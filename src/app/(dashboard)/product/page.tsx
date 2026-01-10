@@ -1,4 +1,3 @@
-
 import { Suspense } from "react";
 import ProductCatalogClient from "./_component/ProductCatalogClient";
 
@@ -7,6 +6,7 @@ interface ApiProduct {
   name: string;
   price: number;
   categoryId: string;
+  subcategoryId?: string;
   brandId?: string;
   brand?: string;
   description: string;
@@ -43,22 +43,38 @@ const CATEGORY_API_URL =
 const BRAND_API_URL =
   "https://barber-syndicate.vercel.app/api/v1/brands";
 
-async function fetchInitialProducts(page = 1): Promise<ApiResponse> {
+// UPDATED: Accept searchParams to filter by category/subcategory
+async function fetchInitialProducts(
+  page = 1,
+  category?: string,
+  subcategory?: string
+): Promise<ApiResponse> {
   try {
-    const response = await fetch(`${PRODUCT_API_URL}?page=${page}`, {
+    // Build query parameters
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: "20",
+      ...(category && { category }),
+      ...(subcategory && { subcategory }),
+    });
+
+    const response = await fetch(`${PRODUCT_API_URL}?${queryParams}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      next: { revalidate: 3600 },
     });
+    
     const data: ApiResponse = await response.json();
+    
     // Map products to include quantityOptions
     const mappedProducts = data.products.map((product: any) => ({
       ...product,
       quantityOptions: product.quantity || [],
     }));
+    
     return { ...data, products: mappedProducts };
   } catch (err) {
     return {
@@ -75,7 +91,7 @@ async function fetchInitialProducts(page = 1): Promise<ApiResponse> {
 async function fetchCategories(): Promise<Category[]> {
   try {
     const response = await fetch(CATEGORY_API_URL, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      next: { revalidate: 3600 },
     });
     const data = await response.json();
     if (data.success && Array.isArray(data.data)) {
@@ -94,7 +110,7 @@ async function fetchCategories(): Promise<Category[]> {
 async function fetchBrands(): Promise<Brand[]> {
   try {
     const response = await fetch(BRAND_API_URL, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      next: { revalidate: 3600 },
     });
     const data = await response.json();
     if (data.success && Array.isArray(data.data)) {
@@ -110,8 +126,21 @@ async function fetchBrands(): Promise<Brand[]> {
   }
 }
 
-export default async function ProductPage() {
-  const initialData = await fetchInitialProducts(1);
+export default async function ProductPage({
+  searchParams,
+}: {
+  searchParams?: { 
+    [key: string]: string | string[] | undefined;
+    category?: string;
+    subcategory?: string;
+  };
+}) {
+  // Extract filter parameters from URL
+  const category = searchParams?.category as string | undefined;
+  const subcategory = searchParams?.subcategory as string | undefined;
+
+  // Fetch products with filters if provided
+  const initialData = await fetchInitialProducts(1, category, subcategory);
   const initialCategories = await fetchCategories();
   const initialBrands = await fetchBrands();
 
@@ -133,6 +162,8 @@ export default async function ProductPage() {
         initialPage={initialData.currentPage}
         initialTotalPages={initialData.totalPages}
         initialTotalResults={initialData.totalResults}
+        initialCategory={category}
+        initialSubCategory={subcategory}
       />
     </Suspense>
   );
