@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Loader, Search, ArrowLeft, X } from "lucide-react";
+import { Loader, Search, ArrowLeft, X, Tag } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -12,18 +12,21 @@ export default function ProductCatalogClient() {
   const [totalPages, setTotalPages] = useState(1);
   const [categoryName, setCategoryName] = useState("");
   const [subCategoryName, setSubCategoryName] = useState("");
+  const [brandName, setBrandName] = useState("");
 
   const searchParams = useSearchParams();
   const router = useRouter();
   
   const categoryId = searchParams.get('category');
   const subcategoryId = searchParams.get('subcategory');
+  const brandId = searchParams.get('brand');
 
   const API_URL = "https://barber-syndicate.vercel.app/api/v1/product";
 
-  // Fetch category names
+  // Fetch category and brand names
   useEffect(() => {
-    const fetchCategoryNames = async () => {
+    const fetchNames = async () => {
+      // Fetch category name
       if (categoryId) {
         try {
           const res = await fetch(`https://barber-syndicate.vercel.app/api/v1/category/${categoryId}`);
@@ -34,6 +37,7 @@ export default function ProductCatalogClient() {
         }
       }
 
+      // Fetch subcategory name
       if (subcategoryId) {
         try {
           const res = await fetch(`https://barber-syndicate.vercel.app/api/v1/subcategory/${subcategoryId}`);
@@ -45,10 +49,23 @@ export default function ProductCatalogClient() {
           console.error("Error fetching subcategory:", err);
         }
       }
+
+      // Fetch brand name
+      if (brandId) {
+        try {
+          const res = await fetch(`https://barber-syndicate.vercel.app/api/v1/brand/${brandId}`);
+          const data = await res.json();
+          if (data.success) {
+            setBrandName(data.data?.brandName || "");
+          }
+        } catch (err) {
+          console.error("Error fetching brand:", err);
+        }
+      }
     };
 
-    fetchCategoryNames();
-  }, [categoryId, subcategoryId]);
+    fetchNames();
+  }, [categoryId, subcategoryId, brandId]);
 
   // Fetch Products
   const fetchProducts = async (page = 1) => {
@@ -63,6 +80,7 @@ export default function ProductCatalogClient() {
       if (searchTerm) params.append('search', searchTerm);
       if (subcategoryId) params.append('subcategory', subcategoryId);
       else if (categoryId) params.append('category', categoryId);
+      if (brandId) params.append('brand', brandId); // Brand parameter add kiya
       
       const res = await fetch(`${API_URL}?${params.toString()}`);
       const data = await res.json();
@@ -81,7 +99,7 @@ export default function ProductCatalogClient() {
 
   useEffect(() => {
     fetchProducts(1);
-  }, [searchTerm, categoryId, subcategoryId]);
+  }, [searchTerm, categoryId, subcategoryId, brandId]); // brandId add kiya dependency mein
 
   // Clear filters
   const clearFilters = () => {
@@ -93,15 +111,49 @@ export default function ProductCatalogClient() {
   const removeFilter = (type) => {
     const params = new URLSearchParams();
     
-    if (type === 'category' && subcategoryId) {
-      params.set('subcategory', subcategoryId);
+    if (type === 'brand') {
+      // Agar brand hatana hai
+      if (categoryId) params.set('category', categoryId);
+      if (subcategoryId) params.set('subcategory', subcategoryId);
       router.push(`/product?${params.toString()}`);
-    } else if (type === 'subcategory' && categoryId) {
-      params.set('category', categoryId);
+    } else if (type === 'category') {
+      // Agar category hatana hai
+      if (subcategoryId) params.set('subcategory', subcategoryId);
+      if (brandId) params.set('brand', brandId);
+      router.push(`/product?${params.toString()}`);
+    } else if (type === 'subcategory') {
+      // Agar subcategory hatana hai
+      if (categoryId) params.set('category', categoryId);
+      if (brandId) params.set('brand', brandId);
       router.push(`/product?${params.toString()}`);
     } else {
       router.push('/product');
     }
+  };
+
+  // Brand button component
+  const BrandFilterButton = () => {
+    // Agar brand page se aaye hain to brand filter button show karein
+    if (brandId && brandName) {
+      return (
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-gray-400">›</span>
+          <div className="flex items-center gap-1 bg-purple-50 px-3 py-1 rounded-md border border-purple-200">
+            <Tag className="h-3 w-3 text-purple-600" />
+            <span className="text-sm font-medium text-purple-600 capitalize">
+              {brandName}
+            </span>
+            <button
+              onClick={() => removeFilter('brand')}
+              className="text-gray-400 hover:text-gray-600 ml-1"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -109,13 +161,12 @@ export default function ProductCatalogClient() {
       {/* 1. MAIN HEADER - Logo Section */}
       <div className="w-full bg-[#FAF3E0] py-4 flex justify-center border-b border-orange-100">
         <div className="flex items-center gap-2">
-          {/* <img src="/logo.png" alt="Logo" className="h-12 w-auto" /> */}
           <h1 className="text-2xl font-bold text-[#B30000]">Barber Syndicate</h1>
         </div>
       </div>
 
       {/* 2. FILTER BREADCRUMB */}
-      {(categoryId || subcategoryId) && (
+      {(categoryId || subcategoryId || brandId) && (
         <div className="bg-white py-3 px-4 border-b">
           <div className="container mx-auto">
             <div className="flex items-center gap-2 flex-wrap">
@@ -160,6 +211,9 @@ export default function ProductCatalogClient() {
                   </div>
                 </div>
               )}
+              
+              {/* Brand Filter Button */}
+              <BrandFilterButton />
             </div>
             
             <h2 className="text-lg font-bold mt-2">
@@ -167,6 +221,8 @@ export default function ProductCatalogClient() {
                 ? `${subCategoryName} Products`
                 : categoryName 
                 ? `${categoryName} Products`
+                : brandName
+                ? `${brandName} Brand Products`
                 : "All Products"}
             </h2>
           </div>
@@ -195,7 +251,7 @@ export default function ProductCatalogClient() {
             )}
           </div>
           
-          {(categoryId || subcategoryId || searchTerm) && (
+          {(categoryId || subcategoryId || brandId || searchTerm) && (
             <button
               onClick={clearFilters}
               className="px-4 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -216,14 +272,7 @@ export default function ProductCatalogClient() {
           <>
             {/* Product Count */}
             <div className="mb-6 text-center">
-              {/* <p className="text-gray-600">
-                Showing {products.length} product{products.length !== 1 ? 's' : ''}
-                {subCategoryName 
-                  ? ` in "${subCategoryName}"`
-                  : categoryName 
-                  ? ` in "${categoryName}"`
-                  : ''}
-              </p> */}
+              {/* Optional: Product count display */}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -274,6 +323,8 @@ export default function ProductCatalogClient() {
                 <p className="text-gray-600 mb-6">
                   {searchTerm 
                     ? `No products found for "${searchTerm}"`
+                    : brandName
+                    ? `No products found for "${brandName}" brand`
                     : categoryName || subCategoryName
                     ? `No products found in this category`
                     : "No products available"}

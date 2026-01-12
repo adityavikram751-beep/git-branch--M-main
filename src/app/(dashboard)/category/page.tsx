@@ -661,7 +661,7 @@ export default function CategoryPage() {
     return (
       <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full">
         {/* Product Image - White background like in image */}
-        <div className="h-60 flex items-center justify-center p-20 bg-gray-200">
+        <div className="h-full flex items-center justify-center p-20 bg-gray-200">
           <img
             src={item.catImg || item.icon || item.subCatImg || "https://via.placeholder.com/400"}
             alt={item.categoryname || item.subCatName}

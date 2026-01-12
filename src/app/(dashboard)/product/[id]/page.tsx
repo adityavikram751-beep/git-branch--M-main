@@ -1,5 +1,5 @@
-"use client";
-import React, { useState, useEffect } from 'react';
+'use client';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, MessageCircle, ShoppingCart, Heart, Share2, Loader, ChevronLeft, ChevronRight, X, CheckCircle, Minus, Plus, Check } from 'lucide-react';
@@ -42,6 +42,8 @@ interface SimilarProduct {
   __v?: number;
 }
 
+// --- Component Starts Here ---
+
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -56,7 +58,7 @@ export default function ProductDetail() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  
+
   // Enquiry related states
   const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
   const [showEnquiryPopup, setShowEnquiryPopup] = useState(false);
@@ -215,9 +217,9 @@ export default function ProductDetail() {
     if (!product || product.variants.length === 0) return;
     const selectedOption = product.variants[selectedVariant];
     const variantName = selectedOption.variantName || selectedOption.quantity;
-    
+
     const message = `Hi! I'm interested in:\n\nProduct: ${product.name}\nVariant: ${variantName}\nQuantity: ${quantity} units\n${isAuthenticated ? `Price per unit: ₹${selectedOption.price}\nTotal Price: ₹${(parseFloat(selectedOption.price) * quantity).toFixed(2)}` : ''}\n\nCan you please provide more details?`;
-    
+
     const phoneNumber = '919876543210';
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
@@ -263,12 +265,12 @@ export default function ProductDetail() {
     }
   };
 
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
-      setQuantity(value);
-    }
-  };
+  // const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const value = parseInt(e.target.value);
+  //   if (!isNaN(value) && value > 0) {
+  //     setQuantity(value);
+  //   }
+  // };
 
   // Enquiry Success Popup Component
   const EnquirySuccessPopup = () => (
@@ -297,11 +299,12 @@ export default function ProductDetail() {
     </div>
   );
 
+  // --- Loading/Error State ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#fff8f2] flex items-center justify-center">
         <div className="text-center">
-          <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-600" />
+          <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-[#C13636]" />
           <p className="text-gray-600">Loading product...</p>
         </div>
       </div>
@@ -310,19 +313,13 @@ export default function ProductDetail() {
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#fff8f2] flex items-center justify-center">
         <div className="text-center">
           <div className="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
             <span className="text-red-400 text-2xl">!</span>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading product</h3>
           <p className="text-gray-600 mb-4">{error || 'Product not found'}</p>
-          {/* <Link
-            href="/products"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 transition-colors"
-          >
-            Back to Products
-          </Link> */}
         </div>
       </div>
     );
@@ -331,44 +328,47 @@ export default function ProductDetail() {
   const selectedVariantData = product.variants[selectedVariant];
   const variantName = selectedVariantData?.variantName || selectedVariantData?.quantity || `Variant ${selectedVariant + 1}`;
   const totalPrice = selectedVariantData ? (parseFloat(selectedVariantData.price) * quantity) : 0;
+  
+  // Custom Class for the main container to match the image's background color
+  const tanBgClass = "bg-[#fff8f2]";
+  // Custom Class for the accent color, choosing a red that matches the image's pink/red highlights
+  const accentColorClass = "text-[#C13636] border-[#C13636]"; 
+  const accentBgClass = "bg-[#C13636] hover:bg-[#A32D2D]";
+  const whatsappBgClass = "bg-[#43a047] hover:bg-[#388e3c]"; // A classic WhatsApp green
 
+  // --- Main Product Detail UI ---
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${tanBgClass}`}>
       {/* Enquiry Success Popup */}
       {showEnquiryPopup && <EnquirySuccessPopup />}
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center space-x-2 text-sm text-gray-500 mb-8">
-          <Link href="/" className="hover:text-purple-600 transition-colors">Home</Link>
-          <span>/</span>
-          <Link href="/products" className="hover:text-purple-600 transition-colors">Products</Link>
-          <span>/</span>
-          <span className="text-gray-900 capitalize">{product.category}</span>
-          <span>/</span>
-          <span className="text-gray-900">{product.name}</span>
-        </div>
         
-        {/* Back Button */}
+        {/* Back Button / Simplified Breadcrumb */}
         <Link
           href="/product"
-          className="inline-flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors mb-8"
+          className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors mb-8 text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Products</span>
         </Link>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Product Images */}
+          
+          {/* Product Images (Left Side) */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-xl overflow-hidden bg-white shadow-sm border border-gray-200">
+            <div className="aspect-[3/4] rounded-xl overflow-hidden shadow-2xl relative">
+              {/* Product Image on a Decorative Rock (Emulating the Image) */}
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/placeholder-rock-bg.png')" }} />
               <img
                 src={product.images[selectedImage] || '/placeholder-image.jpg'}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                // Object-contain to show full product, like in the image
+                className="w-full h-full object-contain p-8 md:p-12 z-10 relative" 
               />
             </div>
-            {product.images.length > 1 && (
+            {/* Small Thumbnails (Removed for cleaner UI like the image, but kept here for function) */}
+            {/* {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
                 {product.images.map((image, index) => (
                   <button
@@ -376,7 +376,7 @@ export default function ProductDetail() {
                     onClick={() => setSelectedImage(index)}
                     className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                       selectedImage === index
-                        ? 'border-purple-600'
+                        ? 'border-[#C13636]'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -388,45 +388,28 @@ export default function ProductDetail() {
                   </button>
                 ))}
               </div>
-            )}
+            )} */}
           </div>
           
-          {/* Product Information */}
-          <div className="space-y-6">
+          {/* Product Information (Right Side) */}
+          <div className="space-y-8">
             <div>
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex flex-col space-y-2">
-                  <span className="inline-block bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full capitalize">
-                    {product.brand}
-                  </span>
-                  {product.isFeature && (
-                    <span className="inline-block bg-amber-100 text-amber-800 text-xs font-medium px-2 py-1 rounded-full w-fit">
-                      Featured
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handleShare}
-                    className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </button>
-                  {/* <button className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                    <Heart className="h-5 w-5" />
-                  </button> */}
-                </div>
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
-              <p className="text-lg text-gray-600 leading-relaxed mb-4">{product.description}</p>
               
-              {/* Product Points */}
+              {/* Product Title and Description */}
+              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
+                {product.name}
+              </h1>
+              <p className="text-lg text-gray-600 leading-relaxed mb-6">
+                {product.description}
+              </p>
+              
+              {/* Key Features (Points) */}
               {product.points && product.points.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-gray-900">Key Features:</h4>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <div className="space-y-3 p-4 bg-white/50 border border-gray-100 rounded-lg">
+                  <h4 className="font-bold text-gray-800 text-lg">Key Features</h4>
+                  <ul className="list-disc list-inside space-y-1 text-base text-gray-600">
                     {product.points.map((point, index) => (
-                      <li key={index}>{point}</li>
+                      <li key={index} className="pl-1">{point}</li>
                     ))}
                   </ul>
                 </div>
@@ -435,107 +418,80 @@ export default function ProductDetail() {
             
             {/* Variant Selection */}
             {product.variants && product.variants.length > 0 && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Select Variant</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {product.variants.map((variant, index) => (
-                      <button
-                        key={variant._id}
-                        onClick={() => setSelectedVariant(index)}
-                        className={`p-4 border-2 rounded-lg text-left transition-all ${
-                          selectedVariant === index
-                            ? 'border-purple-600 bg-purple-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-gray-900">
-                              {variant.variantName || variant.quantity || `Variant ${index + 1}`}
-                            </h4>
-                            {variant.variantColor && (
-                              <p className="text-sm text-gray-600 mt-1">Color: {variant.variantColor}</p>
-                            )}
-                            {variant.variantSize && (
-                              <p className="text-sm text-gray-600">Size: {variant.variantSize}</p>
-                            )}
-                            {variant.variantSKU && (
-                              <p className="text-xs text-gray-500 mt-1">SKU: {variant.variantSKU}</p>
-                            )}
-                          </div>
-                          {selectedVariant === index && (
-                            <Check className="h-5 w-5 text-purple-600" />
-                          )}
-                        </div>
-                        <p className={`text-lg font-bold mt-3 ${
-                          isAuthenticated ? 'text-purple-600' : 'text-gray-400'
-                        }`}>
-                          {isAuthenticated ? `₹${parseFloat(variant.price).toFixed(2)}` : 'Login to view price'}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Select Variant</h3>
+                <div className="flex flex-wrap gap-4">
+                  {product.variants.map((variant, index) => (
+                    <button
+                      key={variant._id}
+                      onClick={() => setSelectedVariant(index)}
+                      // Styled to look like the buttons in the image
+                      className={`px-6 py-3 border-2 rounded-xl text-center transition-all min-w-[120px] ${
+                        selectedVariant === index
+                          ? 'border-[#C13636] bg-[#ffe0e0] font-bold shadow-md'
+                          : 'border-gray-300 bg-white hover:border-gray-400 font-medium'
+                      }`}
+                    >
+                      <h4 className="text-gray-900 text-base">
+                        {variant.variantName || variant.quantity || `${variant.quantity} pcs`}
+                      </h4>
+                      <p className={`text-sm mt-1 ${
+                        isAuthenticated ? 'text-gray-700 font-semibold' : 'text-gray-400'
+                      }`}>
+                        {isAuthenticated ? `₹${parseFloat(variant.price).toFixed(2)}` : 'Login to view price'}
+                      </p>
+                    </button>
+                  ))}
                 </div>
-
-                {/* Quantity Selection Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Quantity</h3>
-                  
-                  <div className="flex items-center gap-4">
-                    {/* Plus/Minus Quantity Selector */}
-                    <div className="flex items-center border rounded-lg bg-white">
-                      <button
-                        onClick={handleDecrement}
-                        disabled={quantity <= 1}
-                        className="p-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-lg transition-colors"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      
-                      <div className="px-6 py-3 border-x min-w-[60px] text-center">
-                        <span className="text-lg font-medium">{quantity}</span>
-                      </div>
-                      
-                      <button
-                        onClick={handleIncrement}
-                        className="p-3 hover:bg-gray-100 rounded-r-lg transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
+              </div>
+            )}
+            
+            {/* Quantity Selection Section */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Quantity</h3>
+                
+                <div className="flex items-center justify-between">
+                  {/* Plus/Minus Quantity Selector (Styled for UI match) */}
+                  <div className="flex items-center border border-gray-300 rounded-xl bg-white">
+                    <button
+                      onClick={handleDecrement}
+                      disabled={quantity <= 1}
+                      className="p-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-xl transition-colors text-gray-700"
+                    >
+                      <Minus className="h-5 w-5" />
+                    </button>
+                    
+                    <div className="px-6 py-2 border-x border-gray-300 min-w-[70px] text-center">
+                      <span className="text-xl font-bold text-gray-900">{quantity}</span>
                     </div>
                     
-                    {/* Total Price Display */}
-                    {isAuthenticated && selectedVariantData && (
-                      <div className="ml-auto text-right">
-                        <p className="text-2xl font-bold text-gray-900">
-                          ₹{totalPrice.toFixed(2)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          ₹{parseFloat(selectedVariantData.price).toFixed(2)} × {quantity} units
-                        </p>
-                      </div>
-                    )}
+                    <button
+                      onClick={handleIncrement}
+                      className="p-3 hover:bg-gray-100 rounded-r-xl transition-colors text-gray-700"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
                   </div>
                   
-                  {/* Manual Input for large quantities */}
-                  {/* <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Or enter quantity:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div> */}
+                  {/* Total Price Display (Conditional) */}
+                  {isAuthenticated && selectedVariantData && (
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-[#C13636]">
+                        ₹{totalPrice.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        ₹{parseFloat(selectedVariantData.price).toFixed(2)} × {quantity} units
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
             
             {/* No Variants Message */}
             {(!product.variants || product.variants.length === 0) && (
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+              <div className="bg-gray-100 border border-gray-200 rounded-xl p-6 text-center">
                 <p className="text-gray-600">Contact us for pricing and availability information.</p>
               </div>
             )}
@@ -547,32 +503,35 @@ export default function ProductDetail() {
               </div>
             )}
             
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={handleWhatsAppClick}
-                disabled={!isAuthenticated || !product.variants.length}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <MessageCircle className="h-5 w-5" />
-                <span>Contact via WhatsApp</span>
-              </button>
+            {/* Action Buttons (Styled for UI match) */}
+            <div className="flex flex-col gap-4 pt-4">
               <button
                 onClick={handleEnquiry}
                 disabled={!isAuthenticated || isSubmittingEnquiry || !product.variants.length}
-                className="flex-1 border-2 border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-8 py-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                // Style matches the 'Add to enquiry' button in the image
+                className={`w-full border-2 border-[#C13636] text-black bg-[#ffe0e0] hover:bg-red-100 hover:text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl`}
               >
                 {isSubmittingEnquiry ? (
-                  <Loader className="h-5 w-5 animate-spin" />
+                  <Loader className="h-6 w-6 animate-spin" />
                 ) : (
-                  <ShoppingCart className="h-5 w-5" />
+                  <ShoppingCart className="h-6 w-6" />
                 )}
                 <span>
-                  {isSubmittingEnquiry ? 'Adding...' : 
-                   isAuthenticated && selectedVariantData ? 
-                   `Add to Inquiry - ₹${totalPrice.toFixed(2)}` : 
-                   'Add to Inquiry'}
+                  {isSubmittingEnquiry ? 'Adding to Inquiry...' : 
+                    isAuthenticated && selectedVariantData ? 
+                    `Add to Inquiry - ₹${totalPrice.toFixed(2)}` : 
+                    'Add to Inquiry'}
                 </span>
+              </button>
+              
+              <button
+                onClick={handleWhatsAppClick}
+                disabled={!product.variants.length} // WhatsApp contact is always available, even if not logged in
+                // Style matches the 'Connect on Whatsapp' button in the image
+                className={`w-full ${whatsappBgClass} text-black px-8 py-4 rounded-xl font-bold text-lg transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 shadow-lg hover:shadow-xl`}
+              >
+                <MessageCircle className="h-6 w-6" />
+                <span>Connect on WhatsApp</span>
               </button>
             </div>
             
@@ -606,14 +565,14 @@ export default function ProductDetail() {
         
         {/* Similar Products Section */}
         {similarProducts.length > 0 && (
-          <div className="mt-12">
+          <div className="mt-16 border-t border-gray-200 pt-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Similar Products</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {similarProducts.map((similarProduct) => (
+              {similarProducts.slice(0, 4).map((similarProduct) => (
                 <Link
                   key={similarProduct._id}
                   href={`/product/${similarProduct._id}`}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden"
+                  className="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow overflow-hidden"
                 >
                   <div className="aspect-square relative overflow-hidden">
                     <img
@@ -624,19 +583,18 @@ export default function ProductDetail() {
                   </div>
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full font-medium">
                         {similarProduct.brand}
                       </span>
                       {similarProduct.isFeature && (
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
                           Featured
                         </span>
                       )}
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-2">{similarProduct.name}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">{similarProduct.description}</p>
                     <div className={`text-lg font-bold ${
-                      isAuthenticated ? 'text-purple-600' : 'text-gray-400'
+                      isAuthenticated ? 'text-gray-900' : 'text-gray-400'
                     }`}>
                       {isAuthenticated && similarProduct.variants.length > 0 
                         ? `From ₹${getLowestPrice(similarProduct.variants).toFixed(2)}` 
@@ -653,7 +611,7 @@ export default function ProductDetail() {
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="p-2 text-gray-600 hover:text-purple-600 disabled:text-gray-300 transition-colors"
+                  className="p-2 text-gray-600 hover:text-[#C13636] disabled:text-gray-300 transition-colors"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
@@ -663,7 +621,7 @@ export default function ProductDetail() {
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="p-2 text-gray-600 hover:text-purple-600 disabled:text-gray-300 transition-colors"
+                  className="p-2 text-gray-600 hover:text-[#C13636] disabled:text-gray-300 transition-colors"
                 >
                   <ChevronRight className="h-6 w-6" />
                 </button>
