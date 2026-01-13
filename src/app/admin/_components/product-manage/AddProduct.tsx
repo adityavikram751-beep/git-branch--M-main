@@ -573,7 +573,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
           {/* 5. Images Section */}
           <div className="space-y-2">
             <Label htmlFor="images" className="text-sm font-medium text-gray-700">
-              Product Images <span className="text-rose-600">(At least 1, max 5)</span>
+              Product Images <span className="text-rose-600">(At least 1, max 7)</span>
             </Label>
             <Input 
               id="images" 

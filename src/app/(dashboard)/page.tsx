@@ -238,7 +238,7 @@ useEffect(() => {
   return (
     <div className="bg-white">
       {/* ================= HERO SECTION ================= */}
-      <section className="relative h-[70vh] md:h-screen w-full overflow-hidden">
+      <section className="relative h-[80vh] md:h-screen w-full overflow-hidden">
         <div className="relative h-full w-full">
           {HERO_SLIDES.map((slide, index) => (
             <div
@@ -711,9 +711,9 @@ useEffect(() => {
 
      
 
-  {/* ================= ALL PRODUCTS GRID ================= */}
+ {/* ================= ALL PRODUCTS GRID ================= */}
 <section className="py-20 bg-[#f6dcc7]">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden"> {/* YEH LINE CHANGE KARO */}
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
     
     {/* ===== Header ===== */}
     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
@@ -741,7 +741,7 @@ useEffect(() => {
         Loading products...
       </div>
     ) : allProducts.length > 0 ? (
-      <div className="relative"> {/* YEH OVERFLOW HIDDEN HATA DO */}
+      <div className="relative">
 
         {/* LEFT ARROW */}
         <button
@@ -780,7 +780,7 @@ useEffect(() => {
         </button>
 
         {/* TRACK */}
-        <div className="overflow-hidden"> {/* YEH EK AUR OVERFLOW HIDDEN LAGAO */}
+        <div className="overflow-hidden">
           <div
             className="flex transition-transform duration-700 ease-in-out"
             style={{
@@ -799,47 +799,50 @@ useEffect(() => {
                 key={p._id}
                 className="min-w-full sm:min-w-[50%] lg:min-w-[33.333%] px-3"
               >
-                {/* CARD – FIXED HEIGHT */}
-                <div
-                  className="
-                    bg-white rounded-xl shadow-md overflow-hidden
-                    transition-all duration-300
-                    hover:-translate-y-2 hover:shadow-xl
-                    h-[420px] flex flex-col
-                  "
-                >
-                  {/* IMAGE – FIXED HEIGHT */}
-                  <div className="relative h-[220px] bg-gray-100 overflow-hidden">
-                    <img
-                      src={p.images?.[0] || "/placeholder.jpg"}
-                      alt={p.name}
-                      className="w-full h-full object-cover"
-                    />
+                {/* POORA CARD CLICKABLE */}
+                <Link href={`/product/${p._id}`} className="block h-full">
+                  <div
+                    className="
+                      bg-white rounded-xl shadow-md overflow-hidden
+                      transition-all duration-300
+                      hover:-translate-y-2 hover:shadow-xl
+                      h-[420px] flex flex-col
+                      cursor-pointer
+                    "
+                  >
+                    {/* IMAGE */}
+                    <div className="relative h-[220px] bg-gray-100 overflow-hidden">
+                      <img
+                        src={p.images?.[0] || "/placeholder.jpg"}
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                      />
 
-                    <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
-                      Featured
-                    </span>
+                      <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
+                        Featured
+                      </span>
+                    </div>
+
+                    {/* CONTENT */}
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
+                        {p.name}
+                      </h3>
+
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
+                        {p.description}
+                      </p>
+
+                      {/* BUTTON LOOK SAME BUT LINK CARD KE ANDAR */}
+                      <span
+                        className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium w-fit"
+                      >
+                        View Details
+                        <ArrowRight size={14} />
+                      </span>
+                    </div>
                   </div>
-
-                  {/* CONTENT – FIXED */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
-                      {p.name}
-                    </h3>
-
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
-                      {p.description}
-                    </p>
-
-                    <Link
-                      href={`/product/${p._id}`}
-                      className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium w-fit"
-                    >
-                      View Details
-                      <ArrowRight size={14} />
-                    </Link>
-                  </div>
-                </div>
+                </Link>
               </div>
             ))}
           </div>

@@ -234,21 +234,14 @@ export default function Header() {
                         <p className="text-sm text-gray-500 truncate">{userName}</p>
                       </div>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={handleEnquiryClick} 
-                        className="cursor-pointer"
-                      >
-                        <FileText className="w-4 h-4 mr-2" />
-                        My Enquiries
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={handleLogout} 
-                        className="cursor-pointer text-red-600 focus:text-red-600"
-                      >
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Logout
-                      </DropdownMenuItem>
+                    <DropdownMenuItem 
+  onClick={handleLogout} 
+  className="cursor-pointer text-red-600 focus:text-red-600"
+>
+  <LogOut className="w-4 h-4 mr-2" />
+  Logout
+</DropdownMenuItem>
+
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

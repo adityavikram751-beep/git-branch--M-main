@@ -658,50 +658,67 @@ export default function CategoryPage() {
     const isCategory = 'categoryname' in item;
     const isSubCategory = 'subCatName' in item;
     
-    return (
-      <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full">
-        {/* Product Image - White background like in image */}
-        <div className="h-full flex items-center justify-center p-20 bg-gray-200">
-          <img
-            src={item.catImg || item.icon || item.subCatImg || "https://via.placeholder.com/400"}
-            alt={item.categoryname || item.subCatName}
-            className="max-h-full max-w-full object-contain hover:scale-105 transition-transform duration-300"
-          />
+   return (
+  <Link
+    href={
+      isCategory
+        ? `/product?category=${item._id}`
+        : `/product?subcategory=${item._id}`
+    }
+    className="block h-full"
+  >
+    <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full cursor-pointer">
+      
+      {/* Product Image */}
+     <div className="relative w-full h-[220px] sm:h-[240px] lg:h-[260px] bg-white">
+  <img
+    src={
+      item.catImg ||
+      item.icon ||
+      item.subCatImg ||
+      "https://via.placeholder.com/400"
+    }
+    alt={item.categoryname || item.subCatName}
+    className="w-full h-full object-cover"
+    onError={(e) => {
+      e.currentTarget.src = "https://via.placeholder.com/400";
+    }}
+  />
+</div>
+
+
+      {/* Product Info */}
+      <div className="p-6 pt-2 flex flex-col flex-grow">
+        <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
+          {item.categoryname || item.subCatName}
+        </h3>
+
+        {/* Category / Subcategory Tag */}
+        <div className="mb-3">
+          {isCategory && (
+            <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
+              Category
+            </span>
+          )}
+          {isSubCategory && (
+            <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
+              Subcategory
+            </span>
+          )}
         </div>
 
-        {/* Product Info - Exactly like in your image */}
-        <div className="p-6 pt-2 flex flex-col flex-grow">
-          <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
-            {item.categoryname || item.subCatName}
-          </h3>
-          
-          {/* Show if it's category or subcategory */}
-          <div className="mb-3">
-            {isCategory && (
-              <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
-                Category
-              </span>
-            )}
-            {isSubCategory && (
-              <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
-                Subcategory
-              </span>
-            )}
-          </div>
-          
-          <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-2 flex-grow">
-          </p>
+        <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-2 flex-grow"></p>
 
-          {/* View Details Button - Red color like in image */}
-          <Link href={isCategory ? `/product?category=${item._id}` : `/product?subcategory=${item._id}`}>
-            <button className="bg-red-400  text-black px-5 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors w-full justify-center">
-              View Details <span className="text-lg">→</span>
-            </button>
-          </Link>
+        {/* Button look same (but ab link ke andar hai) */}
+        <div className="bg-red-400 text-black px-5 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors w-full justify-center hover:bg-red-500">
+          View Details <span className="text-lg">→</span>
         </div>
       </div>
-    );
-  };
+    </div>
+  </Link>
+);
+};
+
 
   // Get current page title
   const getPageTitle = () => {
@@ -738,14 +755,9 @@ export default function CategoryPage() {
       {/* Top Navigation */}
       <nav className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14">
             {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#B30000] rounded flex items-center justify-center">
-                <span className="text-white font-bold text-sm">BS</span>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">Barber Syndicate</h1>
-            </div>
+           
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-6">
@@ -801,7 +813,7 @@ export default function CategoryPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Sidebar - Categories - Your design from Frame 32 */}
           <div className="lg:w-80">
-            <div className="bg-orange-50 rounded-xl border border-gray-200 p-6 sticky top-6 shadow-sm">
+<div className="bg-orange-50 rounded-xl border border-gray-200 p-6 lg:sticky lg:top-24 shadow-sm">
               {/* Header - "Categories" title */}
            
               {/* Search Box - Like in your image */}

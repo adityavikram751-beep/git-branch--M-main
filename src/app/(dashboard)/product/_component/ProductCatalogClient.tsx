@@ -167,16 +167,10 @@ export default function ProductCatalogClient() {
 
       {/* 2. FILTER BREADCRUMB */}
       {(categoryId || subcategoryId || brandId) && (
-        <div className="bg-white py-3 px-4 border-b">
+        <div className="bg-yellow-50 py-3 px-4 border-b">
           <div className="container mx-auto">
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => router.push('/category')}
-                className="text-sm text-gray-600 hover:text-[#B30000] flex items-center gap-1"
-              >
-                <ArrowLeft className="h-3 w-3" />
-                Categories
-              </button>
+             
               
               {categoryName && (
                 <div className="flex items-center gap-1">
@@ -229,38 +223,40 @@ export default function ProductCatalogClient() {
         </div>
       )}
 
-      {/* 3. STICKY SEARCH BAR */}
-      <div className="sticky top-16 z-20 bg-[#FAF0E0]/90 backdrop-blur-sm py-6 flex justify-center px-4">
-        <div className="w-full max-w-2xl flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Search Product ...."
-              className="w-full py-3 pl-12 pr-4 rounded-xl border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-[#B30000] bg-white transition-all text-gray-700"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          
-          {(categoryId || subcategoryId || brandId || searchTerm) && (
-            <button
-              onClick={clearFilters}
-              className="px-4 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Clear All
-            </button>
-          )}
-        </div>
-      </div>
+     {/* 3. STICKY SEARCH BAR */}
+<div className="sticky top-14 z-20 bg-[#FAF0E0]/90 backdrop-blur-sm py-6 flex justify-center px-4">
+  <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3">
+    
+    {/* Search Input */}
+    <div className="relative flex-1 w-full">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+      <input
+        type="text"
+        placeholder="Search Product ...."
+        className="w-full py-2 pl-10 pr-10 rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-[#B30000] bg-white transition-all text-gray-700 text-sm"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      {searchTerm && (
+        <button
+          onClick={() => setSearchTerm('')}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+
+    {/* Clear Button */}
+    {(categoryId || subcategoryId || brandId || searchTerm) && (
+      <button
+        onClick={clearFilters}
+      >
+        
+      </button>
+    )}
+  </div>
+</div>
 
       {/* 4. PRODUCT GRID */}
       <main className="container mx-auto px-4 py-8 flex-grow">

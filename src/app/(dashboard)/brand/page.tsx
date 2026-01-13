@@ -330,87 +330,93 @@ export default function CategoryPage() {
 
   const displayItems = getDisplayItems();
 
-  const ProductCard = ({ item, type }: { item: any, type: 'brand' | 'category' | 'subcategory' }) => {
-    let title = '';
-    let description = '';
-    let image = '';
-    let bgColor = '';
+ const ProductCard = ({ item, type }: { item: any, type: 'brand' | 'category' | 'subcategory' }) => {
+  let title = '';
+  let description = '';
+  let image = '';
+  let bgColor = '';
 
-    if (type === 'brand') {
-      title = item.brand;
-      image = item.icons;
-      bgColor = 'from-gray-50 to-gray-100';
-    } else if (type === 'category') {
-      title = item.categoryname;
-      image = item.catImg;
-      bgColor = 'from-green-50 to-emerald-100';
+  if (type === 'brand') {
+    title = item.brand;
+    image = item.icons;
+    bgColor = 'from-gray-50 to-gray-100';
+  } else if (type === 'category') {
+    title = item.categoryname;
+    image = item.catImg;
+    bgColor = 'from-green-50 to-emerald-100';
+  } else {
+    title = item.subCatName;
+    description = item.subCatTitle;
+    image = item.icon;
+    bgColor = 'from-purple-50 to-violet-100';
+  }
+
+  const handleClick = () => {
+    if (type === "brand") {
+      handleBrandGridClick(item._id);
+    } else if (type === "category") {
+      handleCategoryGridClick(item._id);
     } else {
-      title = item.subCatName;
-      description = item.subCatTitle;
-      image = item.icon;
-      bgColor = 'from-purple-50 to-violet-100';
+      handleSubCategoryGridClick(item._id);
     }
+  };
 
-    return (
-      <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full">
-        <div className={`h-full flex items-center justify-center p-12 bg-gradient-to-br ${bgColor}`}>
-          <img
-            src={image || "https://via.placeholder.com/400"}
-            alt={title}
-            className="max-h-full max-w-full object-contain hover:scale-105 transition-transform duration-300"
-            onError={(e) => {
-              e.currentTarget.src = "https://via.placeholder.com/400";
-            }}
-          />
+  return (
+    <div
+      onClick={handleClick}
+      className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full cursor-pointer"
+    >
+      {/* IMAGE (FULL) */}
+      <div className={`relative w-full h-[220px] sm:h-[240px] lg:h-[260px] bg-gradient-to-br ${bgColor}`}>
+        <img
+          src={image || "https://via.placeholder.com/400"}
+          alt={title}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.currentTarget.src = "https://via.placeholder.com/400";
+          }}
+        />
+      </div>
+
+      {/* CONTENT */}
+      <div className="p-6 flex flex-col flex-grow">
+        <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
+          {title}
+        </h3>
+
+        <div className="mb-3">
+          {type === 'brand' && (
+            <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
+              Brand
+            </span>
+          )}
+          {type === 'category' && (
+            <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
+              Category
+            </span>
+          )}
+          {type === 'subcategory' && (
+            <span className="inline-block px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md border border-purple-200">
+              Subcategory
+            </span>
+          )}
         </div>
 
-        <div className="p-6 flex flex-col flex-grow">
-          <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
-            {title}
-          </h3>
-          
-          <div className="mb-3">
-            {type === 'brand' && (
-              <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
-                Brand
-              </span>
-            )}
-            {type === 'category' && (
-              <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
-                Category
-              </span>
-            )}
-            {type === 'subcategory' && (
-              <span className="inline-block px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md border border-purple-200">
-                Subcategory
-              </span>
-            )}
-          </div>
-          
-          {description && (
-            <p className="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-2 flex-grow">
-              {description}
-            </p>
-          )}
+        {description && (
+          <p className="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-2 flex-grow">
+            {description}
+          </p>
+        )}
 
-          <button
-            onClick={() => {
-              if (type === 'brand') {
-                handleBrandGridClick(item._id);
-              } else if (type === 'category') {
-                handleCategoryGridClick(item._id);
-              } else if (type === 'subcategory') {
-                handleSubCategoryGridClick(item._id);
-              }
-            }}
-            className="mt-auto bg-red-400 text-black px-5 py-2 rounded-md text-sm font-medium flex items-center gap-2 justify-center hover:bg-red-500 transition-colors"
-          >
-            View Details <ChevronRight className="w-4 h-4" />
-          </button>
+        {/* BUTTON LOOK SAME - but click full card */}
+        <div className="mt-auto bg-[#FF6B6B] text-black px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 justify-center hover:bg-[#ff4f4f] transition-colors">
+          View Details <ChevronRight className="w-4 h-4" />
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
+
 
   const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
@@ -420,7 +426,7 @@ export default function CategoryPage() {
     <div className="min-h-screen bg-yellow-50">
       <nav className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-[#B30000] rounded flex items-center justify-center">
                 <span className="text-white font-bold text-sm">BS</span>
@@ -478,7 +484,7 @@ export default function CategoryPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-80">
-            <div className="bg-orange-50 rounded-xl border border-gray-200 p-6 sticky top-6 shadow-sm">
+<div className="bg-orange-50 rounded-xl border border-gray-200 p-6 lg:sticky lg:top-20 shadow-sm">
               {viewMode !== 'brands' && (
                 <button
                   onClick={viewMode === 'categories' ? handleBackToCategories : handleBackToCategories}
@@ -642,18 +648,9 @@ export default function CategoryPage() {
                 )}
               </div>
 
-              <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-gray-700">
-                    Total Items
-                  </p>
-                  <span className="px-3 py-1 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-900">
-                    {displayItems.length}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Showing {displayItems.length} items
-                </p>
+                 
+                
               </div>
             </div>
           </div>
@@ -665,17 +662,11 @@ export default function CategoryPage() {
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                     {getPageTitle()}
                   </h1>
-                  <p className="text-gray-600">
-                    {getPageDescription()}
-                  </p>
+                 
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="px-3 py-1.5 bg-gray-100 rounded-full">
-                    <span className="text-sm text-gray-700 font-medium">
-                      {displayItems.length} items
-                    </span>
-                  </div>
+                  
                   {(selectedBrand || selectedCategory || selectedSubCategory || searchTerm) && (
                     <button
                       onClick={clearAllFilters}
@@ -689,7 +680,7 @@ export default function CategoryPage() {
               </div>
             </div>
 
-            <div className="max-w-7xl mx-auto bg-orange-50 p-8 rounded-[2rem] border border-gray-50 shadow-sm min-h-full">
+<div className="max-w-7xl mx-auto bg-orange-50 p-6 sm:p-8 rounded-[2rem] border border-gray-50 shadow-sm mb-10">
               {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
                   {[1, 2, 3, 4, 5, 6].map((i) => (

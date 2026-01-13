@@ -166,42 +166,17 @@ export default function EnquiryPage() {
   return (
     <div className="min-h-screen bg-yellow-50">
       {/* Header - Mobile Optimized */}
-      <div className="bg-red-50 shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-10 lg:px-8 py-18 sm:py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center justify-between w-full sm:w-auto">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Enquiries</h1>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1 hidden sm:block">
-                  Track and manage your enquiries
-                </p>
-              </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="sm:hidden p-2 rounded-lg hover:bg-gray-100"
-              >
-                {isMobileMenuOpen ? <ChevronUp /> : <ChevronDown />}
-              </button>
-            </div>
-            
-            <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${isMobileMenuOpen ? 'block' : 'hidden'} sm:flex`}>
-              <div className="flex items-center gap-2 text-gray-600">
-                <ShoppingBag className="w-5 h-5" />
-                <span className="font-medium">{enquiries.length} Enquiries</span>
-              </div>
-              <Badge className={`px-3 py-1 text-sm font-medium ${getStatusColor(userInfo.status)}`}>
-                {userInfo.status}
-              </Badge>
-            </div>
-          </div>
-        </div>
+<div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-10 pt-14 sm:pt-16 lg:pt-14">
+
+
+          
       </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-12 py-6 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-8">
           {/* Sidebar - Mobile First */}
           <div className="lg:col-span-1">
-            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 sticky top-6 lg:top-24">
+<Card className="shadow-sm hover:shadow-md transition-shadow duration-200 lg:sticky lg:top-24">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <User className="w-5 h-5 text-blue-600 flex-shrink-0" />
@@ -274,7 +249,7 @@ export default function EnquiryPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <CardTitle className="text-base sm:text-lg truncate">
-                          Enquiry #{enquiry._id.slice(-8)}
+                          Enquiry 
                         </CardTitle>
                         <div className="flex items-center gap-2 mt-1">
                           <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
@@ -340,9 +315,7 @@ export default function EnquiryPage() {
                       {/* Product Details */}
                       <div className="space-y-3 sm:space-y-4">
                         <div>
-                          <p className="text-xs sm:text-sm text-gray-600 uppercase tracking-wide truncate">
-                            {enquiry.productId.brand}
-                          </p>
+                         
                           <h3 className="text-lg sm:text-xl font-bold text-gray-900 mt-1 line-clamp-2">
                             {enquiry.productId.name}
                           </h3>

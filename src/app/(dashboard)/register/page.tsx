@@ -142,7 +142,7 @@ const RegisterUI = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-amber-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-amber-50 py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg mx-auto">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-6 text-center">

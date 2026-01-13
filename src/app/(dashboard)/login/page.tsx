@@ -80,7 +80,7 @@ const LoginUI = () => {
         setPendingApproval('Your account is not approved by admin yet.');
       } else {
         setSuccess(message);
-        setTimeout(() => router.push('/product'), 1000);
+        setTimeout(() => router.push('/'), 1000);
       }
     } catch (err: any) {
       console.error('Login error:', err);
@@ -91,7 +91,7 @@ const LoginUI = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-amber-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-amber-50 py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Header */}
