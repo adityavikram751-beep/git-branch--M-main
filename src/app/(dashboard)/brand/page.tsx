@@ -690,22 +690,26 @@ export default function CategoryPage() {
               ) : displayItems.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
                   {(() => {
-                    switch (viewMode) {
-                      case 'brands':
-                        return displayItems.map((item: Brand) => (
-                          <ProductCard key={item._id} item={item} type="brand" />
-                        ));
-                      case 'categories':
-                        return displayItems.map((item: Category) => (
-                          <ProductCard key={item._id} item={item} type="category" />
-                        ));
-                      case 'subcategories':
-                        return displayItems.map((item: SubCategory) => (
-                          <ProductCard key={item._id} item={item} type="subcategory" />
-                        ));
-                      default:
-                        return null;
-                    }
+                   switch (viewMode) {
+  case "brands":
+    return displayItems.map((item) => (
+      <ProductCard key={item._id} item={item as Brand} type="brand" />
+    ));
+
+  case "categories":
+    return displayItems.map((item) => (
+      <ProductCard key={item._id} item={item as Category} type="category" />
+    ));
+
+  case "subcategories":
+    return displayItems.map((item) => (
+      <ProductCard key={item._id} item={item as SubCategory} type="subcategory" />
+    ));
+
+  default:
+    return null;
+}
+
                   })()}
                 </div>
               ) : (
