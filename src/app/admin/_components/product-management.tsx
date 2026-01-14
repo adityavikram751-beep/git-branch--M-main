@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Package, RefreshCw, MoreVertical, Eye, EyeOff } from "lucide-react";
 import { AddProduct } from "./product-manage/AddProduct";
 import { EditProduct } from "./product-manage/EditProduct";
@@ -33,6 +40,7 @@ interface Product {
   isFeatured?: boolean;
   variants?: { price: string; quantity: string }[];
   images?: string[];
+  image?: string; // ✅ added
   isActivate?: boolean;
   status?: string;
 }
@@ -52,7 +60,7 @@ interface ApiProduct {
   subcategoryId: string;
   points: string[];
   isFeature: boolean;
-  isActivate: boolean; // Boolean: true = active, false = inactive
+  isActivate: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -92,72 +100,95 @@ export function ProductManagement() {
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(false);
 
-  // Function to extract pricing from variants with better matching
-  const extractPricingFromVariants = (variants: { price: string; quantity: string }[]) => {
+  // ✅ FIX: variants default [] so undefined never breaks build
+  const extractPricingFromVariants = (
+    variants: { price: string; quantity: string }[] = []
+  ) => {
     let single = 0;
     let dozen = 0;
     let carton = 0;
 
-    variants?.forEach(variant => {
-      const qty = variant.quantity.toLowerCase().trim();
+    variants.forEach((variant) => {
+      const qty = (variant.quantity || "").toLowerCase().trim();
       const price = parseFloat(variant.price) || 0;
 
       // Single piece (1 pc)
-      if (qty === "1" || qty === "1pc" || qty === "1pcs" || qty === "single" || 
-          qty === "1 piece" || qty === "1 pc" || qty === "1p" || qty.startsWith("1 ")) {
+      if (
+        qty === "1" ||
+        qty === "1pc" ||
+        qty === "1pcs" ||
+        qty === "single" ||
+        qty === "1 piece" ||
+        qty === "1 pc" ||
+        qty === "1p" ||
+        qty.startsWith("1 ")
+      ) {
         single = price;
       }
-      
+
       // Dozen (12 pcs)
-      if (qty === "12" || qty === "12pcs" || qty === "12 pcs" || qty === "12pc" || 
-          qty === "12p" || qty.includes("dozen") || qty.includes("12 pieces") || 
-          qty === "12 pieces" || qty === "12 piece" || qty === "12-pack") {
+      if (
+        qty === "12" ||
+        qty === "12pcs" ||
+        qty === "12 pcs" ||
+        qty === "12pc" ||
+        qty === "12p" ||
+        qty.includes("dozen") ||
+        qty.includes("12 pieces") ||
+        qty === "12 pieces" ||
+        qty === "12 piece" ||
+        qty === "12-pack"
+      ) {
         dozen = price;
       }
-      
+
       // Carton (bulk)
-      if (qty.includes("carton") || qty.includes("ctn") || qty.includes("box") || 
-          qty.includes("case") || qty.includes("pack") || qty.includes("bulk") ||
-          qty.includes("crate") || qty.includes("package") || qty.includes("lot")) {
+      if (
+        qty.includes("carton") ||
+        qty.includes("ctn") ||
+        qty.includes("box") ||
+        qty.includes("case") ||
+        qty.includes("pack") ||
+        qty.includes("bulk") ||
+        qty.includes("crate") ||
+        qty.includes("package") ||
+        qty.includes("lot")
+      ) {
         carton = price;
       }
 
-      // Try to parse as number for carton detection
       const qtyNumber = parseInt(qty);
       if (qtyNumber > 12 && carton === 0) {
         carton = price;
       }
     });
 
-    // If carton not found, try alternative approaches
-    if (carton === 0 && variants && variants.length > 0) {
-      // Approach 1: Find variant with highest quantity
+    // fallback for carton
+    if (carton === 0 && variants.length > 0) {
       const sortedByQty = [...variants].sort((a, b) => {
         const aNum = parseInt(a.quantity) || 0;
         const bNum = parseInt(b.quantity) || 0;
         return bNum - aNum;
       });
-      
+
       if (sortedByQty.length > 0) {
         const highestQty = sortedByQty[0];
         const highestQtyNum = parseInt(highestQty.quantity) || 0;
-        
+
         if (highestQtyNum > 12) {
           carton = parseFloat(highestQty.price) || 0;
         }
       }
 
-      // Approach 2: If still not found, check for variant with "large" in name
       if (carton === 0) {
-        const largeVariant = variants.find(v => 
-          v.quantity.toLowerCase().includes("large") || 
-          v.quantity.toLowerCase().includes("big") ||
-          v.quantity.toLowerCase().includes("xl") ||
-          v.quantity.toLowerCase().includes("xxl")
+        const largeVariant = variants.find(
+          (v) =>
+            v.quantity.toLowerCase().includes("large") ||
+            v.quantity.toLowerCase().includes("big") ||
+            v.quantity.toLowerCase().includes("xl") ||
+            v.quantity.toLowerCase().includes("xxl")
         );
-        if (largeVariant) {
-          carton = parseFloat(largeVariant.price) || 0;
-        }
+        if (largeVariant) carton = parseFloat(largeVariant.price) || 0;
       }
     }
 
@@ -167,19 +198,23 @@ export function ProductManagement() {
   const fetchProducts = async () => {
     setIsLoading(true);
     setError(null);
+
     try {
       const adminToken = localStorage.getItem("adminToken");
-      
+
       if (!adminToken) {
         throw new Error("Authentication required. Please log in.");
       }
 
-      const response = await fetch(`https://barber-syndicate.vercel.app/api/v1/product?page=${currentPage}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`,
-        },
-      });
+      const response = await fetch(
+        `https://barber-syndicate.vercel.app/api/v1/product?page=${currentPage}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -189,43 +224,42 @@ export function ProductManagement() {
       }
 
       const data: ApiResponse = await response.json();
-      
-      // Sort products: active first (isActivate: true), then by creation date (newest first)
+
       const sortedProducts = data.products.sort((a, b) => {
-        // First sort by isActivate: active products first (true first)
         if (a.isActivate && !b.isActivate) return -1;
         if (!a.isActivate && b.isActivate) return 1;
-        // Then sort by createdAt (newest first)
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-      
+
       const mappedProducts: Product[] = sortedProducts.map((apiProduct) => {
         const pricing = extractPricingFromVariants(apiProduct.variants);
-        
+
         return {
           id: apiProduct._id,
           name: apiProduct.name,
           description: apiProduct.description,
-          pricing: pricing,
+          pricing,
           brand: apiProduct.brand,
           categoryId: apiProduct.categoryId,
           subcategoryId: apiProduct.subcategoryId,
           points: apiProduct.points || [],
           isFeatured: apiProduct.isFeature || false,
-          variants: apiProduct.variants.map(v => ({
+          variants: apiProduct.variants.map((v) => ({
             price: v.price,
-            quantity: v.quantity
+            quantity: v.quantity,
           })),
           images: apiProduct.images || [],
-          isActivate: apiProduct.isActivate, // true = active, false = inactive
-          status: apiProduct.isActivate ? "active" : "inactive"
+          image: apiProduct.images?.[0] || "", // ✅ always set
+          isActivate: apiProduct.isActivate,
+          status: apiProduct.isActivate ? "active" : "inactive",
         };
       });
-      
+
       setProducts(mappedProducts);
       setTotalPages(data.totalPages);
     } catch (err: any) {
-      const errorMessage = err.message || "Failed to load products. Please try again later.";
+      const errorMessage =
+        err.message || "Failed to load products. Please try again later.";
       setError(errorMessage);
       toast.error(errorMessage);
       console.error("Error fetching products:", err);
@@ -236,39 +270,38 @@ export function ProductManagement() {
 
   useEffect(() => {
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, refreshTrigger]);
 
   const handleAddProduct = (newProduct: Product) => {
-    // Add new product to the beginning of the list
     setProducts((prev) => [newProduct, ...prev]);
-    
-    // Refresh the list to ensure proper sorting
+
     setTimeout(() => {
       fetchProducts();
     }, 300);
-    
+
     toast.success("Product added successfully!");
   };
 
   const handleUpdateProduct = (updatedProduct: Product) => {
-    // Extract pricing from updated product's variants
-    const pricing = extractPricingFromVariants(updatedProduct.variants);
-    const productWithPricing = {
+    const pricing = extractPricingFromVariants(updatedProduct.variants || []);
+
+    const productWithPricing: Product = {
       ...updatedProduct,
-      pricing: pricing
+      pricing,
+      image: updatedProduct.image || updatedProduct.images?.[0] || "", // ✅ safety
     };
-    
+
     setProducts((prev) =>
       prev.map((product) =>
         product.id === productWithPricing.id ? productWithPricing : product
       )
     );
-    
-    // Force refresh after a moment to ensure consistency
+
     setTimeout(() => {
       fetchProducts();
     }, 300);
-    
+
     toast.success("Product updated successfully!");
   };
 
@@ -277,7 +310,10 @@ export function ProductManagement() {
     toast.success("Product deleted successfully!");
   };
 
-  const handleToggleStatus = async (productId: string, currentIsActivate: boolean) => {
+  const handleToggleStatus = async (
+    productId: string,
+    currentIsActivate: boolean
+  ) => {
     try {
       const adminToken = localStorage.getItem("adminToken");
       if (!adminToken) {
@@ -285,83 +321,69 @@ export function ProductManagement() {
         return;
       }
 
-      // GET API se: isActivate: true = active, false = inactive
-      // PUT API ko: {status: "activate"} ya {status: "deactivate"} bhejna hai
-      
-      // Agar product currently active hai (isActivate: true), to use deactivate karna hai
-      // Agar product currently inactive hai (isActivate: false), to use activate karna hai
       const newStatus = currentIsActivate ? "deactivate" : "activate";
-      
-      console.log(`Toggling product ${productId}:`, {
-        currentIsActivate,
-        newStatus,
-        action: currentIsActivate ? "Deactivating" : "Activating"
-      });
-      
-      const response = await fetch(`https://barber-syndicate.vercel.app/api/v1/product/active-deactive/${productId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify({
-          status: newStatus
-        }),
-      });
+
+      const response = await fetch(
+        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive/${productId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error:', errorText);
-        throw new Error(`Failed to update product status. Status: ${response.status}`);
+        console.error("API Error:", errorText);
+        throw new Error(
+          `Failed to update product status. Status: ${response.status}`
+        );
       }
 
       const result = await response.json();
-      console.log('API Response:', result);
-      
+
       if (result.success) {
-        // New status calculate karo
-        // Agar newStatus "activate" hai to isActivate true hoga
-        // Agar newStatus "deactivate" hai to isActivate false hoga
         const newIsActivate = newStatus === "activate";
-        
-        console.log(`Updating local state: newIsActivate = ${newIsActivate}`);
-        
-        // Local state update karo
-        setProducts(prev => 
-          prev.map(product => 
-            product.id === productId 
-              ? { 
-                  ...product, 
+
+        setProducts((prev) =>
+          prev.map((product) =>
+            product.id === productId
+              ? {
+                  ...product,
                   isActivate: newIsActivate,
-                  status: newIsActivate ? "active" : "inactive"
-                } 
+                  status: newIsActivate ? "active" : "inactive",
+                }
               : product
           )
         );
-        
-        // Sort products after status change
-        setProducts(prev => 
+
+        setProducts((prev) =>
           [...prev].sort((a, b) => {
-            // First sort by isActivate: active products first (true first)
             if (a.isActivate && !b.isActivate) return -1;
             if (!a.isActivate && b.isActivate) return 1;
-            // Keep original order for others
             return 0;
           })
         );
-        
-        toast.success(result.message || `Product ${newStatus === "activate" ? "activated" : "deactivated"} successfully!`);
-        
-        // Refresh after 500ms to ensure data is synced
+
+        toast.success(
+          result.message ||
+            `Product ${
+              newStatus === "activate" ? "activated" : "deactivated"
+            } successfully!`
+        );
+
         setTimeout(() => {
           fetchProducts();
         }, 500);
       } else {
-        throw new Error(result.message || 'Failed to update status');
+        throw new Error(result.message || "Failed to update status");
       }
     } catch (error: any) {
-      console.error('Error updating product status:', error);
-      toast.error(error.message || 'Failed to update product status');
+      console.error("Error updating product status:", error);
+      toast.error(error.message || "Failed to update product status");
     }
   };
 
@@ -372,26 +394,32 @@ export function ProductManagement() {
   };
 
   const handleRefresh = () => {
-    setCurrentPage(1); // Reset to first page on refresh
-    setRefreshTrigger(prev => !prev); // Trigger refresh
+    setCurrentPage(1);
+    setRefreshTrigger((prev) => !prev);
   };
 
   return (
     <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-rose-900">Product Management</h1>
+          <h1 className="text-3xl font-bold text-rose-900">
+            Product Management
+          </h1>
           <p className="text-rose-600">Manage your cosmetic product catalog</p>
         </div>
+
         <div className="flex gap-2">
           <button
             onClick={handleRefresh}
             className="px-4 py-2 bg-rose-100 text-rose-700 rounded hover:bg-rose-200 transition-colors flex items-center gap-2"
             disabled={isLoading}
           >
-            <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </button>
+
           <AddProduct onAddProduct={handleAddProduct} />
         </div>
       </header>
@@ -401,7 +429,7 @@ export function ProductManagement() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-700"></div>
         </div>
       )}
-      
+
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded text-red-600">
           {error}
@@ -414,6 +442,7 @@ export function ProductManagement() {
             <Package className="h-5 w-5" /> Product Catalog
           </CardTitle>
         </CardHeader>
+
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
@@ -421,7 +450,9 @@ export function ProductManagement() {
                 <TableRow className="border-rose-200">
                   <TableHead className="text-rose-700">Image</TableHead>
                   <TableHead className="text-rose-700">Product</TableHead>
-                  <TableHead className="text-rose-700 hidden md:table-cell">Description</TableHead>
+                  <TableHead className="text-rose-700 hidden md:table-cell">
+                    Description
+                  </TableHead>
                   <TableHead className="text-rose-700">1 pc</TableHead>
                   <TableHead className="text-rose-700">12 pcs</TableHead>
                   <TableHead className="text-rose-700">Carton</TableHead>
@@ -429,19 +460,23 @@ export function ProductManagement() {
                   <TableHead className="text-rose-700">Actions</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {products.length === 0 && !isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-rose-700 py-8">
+                    <TableCell
+                      colSpan={8}
+                      className="text-center text-rose-700 py-8"
+                    >
                       No products found. Add your first product!
                     </TableCell>
                   </TableRow>
                 ) : (
                   products.map((product) => (
-                    <TableRow 
-                      key={product.id} 
+                    <TableRow
+                      key={product.id}
                       className={`border-rose-200 hover:bg-rose-50 ${
-                        !product.isActivate ? 'opacity-60 bg-gray-50' : ''
+                        !product.isActivate ? "opacity-60 bg-gray-50" : ""
                       }`}
                     >
                       <TableCell>
@@ -457,48 +492,70 @@ export function ProductManagement() {
                           </div>
                         )}
                       </TableCell>
+
                       <TableCell>
-                        <div 
+                        <div
                           className="font-medium text-rose-900 cursor-help"
                           title={product.name}
                         >
                           {truncateProductName(product.name)}
                         </div>
+
                         {product.isFeatured && (
                           <span className="mt-1 px-2 py-0.5 text-xs bg-rose-100 text-rose-700 rounded inline-block">
                             Featured
                           </span>
                         )}
                       </TableCell>
+
                       <TableCell className="text-rose-700 hidden md:table-cell">
-                        <div 
+                        <div
                           className="truncate cursor-help"
                           title={product.description}
                         >
                           {truncateDescription(product.description)}
                         </div>
                       </TableCell>
+
                       <TableCell className="text-rose-700">
-                        ${product.pricing.single > 0 ? product.pricing.single.toFixed(2) : "0.00"}
+                        $
+                        {product.pricing.single > 0
+                          ? product.pricing.single.toFixed(2)
+                          : "0.00"}
                       </TableCell>
+
                       <TableCell className="text-rose-700">
-                        ${product.pricing.dozen > 0 ? product.pricing.dozen.toFixed(2) : "0.00"}
+                        $
+                        {product.pricing.dozen > 0
+                          ? product.pricing.dozen.toFixed(2)
+                          : "0.00"}
                       </TableCell>
+
                       <TableCell className="text-rose-700">
-                        ${product.pricing.carton > 0 ? product.pricing.carton.toFixed(2) : "0.00"}
+                        $
+                        {product.pricing.carton > 0
+                          ? product.pricing.carton.toFixed(2)
+                          : "0.00"}
                       </TableCell>
+
                       <TableCell>
-                        <Badge 
+                        <Badge
                           className={`cursor-pointer ${
-                            product.isActivate 
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                            product.isActivate
+                              ? "bg-green-100 text-green-800 hover:bg-green-200"
+                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                           }`}
-                          onClick={() => handleToggleStatus(product.id, product.isActivate || false)}
+                          onClick={() =>
+                            handleToggleStatus(
+                              product.id,
+                              product.isActivate || false
+                            )
+                          }
                         >
-                          {product.isActivate ? 'Active' : 'Inactive'}
+                          {product.isActivate ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
+
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -506,9 +563,15 @@ export function ProductManagement() {
                               <MoreVertical className="h-4 w-4 text-rose-700" />
                             </button>
                           </DropdownMenuTrigger>
+
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem
-                              onClick={() => handleToggleStatus(product.id, product.isActivate || false)}
+                              onClick={() =>
+                                handleToggleStatus(
+                                  product.id,
+                                  product.isActivate || false
+                                )
+                              }
                               className="cursor-pointer"
                             >
                               {product.isActivate ? (
@@ -523,12 +586,20 @@ export function ProductManagement() {
                                 </>
                               )}
                             </DropdownMenuItem>
+
                             <DropdownMenuSeparator />
-                            <EditProduct 
-                              product={product} 
-                              onUpdateProduct={handleUpdateProduct} 
+
+                            {/* ✅ FINAL FIX: always pass image to EditProduct */}
+                            <EditProduct
+                              product={{
+                                ...product,
+                                image: product.image || product.images?.[0] || "",
+                              }}
+                              onUpdateProduct={handleUpdateProduct}
                             />
+
                             <DropdownMenuSeparator />
+
                             <DeleteProduct
                               productId={product.id}
                               productName={product.name}
@@ -553,9 +624,11 @@ export function ProductManagement() {
               >
                 Previous
               </button>
+
               <span className="px-4 py-2 text-rose-700">
                 Page {currentPage} of {totalPages}
               </span>
+
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
