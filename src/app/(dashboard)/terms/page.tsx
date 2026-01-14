@@ -119,7 +119,7 @@ export default function PrivacyPolicyPage() {
           </h1>
           <p className="text-gray-600 mt-2 max-w-3xl">
             Your privacy is important to us. This policy outlines how we collect,
-            use, and protect your personal information.
+            use, and protect your personal information when you use our services.
           </p>
         </div>
 
