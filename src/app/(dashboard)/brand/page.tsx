@@ -60,25 +60,40 @@ export default function CategoryPage() {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [openBrand, setOpenBrand] = useState<string | null>(null);
 
-  const BASE_URL = "https://barber-syndicate.vercel.app";
-  const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NWI4ZGY4Yzg1ZDcwMzY5YWFmMTMwMiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2ODE5MTk2NywiZXhwIjoxNzY4Nzk2NzY3fQ.CL4IZAWkRIKngrITLPJvU1fgcUVVrCH9okx-ZpELjZs";
+ const BASE_URL = "https://barber-syndicate.vercel.app";
 
-  const headers = {
-    'Authorization': `Bearer ${TOKEN}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
+// 🔥 Dynamic Token (Login se jo store hota hai)
+const getToken = () => {
+  if (typeof window !== "undefined") {
+    return (
+      localStorage.getItem("token") || // agar login me token key "token" hai
+      localStorage.getItem("authToken") || // agar key authToken hai
+      sessionStorage.getItem("token") ||
+      ""
+    );
+  }
+  return "";
+};
+
+const getHeaders = () => {
+  const token = getToken();
+  return {
+    Authorization: token ? `Bearer ${token}` : "",
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
+};
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
-        const [brandsRes, categoriesRes, subCategoriesRes] = await Promise.all([
-          fetch(`${BASE_URL}/api/v1/brands/getall`, { headers }),
-          fetch(`${BASE_URL}/api/v1/category`, { headers }),
-          fetch(`${BASE_URL}/api/v1/subcategory/getSubCat`, { headers })
-        ]);
+      const [brandsRes, categoriesRes, subCategoriesRes] = await Promise.all([
+  fetch(`${BASE_URL}/api/v1/brands/getall`, { headers: getHeaders() }),
+  fetch(`${BASE_URL}/api/v1/category`, { headers: getHeaders() }),
+  fetch(`${BASE_URL}/api/v1/subcategory/getSubCat`, { headers: getHeaders() }),
+]);
 
         const brandsData = await brandsRes.json();
         const categoriesData = await categoriesRes.json();
