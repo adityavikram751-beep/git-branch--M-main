@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { Search, Eye, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Search, Eye, AlertCircle, RefreshCw, X } from "lucide-react";
 
 type Enquiry = {
   _id: string;
@@ -15,19 +15,39 @@ type Enquiry = {
   [key: string]: any;
 };
 
-const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) => {
+type UserEnquirySummary = {
+  _id?: string;
+  name: string;
+  email: string;
+  enquiryId: string;
+  enquiryCount: number;
+  latestEnquiry: string;
+  status: string;
+  allEnquiries: Enquiry[];
+};
+
+const AllUserEnquiries = ({
+  onViewUser,
+}: {
+  onViewUser?: (user: any) => void;
+}) => {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const adminToken = localStorage.getItem("adminToken");
+  // ✅ Modal state
+  const [selectedUser, setSelectedUser] = useState<UserEnquirySummary | null>(
+    null
+  );
 
   const fetchAllUserEnquiries = async () => {
     try {
+      const adminToken = localStorage.getItem("adminToken");
+
       if (!adminToken) {
         throw new Error("No admin token provided. Please log in again.");
       }
@@ -52,7 +72,7 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
 
       const result = await response.json();
       if (result.success) {
-        setEnquiries(result.data);
+        setEnquiries(result.data || []);
       } else {
         throw new Error("Failed to fetch enquiries");
       }
@@ -68,46 +88,39 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
     fetchAllUserEnquiries();
   }, []);
 
-  // Define a type for the user summary
-      type UserEnquirySummary = {
-        _id?: string;
-        name: string;
-        email: string;
-        enquiryId: string;
-        enquiryCount: number;
-        latestEnquiry: string;
-        status: string;
-        allEnquiries: Enquiry[];
-        [key: string]: any;
-      };
-  
-    // Group enquiries by user
-    const uniqueUsers = enquiries.reduce<UserEnquirySummary[]>((acc, enquiry) => {
-      const userId = enquiry.user_id?._id;
-      if (userId && !acc.find((user) => user._id === userId)) {
-        const userEnquiries = enquiries.filter(
-          (enq) => enq.user_id?._id === userId
-        );
-        const latestEnquiry = userEnquiries.sort(
-          (a, b) => new Date(b.AddedAt).getTime() - new Date(a.AddedAt).getTime()
-        )[0];
-  
-        acc.push({
-          _id: enquiry.user_id?._id ?? "",
-          name: enquiry.user_id?.name ?? "Unknown",
-          email: enquiry.user_id?.email ?? "Unknown",
-          enquiryId: enquiry._id,
-          enquiryCount: userEnquiries.length,
-          latestEnquiry: latestEnquiry.AddedAt,
-          status: latestEnquiry.status || "Pending", // fallback
-          allEnquiries: userEnquiries,
-        });
-      }
-      return acc;
-    }, []);
+  // ✅ Group enquiries by user (FIXED SORT)
+  const uniqueUsers = enquiries.reduce<UserEnquirySummary[]>((acc, enquiry) => {
+    const userId = enquiry.user_id?._id;
+
+    if (userId && !acc.find((user) => user._id === userId)) {
+      const userEnquiries = enquiries.filter(
+        (enq) => enq.user_id?._id === userId
+      );
+
+      // ✅ FIX: sort on copy (no mutation)
+      const latestEnquiry = [...userEnquiries].sort(
+        (a, b) =>
+          new Date(b.AddedAt).getTime() - new Date(a.AddedAt).getTime()
+      )[0];
+
+      acc.push({
+        _id: enquiry.user_id?._id ?? "",
+        name: enquiry.user_id?.name ?? "Unknown",
+        email: enquiry.user_id?.email ?? "Unknown",
+        enquiryId: enquiry._id,
+        enquiryCount: userEnquiries.length,
+        latestEnquiry: latestEnquiry?.AddedAt ?? enquiry.AddedAt,
+        status: latestEnquiry?.status || "Pending",
+        allEnquiries: userEnquiries,
+      });
+    }
+
+    return acc;
+  }, []);
 
   // Apply filters
   let filteredUsers = uniqueUsers;
+
   if (searchTerm) {
     filteredUsers = uniqueUsers.filter(
       (user) =>
@@ -124,12 +137,8 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
   // Pagination
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedUsers = filteredUsers.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
-  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter]);
@@ -144,22 +153,12 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
     });
   };
 
-  const getStatusBadge = (status: "Approved" | "Pending" | "Rejected" | string = "Pending") => {
-    const statusConfig: Record<"Approved" | "Pending" | "Rejected", string> = {
-      Approved: "bg-green-100 text-green-800 border-green-200",
-      Pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      Rejected: "bg-red-100 text-red-800 border-red-200",
-    };
-    return statusConfig[status as "Approved" | "Pending" | "Rejected"] || "bg-gray-100 text-gray-800 border-gray-200";
-  };
+  const handleViewUser = (user: UserEnquirySummary) => {
+    // ✅ open modal and show all enquiries
+    setSelectedUser(user);
 
-  const handleViewUser = (user: { [x: string]: any; _id?: string | undefined; name: any; email: any; enquiryId?: string; enquiryCount: any; latestEnquiry?: string; status: any; allEnquiries?: Enquiry[]; }) => {
     if (onViewUser) {
       onViewUser(user);
-    } else {
-      alert(
-        `Viewing details for ${user.name}\nEmail: ${user.email}\nEnquiries: ${user.enquiryCount}\nLatest Status: ${user.status}`
-      );
     }
   };
 
@@ -182,7 +181,7 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 relative">
       {/* Header */}
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center mb-4">
@@ -212,16 +211,8 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="All">All Status</option>
-            <option value="Approved">Approved</option>
-            <option value="Pending">Pending</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+
+         
         </div>
 
         <div className="mt-3 text-sm text-gray-600">
@@ -246,14 +237,12 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Latest Activity
               </th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
+
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
@@ -280,6 +269,7 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
                       #{user._id ? user._id.slice(-6) : "------"}
                     </span>
                   </td>
+
                   <td className="px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
@@ -288,24 +278,17 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
                       <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {user.enquiryCount} enquir
-                      {user.enquiryCount === 1 ? "y" : "ies"}
+                      {user.enquiryCount} enquir{user.enquiryCount === 1 ? "y" : "ies"}
                     </span>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatDate(user.latestEnquiry)}
                   </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusBadge(
-                        user.status
-                      )}`}
-                    >
-                      {user.status}
-                    </span>
-                  </td> */}
+
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => handleViewUser(user)}
@@ -326,8 +309,7 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
       {totalPages > 1 && (
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
           <div className="text-sm text-gray-700">
-            Page {currentPage} of {totalPages} ({filteredUsers.length} total
-            users)
+            Page {currentPage} of {totalPages} ({filteredUsers.length} total users)
           </div>
           <div className="flex space-x-2">
             <button
@@ -344,6 +326,69 @@ const AllUserEnquiries = ({ onViewUser }: { onViewUser?: (user: any) => void }) 
             >
               Next
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ MODAL (View Details) */}
+      {selectedUser && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-2xl rounded-lg shadow-lg overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {selectedUser.name} - All Enquiries ({selectedUser.allEnquiries.length})
+                </h2>
+                <p className="text-sm text-gray-600">{selectedUser.email}</p>
+              </div>
+
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="p-2 hover:bg-gray-200 rounded-md transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              {[...selectedUser.allEnquiries]
+                .sort(
+                  (a, b) =>
+                    new Date(b.AddedAt).getTime() - new Date(a.AddedAt).getTime()
+                )
+                .map((enq, i) => (
+                  <div
+                    key={enq._id}
+                    className="border border-gray-200 rounded-lg p-3 mb-3"
+                  >
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-semibold text-gray-900">
+                        Enquiry #{i + 1}
+                      </p>
+                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 border">
+                        {enq.status || "Pending"}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-gray-600 mt-2">
+                      <b>Date:</b> {formatDate(enq.AddedAt)}
+                    </p>
+
+                    <p className="text-xs text-gray-400 mt-1">
+                      Enquiry ID: {enq._id}
+                    </p>
+                  </div>
+                ))}
+            </div>
+
+            <div className="p-4 border-t bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

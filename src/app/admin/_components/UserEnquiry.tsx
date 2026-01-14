@@ -1,34 +1,32 @@
-// Main Admin Enquiry 
 "use client";
 import React, { useState } from "react";
 import AllUserEnquiries from "./user-enquiry/allUserEnquiry";
-import SingleUserEnquiry from "./user-enquiry/SingleUserEnquiries";
+import SingleUserEnquiries from "./user-enquiry/SingleUserEnquiries";
 
 const AdminEnquirySystem = () => {
   const [currentView, setCurrentView] = useState<"all" | "single">("all");
-  const [selectedEnquiryId, setSelectedEnquiryId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const handleViewEnquiry = (enquiryId: string) => {
-    setSelectedEnquiryId(enquiryId);
+  const handleViewUserEnquiries = (userId: string) => {
+    setSelectedUserId(userId);
     setCurrentView("single");
   };
 
   const handleBackToAll = () => {
     setCurrentView("all");
-    setSelectedEnquiryId(null);
+    setSelectedUserId(null);
   };
 
   return (
     <div className="min-h-screen bg-rose-50 p-6">
       <div className="max-w-7xl mx-auto">
         {currentView === "all" ? (
-          <AllUserEnquiries onViewUser={(user) => handleViewEnquiry(user.enquiryId)} />
+          <AllUserEnquiries
+            onViewUser={(user) => handleViewUserEnquiries(user._id)} // ✅ userId
+          />
         ) : (
-          selectedEnquiryId && (
-            <SingleUserEnquiry
-              enquiryId={selectedEnquiryId}
-              onBack={handleBackToAll}
-            />
+          selectedUserId && (
+            <SingleUserEnquiries userId={selectedUserId} onBack={handleBackToAll} />
           )
         )}
       </div>
