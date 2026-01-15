@@ -4,7 +4,14 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -96,7 +103,9 @@ export function UserRequests() {
   const [requests, setRequests] = useState<UserRequest[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
-  const [filterStatus, setFilterStatus] = useState<"all" | UserRequestStatus>("all")
+  const [filterStatus, setFilterStatus] = useState<"all" | UserRequestStatus>(
+    "all"
+  )
   const [selectedUser, setSelectedUser] = useState<UserRequest | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false)
@@ -113,11 +122,13 @@ export function UserRequests() {
     return localStorage.getItem("adminToken")
   }
 
-  // backend status: "reject" / "rejected" -> frontend "rejected"
+  // ✅ FIXED normalizeStatus (approve/approved/accepted sab handle)
   const normalizeStatus = (status: string): UserRequestStatus => {
-    const s = (status || "").toLowerCase()
-    if (s === "approved") return "approved"
+    const s = (status || "").toLowerCase().trim()
+
+    if (s === "approved" || s === "approve" || s === "accepted") return "approved"
     if (s === "rejected" || s === "reject") return "rejected"
+
     return "pending"
   }
 
@@ -148,18 +159,23 @@ export function UserRequests() {
         throw new Error(data.message || "API returned unsuccessful response")
       }
 
-      const mappedRequests: UserRequest[] = (data.data || []).map((user) => ({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        gstNumber: user.gstnumber,
-        status: normalizeStatus(user.status),
-        idProof: user.idProof,
-        isDelete: user.isDelete,
-        isBlock: user.isBlock,
-      }))
+      const mappedRequests: UserRequest[] = (data.data || []).map((user) => {
+        // 🔥 Debug line (optional)
+        // console.log("RAW STATUS FROM API:", user.status)
+
+        return {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          address: user.address,
+          gstNumber: user.gstnumber,
+          status: normalizeStatus(user.status),
+          idProof: user.idProof,
+          isDelete: user.isDelete,
+          isBlock: user.isBlock,
+        }
+      })
 
       setRequests(mappedRequests)
     } catch (err: unknown) {
@@ -175,7 +191,7 @@ export function UserRequests() {
     }
   }
 
-  // ✅ Approve (admin API)
+  // ✅ Approve
   const handleApprove = async (id: string) => {
     try {
       setIsActionLoading(true)
@@ -201,11 +217,12 @@ export function UserRequests() {
 
       toast.success("User approved successfully")
 
-      // UI update
+      // ✅ instant UI update
       setRequests((prev) =>
         prev.map((r) => (r.id === id ? { ...r, status: "approved" } : r))
       )
 
+      // ✅ refresh from backend
       await fetchUsers()
     } catch (e) {
       console.error("Approve error:", e)
@@ -217,7 +234,7 @@ export function UserRequests() {
     }
   }
 
-  // ✅ Reject (delete-block API)
+  // ✅ Reject
   const handleReject = async (id: string) => {
     try {
       setIsActionLoading(true)
@@ -239,9 +256,6 @@ export function UserRequests() {
         message: "Invalid JSON response",
       }))
 
-      console.log("Reject response status:", res.status)
-      console.log("Reject response:", data)
-
       if (!res.ok) {
         throw new Error(data?.message || `Reject failed (HTTP ${res.status})`)
       }
@@ -252,7 +266,6 @@ export function UserRequests() {
 
       toast.success(data.message || "User rejected successfully")
 
-      // UI update
       setRequests((prev) =>
         prev.map((r) => (r.id === id ? { ...r, status: "rejected" } : r))
       )
@@ -268,7 +281,7 @@ export function UserRequests() {
     }
   }
 
-  // ✅ Block/Unblock (delete-block API)
+  // ✅ Block/Unblock
   const handleBlockUnblock = async () => {
     if (!selectedUser) return
 
@@ -289,17 +302,15 @@ export function UserRequests() {
         }
       )
 
-      console.log("Block/Unblock response status:", res.status)
-
       const data: DeleteBlockResponse = await res.json().catch(() => ({
         status: false,
         message: "Invalid JSON response",
       }))
 
-      console.log("Block/Unblock response:", data)
-
       if (!res.ok) {
-        throw new Error(data?.message || `Block/Unblock failed (HTTP ${res.status})`)
+        throw new Error(
+          data?.message || `Block/Unblock failed (HTTP ${res.status})`
+        )
       }
 
       if (!data.status) {
@@ -308,7 +319,6 @@ export function UserRequests() {
 
       toast.success(data.message || `User ${action} successfully`)
 
-      // UI update from response (best)
       if (data?.data?.id) {
         setRequests((prev) =>
           prev.map((r) =>
@@ -322,7 +332,6 @@ export function UserRequests() {
           )
         )
       } else {
-        // fallback toggle
         setRequests((prev) =>
           prev.map((r) =>
             r.id === selectedUser.id
@@ -346,7 +355,7 @@ export function UserRequests() {
     }
   }
 
-  // ✅ Delete (delete-block API)
+  // ✅ Delete
   const handleDelete = async () => {
     if (!selectedUser) return
 
@@ -365,14 +374,10 @@ export function UserRequests() {
         }
       )
 
-      console.log("Delete response status:", res.status)
-
       const data: DeleteBlockResponse = await res.json().catch(() => ({
         status: false,
         message: "Invalid JSON response",
       }))
-
-      console.log("Delete response:", data)
 
       if (!res.ok) {
         throw new Error(data?.message || `Delete failed (HTTP ${res.status})`)
@@ -384,7 +389,6 @@ export function UserRequests() {
 
       toast.success(data.message || "User deleted successfully")
 
-      // UI update from response
       if (data?.data?.id) {
         setRequests((prev) =>
           prev.map((r) =>
@@ -531,7 +535,10 @@ export function UserRequests() {
                 <TableBody>
                   {filteredRequests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-rose-700 py-4">
+                      <TableCell
+                        colSpan={6}
+                        className="text-center text-rose-700 py-4"
+                      >
                         No user requests found
                       </TableCell>
                     </TableRow>
@@ -541,18 +548,21 @@ export function UserRequests() {
                         <TableCell className="font-medium text-rose-900">
                           {request.name}
                         </TableCell>
-                        <TableCell className="text-rose-700">{request.phone}</TableCell>
+                        <TableCell className="text-rose-700">
+                          {request.phone}
+                        </TableCell>
                         <TableCell className="text-rose-700 hidden md:table-cell">
                           {request.email}
                         </TableCell>
-                        <TableCell className="text-rose-700">{request.gstNumber}</TableCell>
+                        <TableCell className="text-rose-700">
+                          {request.gstNumber}
+                        </TableCell>
 
-                     <TableCell>
-  <div className="flex flex-col gap-1">
-    {getStatusBadge(request)}
-  </div>
-</TableCell>
-
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {getStatusBadge(request)}
+                          </div>
+                        </TableCell>
 
                         <TableCell>
                           <div className="flex gap-2">
@@ -579,13 +589,14 @@ export function UserRequests() {
                                 </DialogHeader>
 
                                 <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-                                  {/* User Information */}
                                   <div className="space-y-3">
                                     <div className="grid grid-cols-1 gap-2">
                                       <div className="flex items-center gap-3 p-2 bg-rose-50 rounded-lg">
                                         <User className="h-4 w-4 text-rose-600" />
                                         <div>
-                                          <p className="text-xs font-medium text-rose-700">Name</p>
+                                          <p className="text-xs font-medium text-rose-700">
+                                            Name
+                                          </p>
                                           <p className="text-rose-900 font-semibold text-sm">
                                             {request.name}
                                           </p>
@@ -595,7 +606,9 @@ export function UserRequests() {
                                       <div className="flex items-center gap-3 p-2 bg-rose-50 rounded-lg">
                                         <Mail className="h-4 w-4 text-rose-600" />
                                         <div>
-                                          <p className="text-xs font-medium text-rose-700">Email</p>
+                                          <p className="text-xs font-medium text-rose-700">
+                                            Email
+                                          </p>
                                           <p className="text-rose-900 font-semibold text-sm">
                                             {request.email}
                                           </p>
@@ -605,7 +618,9 @@ export function UserRequests() {
                                       <div className="flex items-center gap-3 p-2 bg-rose-50 rounded-lg">
                                         <Phone className="h-4 w-4 text-rose-600" />
                                         <div>
-                                          <p className="text-xs font-medium text-rose-700">Phone</p>
+                                          <p className="text-xs font-medium text-rose-700">
+                                            Phone
+                                          </p>
                                           <p className="text-rose-900 font-semibold text-sm">
                                             {request.phone}
                                           </p>
@@ -615,7 +630,9 @@ export function UserRequests() {
                                       <div className="flex items-start gap-3 p-2 bg-rose-50 rounded-lg">
                                         <MapPin className="h-4 w-4 text-rose-600 mt-0.5" />
                                         <div className="flex-1">
-                                          <p className="text-xs font-medium text-rose-700">Address</p>
+                                          <p className="text-xs font-medium text-rose-700">
+                                            Address
+                                          </p>
                                           <p className="text-rose-900 font-semibold text-xs">
                                             {request.address}
                                           </p>
@@ -625,7 +642,9 @@ export function UserRequests() {
                                       <div className="flex items-center gap-3 p-2 bg-rose-50 rounded-lg">
                                         <FileText className="h-4 w-4 text-rose-600" />
                                         <div>
-                                          <p className="text-xs font-medium text-rose-700">GST Number</p>
+                                          <p className="text-xs font-medium text-rose-700">
+                                            GST Number
+                                          </p>
                                           <p className="text-rose-900 font-semibold text-sm">
                                             {request.gstNumber}
                                           </p>
@@ -634,7 +653,6 @@ export function UserRequests() {
                                     </div>
                                   </div>
 
-                                  {/* Status Section */}
                                   <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
                                     <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
                                       <AlertCircle className="h-3 w-3" />
@@ -642,11 +660,17 @@ export function UserRequests() {
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="space-y-1">
-                                        <p className="text-xs font-medium text-gray-600">Application</p>
-                                        <div className="text-xs">{getStatusBadge(request)}</div>
+                                        <p className="text-xs font-medium text-gray-600">
+                                          Application
+                                        </p>
+                                        <div className="text-xs">
+                                          {getStatusBadge(request)}
+                                        </div>
                                       </div>
                                       <div className="space-y-1">
-                                        <p className="text-xs font-medium text-gray-600">Account</p>
+                                        <p className="text-xs font-medium text-gray-600">
+                                          Account
+                                        </p>
                                         {request.isDelete ? (
                                           <Badge className="bg-gray-100 text-gray-800 text-xs">
                                             Deleted
@@ -664,7 +688,6 @@ export function UserRequests() {
                                     </div>
                                   </div>
 
-                                  {/* ID Proof Section */}
                                   <div className="bg-rose-50 p-2 rounded-lg">
                                     <h3 className="text-sm font-semibold text-rose-800 mb-2 flex items-center gap-2">
                                       <ImageIcon className="h-3 w-3" />
@@ -679,7 +702,8 @@ export function UserRequests() {
                                             alt="ID Proof"
                                             className="w-full h-40 object-contain"
                                             onError={(e) => {
-                                              const target = e.target as HTMLImageElement
+                                              const target =
+                                                e.target as HTMLImageElement
                                               target.src = getImageUrl("")
                                             }}
                                           />
@@ -697,20 +721,25 @@ export function UserRequests() {
                                     ) : (
                                       <div className="border border-dashed border-rose-200 rounded-lg p-4 text-center bg-white">
                                         <ImageIcon className="h-6 w-6 text-rose-300 mx-auto mb-1" />
-                                        <p className="text-rose-500 text-xs">No ID Proof Available</p>
+                                        <p className="text-rose-500 text-xs">
+                                          No ID Proof Available
+                                        </p>
                                       </div>
                                     )}
                                   </div>
 
-                                  {/* Action Buttons */}
                                   {!request.isDelete && (
                                     <div className="pt-3 border-t border-rose-100">
                                       <div className="space-y-2">
                                         <div className="grid grid-cols-2 gap-2">
                                           <Button
-                                            onClick={() => handleApprove(request.id)}
+                                            onClick={() =>
+                                              handleApprove(request.id)
+                                            }
                                             className="bg-emerald-600 hover:bg-emerald-700 h-9 text-xs"
-                                            disabled={isActionLoading || request.isBlock}
+                                            disabled={
+                                              isActionLoading || request.isBlock
+                                            }
                                             size="sm"
                                           >
                                             <Check className="h-3 w-3 mr-1" />
@@ -719,9 +748,13 @@ export function UserRequests() {
 
                                           <Button
                                             variant="destructive"
-                                            onClick={() => handleReject(request.id)}
+                                            onClick={() =>
+                                              handleReject(request.id)
+                                            }
                                             className="h-9 text-xs"
-                                            disabled={isActionLoading || request.isBlock}
+                                            disabled={
+                                              isActionLoading || request.isBlock
+                                            }
                                             size="sm"
                                           >
                                             <X className="h-3 w-3 mr-1" />
@@ -793,7 +826,10 @@ export function UserRequests() {
       </Card>
 
       {/* Block/Unblock Confirmation Dialog */}
-      <AlertDialog open={isBlockDialogOpen} onOpenChange={setIsBlockDialogOpen}>
+      <AlertDialog
+        open={isBlockDialogOpen}
+        onOpenChange={setIsBlockDialogOpen}
+      >
         <AlertDialogContent className="border-rose-200 max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-rose-900 text-lg">
@@ -836,14 +872,18 @@ export function UserRequests() {
       </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent className="border-rose-200 max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-rose-900 text-lg">
               Delete User
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              Are you sure you want to delete {selectedUser?.name}? This action cannot be undone.
+              Are you sure you want to delete {selectedUser?.name}? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
