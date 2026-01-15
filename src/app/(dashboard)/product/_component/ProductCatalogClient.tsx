@@ -71,7 +71,8 @@ export default function ProductCatalogClient({
 
   // URL Filters
   const categoryId = searchParams.get("category") || initialCategory || null;
-  const subcategoryId = searchParams.get("subcategory") || initialSubCategory || null;
+  const subcategoryId =
+    searchParams.get("subcategory") || initialSubCategory || null;
   const brandId = searchParams.get("brand") || initialBrand || null;
 
   const API_URL = "https://barber-syndicate.vercel.app/api/v1/product";
@@ -116,7 +117,8 @@ export default function ProductCatalogClient({
             `https://barber-syndicate.vercel.app/api/v1/brand/${brandId}`
           );
           const data = await res.json();
-          if (data?.success) setBrandName(data?.data?.brandName || data?.data?.brand || "");
+          if (data?.success)
+            setBrandName(data?.data?.brandName || data?.data?.brand || "");
         } catch (err) {
           console.error("Error fetching brand:", err);
         }
@@ -137,7 +139,9 @@ export default function ProductCatalogClient({
       params.append("page", page.toString());
       params.append("limit", "20");
 
-      if (searchTerm) params.append("search", searchTerm);
+      // ❌ SEARCH PARAM REMOVE (API search nahi hai)
+      // if (searchTerm) params.append("search", searchTerm);
+
       if (subcategoryId) params.append("subcategory", subcategoryId);
       else if (categoryId) params.append("category", categoryId);
       if (brandId) params.append("brand", brandId);
@@ -164,11 +168,16 @@ export default function ProductCatalogClient({
     }
   };
 
-  // When searchTerm or filters change, fetch again
+  // When filters change, fetch again
   useEffect(() => {
     fetchProducts(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, categoryId, subcategoryId, brandId]);
+  }, [categoryId, subcategoryId, brandId]);
+
+  // ================= FRONTEND SEARCH (NAME ONLY) =================
+  const filteredProducts = products.filter((p) =>
+    (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // ================= ACTIONS =================
   const clearFilters = () => {
@@ -333,7 +342,7 @@ export default function ProductCatalogClient({
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {products.map((p) => (
+              {filteredProducts.map((p) => (
                 <ProductCard
                   key={p._id}
                   product={{
@@ -348,31 +357,35 @@ export default function ProductCatalogClient({
 
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-16 mb-12">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => {
-                      fetchProducts(num);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    className={`w-10 h-10 rounded-lg font-bold transition-all ${
-                      currentPage === num
-                        ? "bg-[#B30000] text-white shadow-md"
-                        : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50"
-                    }`}
-                  >
-                    {num}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (num) => (
+                    <button
+                      key={num}
+                      onClick={() => {
+                        fetchProducts(num);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`w-10 h-10 rounded-lg font-bold transition-all ${
+                        currentPage === num
+                          ? "bg-[#B30000] text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  )
+                )}
               </div>
             )}
 
-            {products.length === 0 && (
+            {filteredProducts.length === 0 && (
               <div className="text-center py-16">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                   <Search className="h-8 w-8 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Products Found</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  No Products Found
+                </h3>
                 <p className="text-gray-600 mb-6">
                   {searchTerm
                     ? `No products found for "${searchTerm}"`
