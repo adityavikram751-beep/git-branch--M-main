@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { X, SlidersHorizontal } from "lucide-react";
 
 type Section = {
   id: string;
@@ -61,15 +62,15 @@ export default function PrivacyPolicyPage() {
 
   const [activeId, setActiveId] = useState(sections[0]?.id || "");
 
+  // ✅ Mobile Sidebar Drawer open/close
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   // ✅ Smooth scroll with header offset (Navbar fixed issue solved)
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
 
-    // 🔥 IMPORTANT: ye value apne navbar height ke hisaab se
-    // agar ab bhi header touch ho raha ho to 150/160 kar dena
     const headerOffset = 140;
-
     const elementPosition = el.getBoundingClientRect().top + window.scrollY;
     const offsetPosition = elementPosition - headerOffset;
 
@@ -86,8 +87,7 @@ export default function PrivacyPolicyPage() {
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort(
-            (a, b) =>
-              (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0)
+            (a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0)
           );
 
         if (visible.length > 0) {
@@ -108,9 +108,90 @@ export default function PrivacyPolicyPage() {
     return () => observer.disconnect();
   }, [sections]);
 
+  // ✅ Sidebar UI reusable
+  const SidebarContent = () => (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="sticky top-0 bg-white z-10 p-6 border-b border-gray-200">
+        <h3 className="text-xl font-semibold text-gray-900">
+          Quick Navigation
+        </h3>
+      </div>
+
+      <div className="max-h-[70vh] overflow-y-auto p-6">
+        <ul className="space-y-3">
+          {sections.map((item, index) => {
+            const isActive = activeId === item.id;
+
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => {
+                    scrollToSection(item.id);
+                    // ✅ mobile me click ke baad sidebar close
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full text-left text-sm md:text-base transition-all ${
+                    isActive
+                      ? "text-blue-600 font-semibold"
+                      : "text-gray-700 hover:text-blue-600"
+                  }`}
+                >
+                  <span className="mr-2">{index + 1}.</span>
+                  {item.title}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#FFF7F0]">
-      <div className="max-w-6xl mx-auto px-4 py-20">
+      {/* ✅ MOBILE FIXED NAV BUTTON */}
+      <div className="lg:hidden fixed top-[56px] left-0 right-0 z-40 bg-[#FFF7F0] pt-4 pb-3">
+        <div className="max-w-6xl mx-auto px-4">
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-red-500" />
+              <span className="font-semibold text-gray-800">Navigation</span>
+            </div>
+            <span className="text-xs text-gray-500"></span>
+          </button>
+        </div>
+      </div>
+
+      {/* ✅ MOBILE SIDEBAR DRAWER */}
+      {mobileSidebarOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+
+          <div className="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white z-50 lg:hidden shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+              <h2 className="font-bold text-gray-900">Quick Navigation</h2>
+              <button
+                onClick={() => setMobileSidebarOpen(false)}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="h-[calc(100%-64px)] overflow-y-auto p-4">
+              <SidebarContent />
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="max-w-6xl mx-auto px-4 py-20 pt-32 lg:pt-20">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-4xl font-bold">
@@ -125,43 +206,10 @@ export default function PrivacyPolicyPage() {
 
         {/* Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Sidebar */}
-          <aside className="lg:col-span-4">
-            {/* ✅ Navbar ke niche sticky */}
+          {/* Desktop Sidebar */}
+          <aside className="lg:col-span-4 hidden lg:block">
             <div className="sticky top-[90px]">
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                {/* ✅ Sidebar Header sticky inside sidebar */}
-                <div className="sticky top-0 bg-white z-10 p-6 border-b border-gray-200">
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    Quick Navigation
-                  </h3>
-                </div>
-
-                {/* ✅ Sidebar scrollable list */}
-                <div className="max-h-[70vh] overflow-y-auto p-6">
-                  <ul className="space-y-3">
-                    {sections.map((item, index) => {
-                      const isActive = activeId === item.id;
-
-                      return (
-                        <li key={item.id}>
-                          <button
-                            onClick={() => scrollToSection(item.id)}
-                            className={`w-full text-left text-sm md:text-base transition-all ${
-                              isActive
-                                ? "text-blue-600 font-semibold"
-                                : "text-gray-700 hover:text-blue-600"
-                            }`}
-                          >
-                            <span className="mr-2">{index + 1}.</span>
-                            {item.title}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
+              <SidebarContent />
             </div>
           </aside>
 
@@ -171,7 +219,6 @@ export default function PrivacyPolicyPage() {
               <section
                 key={item.id}
                 id={item.id}
-                // scroll-mt for manual scroll also
                 className="scroll-mt-[160px]"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">

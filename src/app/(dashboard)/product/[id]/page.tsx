@@ -339,11 +339,8 @@ export default function ProductDetail() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
        <div className="flex items-center space-x-2 text-sm text-gray-500 mb-8">
-  <Link href="/" className="hover:text-purple-600 transition-colors">Home</Link>
   <span>/</span>
-  <Link href="/product" className="hover:text-purple-600 transition-colors">Products</Link>
   <span>/</span>
-  <span className="text-gray-900">{product.name}</span>
 </div>
 
         

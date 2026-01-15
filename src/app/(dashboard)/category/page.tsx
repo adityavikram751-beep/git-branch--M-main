@@ -497,10 +497,10 @@
 // //   );
 // // }
 
-'use client';
+"use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import {
   ChevronDown,
   ChevronUp,
@@ -511,9 +511,10 @@ import {
   TagIcon,
   Menu,
   X,
-  Layers
-} from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+  Layers,
+  SlidersHorizontal,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Category {
   _id: string;
@@ -534,10 +535,17 @@ export default function CategoryPage() {
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [categorySearchTerm, setCategorySearchTerm] = useState('');
+
+  // ✅ Mobile Sidebar Drawer
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
 
   const BASE_URL = "https://barber-syndicate.vercel.app";
 
@@ -547,7 +555,7 @@ export default function CategoryPage() {
       try {
         const [catRes, subRes] = await Promise.all([
           fetch(`${BASE_URL}/api/v1/category`),
-          fetch(`${BASE_URL}/api/v1/subcategory/getSubCat`)
+          fetch(`${BASE_URL}/api/v1/subcategory/getSubCat`),
         ]);
         const catData = await catRes.json();
         const subData = await subRes.json();
@@ -565,58 +573,59 @@ export default function CategoryPage() {
 
   // Get subcategories for a specific category
   const getSubCategoriesForCategory = (catId: string) => {
-    return subCategories.filter(sub => sub.catId === catId);
+    return subCategories.filter((sub) => sub.catId === catId);
   };
 
-  // Determine what to display in main content - UPDATED
+  // Determine what to display in main content
   const getDisplayItems = () => {
     if (selectedSubCategory) {
-      // If subcategory selected, show only that subcategory
-      const subCat = subCategories.find(sub => sub._id === selectedSubCategory);
+      const subCat = subCategories.find((sub) => sub._id === selectedSubCategory);
       return subCat ? [subCat] : [];
     } else if (selectedCategory) {
-      // If category selected, show only that category (not its subcategories)
-      const cat = categories.find(c => c._id === selectedCategory);
+      const cat = categories.find((c) => c._id === selectedCategory);
       return cat ? [cat] : [];
     } else {
-      // If nothing selected (All Categories), show all categories
       return categories;
     }
   };
 
-  // Handle category selection - UPDATED
-  const handleCategoryClick = useCallback((catId: string) => {
-    if (selectedCategory === catId) {
-      // Clicking same category again should deselect
-      setSelectedCategory(null);
-      setSelectedSubCategory(null);
-      setOpenCategory(null);
-    } else {
-      setSelectedCategory(catId);
-      setSelectedSubCategory(null);
-      setOpenCategory(catId === openCategory ? null : catId);
-    }
-  }, [openCategory, selectedCategory]);
+  // Handle category selection
+  const handleCategoryClick = useCallback(
+    (catId: string) => {
+      if (selectedCategory === catId) {
+        setSelectedCategory(null);
+        setSelectedSubCategory(null);
+        setOpenCategory(null);
+      } else {
+        setSelectedCategory(catId);
+        setSelectedSubCategory(null);
+        setOpenCategory(catId === openCategory ? null : catId);
+      }
+    },
+    [openCategory, selectedCategory]
+  );
 
   // Handle subcategory selection
-  const handleSubCategoryClick = useCallback((subCatId: string, catId: string) => {
-    if (selectedSubCategory === subCatId) {
-      // Clicking same subcategory again should deselect
-      setSelectedSubCategory(null);
-      setSelectedCategory(catId);
-    } else {
-      setSelectedSubCategory(subCatId);
-      setSelectedCategory(catId);
-      setOpenCategory(catId);
-    }
-  }, [selectedSubCategory]);
+  const handleSubCategoryClick = useCallback(
+    (subCatId: string, catId: string) => {
+      if (selectedSubCategory === subCatId) {
+        setSelectedSubCategory(null);
+        setSelectedCategory(catId);
+      } else {
+        setSelectedSubCategory(subCatId);
+        setSelectedCategory(catId);
+        setOpenCategory(catId);
+      }
+    },
+    [selectedSubCategory]
+  );
 
   // Handle All Categories
   const handleAllCategories = useCallback(() => {
     setSelectedCategory(null);
     setSelectedSubCategory(null);
     setOpenCategory(null);
-    setCategorySearchTerm('');
+    setCategorySearchTerm("");
   }, []);
 
   // Clear all filters
@@ -629,17 +638,15 @@ export default function CategoryPage() {
     if (!categorySearchTerm.trim()) return categories;
 
     const searchLower = categorySearchTerm.toLowerCase();
-    
-    return categories.filter(cat => {
-      // Check if category name matches
+
+    return categories.filter((cat) => {
       if (cat.categoryname?.toLowerCase().includes(searchLower)) return true;
-      
-      // Check if any subcategory matches
+
       const catSubCategories = getSubCategoriesForCategory(cat._id);
-      const hasMatchingSubCategory = catSubCategories.some(sub => 
+      const hasMatchingSubCategory = catSubCategories.some((sub) =>
         sub.subCatName?.toLowerCase().includes(searchLower)
       );
-      
+
       return hasMatchingSubCategory;
     });
   }, [categories, categorySearchTerm, subCategories]);
@@ -653,102 +660,218 @@ export default function CategoryPage() {
     { name: "Contacts", icon: <Users className="w-4 h-4" />, href: "/contacts" },
   ];
 
-  // Product Card Component - Your design from image
+  // Product Card Component
   const ProductCard = ({ item }: { item: any }) => {
-    const isCategory = 'categoryname' in item;
-    const isSubCategory = 'subCatName' in item;
-    
-   return (
-  <Link
-    href={
-      isCategory
-        ? `/product?category=${item._id}`
-        : `/product?subcategory=${item._id}`
-    }
-    className="block h-full"
-  >
-    <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full cursor-pointer">
-      
-      {/* Product Image */}
-     <div className="relative w-full h-[220px] sm:h-[240px] lg:h-[260px] bg-white">
-  <img
-    src={
-      item.catImg ||
-      item.icon ||
-      item.subCatImg ||
-      "https://via.placeholder.com/400"
-    }
-    alt={item.categoryname || item.subCatName}
-    className="w-full h-full object-cover"
-    onError={(e) => {
-      e.currentTarget.src = "https://via.placeholder.com/400";
-    }}
-  />
-</div>
+    const isCategory = "categoryname" in item;
+    const isSubCategory = "subCatName" in item;
 
+    return (
+      <Link
+        href={
+          isCategory
+            ? `/product?category=${item._id}`
+            : `/product?subcategory=${item._id}`
+        }
+        className="block h-full"
+      >
+        <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full cursor-pointer">
+          <div className="relative w-full h-[220px] sm:h-[240px] lg:h-[260px] bg-white">
+            <img
+              src={
+                item.catImg ||
+                item.icon ||
+                item.subCatImg ||
+                "https://via.placeholder.com/400"
+              }
+              alt={item.categoryname || item.subCatName}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = "https://via.placeholder.com/400";
+              }}
+            />
+          </div>
 
-      {/* Product Info */}
-      <div className="p-6 pt-2 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
-          {item.categoryname || item.subCatName}
-        </h3>
+          <div className="p-6 pt-2 flex flex-col flex-grow">
+            <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
+              {item.categoryname || item.subCatName}
+            </h3>
 
-        {/* Category / Subcategory Tag */}
-        <div className="mb-3">
-          {isCategory && (
-            <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
-              Category
-            </span>
-          )}
-          {isSubCategory && (
-            <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
-              Subcategory
-            </span>
-          )}
+            <div className="mb-3">
+              {isCategory && (
+                <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
+                  Category
+                </span>
+              )}
+              {isSubCategory && (
+                <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
+                  Subcategory
+                </span>
+              )}
+            </div>
+
+            <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-2 flex-grow"></p>
+
+            <div className="bg-red-400 text-black px-5 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors w-full justify-center hover:bg-red-500">
+              View Details <span className="text-lg">→</span>
+            </div>
+          </div>
         </div>
+      </Link>
+    );
+  };
 
-        <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-2 flex-grow"></p>
+  // ✅ Mobile Sidebar title (no "Sidebar" word)
+  const getSidebarTitle = () => {
+    if (selectedSubCategory) return "Subcategories";
+    if (selectedCategory) return "Categories";
+    return "Categories";
+  };
 
-        {/* Button look same (but ab link ke andar hai) */}
-        <div className="bg-red-400 text-black px-5 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors w-full justify-center hover:bg-red-500">
-          View Details <span className="text-lg">→</span>
+  // =======================
+  // ✅ SIDEBAR UI (REUSABLE)
+  // =======================
+  const SidebarContent = () => (
+    <div className="bg-orange-50 rounded-xl border border-gray-200 p-6 lg:sticky lg:top-24 shadow-sm">
+      {/* Search Box */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search Category ...."
+            value={categorySearchTerm}
+            onChange={(e) => setCategorySearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#B30000] focus:border-transparent placeholder:text-gray-400"
+          />
         </div>
       </div>
+
+      {/* Categories List */}
+      <div className="space-y-1">
+        <button
+          onClick={handleAllCategories}
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
+            !selectedCategory && !selectedSubCategory
+              ? "bg-gray-100 text-gray-900 font-medium"
+              : "hover:bg-gray-50 text-gray-700"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                !selectedCategory && !selectedSubCategory
+                  ? "bg-[#B30000]"
+                  : "bg-gray-400"
+              }`}
+            ></div>
+            <span className="font-medium">All Categories</span>
+          </div>
+          <span className="text-xs text-gray-500">{categories.length}</span>
+        </button>
+
+        {loading ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : filteredCategories.length > 0 ? (
+          filteredCategories.map((cat) => {
+            const catSubCategories = getSubCategoriesForCategory(cat._id);
+            const filteredSubCategories = catSubCategories.filter(
+              (sub) =>
+                !categorySearchTerm ||
+                sub.subCatName
+                  ?.toLowerCase()
+                  .includes(categorySearchTerm.toLowerCase())
+            );
+
+            const shouldShow =
+              !categorySearchTerm ||
+              cat.categoryname
+                .toLowerCase()
+                .includes(categorySearchTerm.toLowerCase()) ||
+              filteredSubCategories.length > 0;
+
+            if (!shouldShow) return null;
+
+            return (
+              <div key={cat._id} className="rounded-lg overflow-hidden">
+                <button
+                  onClick={() => handleCategoryClick(cat._id)}
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
+                    selectedCategory === cat._id && !selectedSubCategory
+                      ? "bg-gray-100 text-gray-900 font-medium"
+                      : selectedCategory === cat._id && selectedSubCategory
+                      ? "bg-gray-50 text-gray-800"
+                      : "hover:bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        selectedCategory === cat._id
+                          ? "bg-[#B30000]"
+                          : "bg-gray-400"
+                      }`}
+                    ></div>
+                    <span className="capitalize font-medium">
+                      {cat.categoryname}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {filteredSubCategories.length > 0 && (
+                      <span className="text-xs text-gray-500">
+                        {filteredSubCategories.length}
+                      </span>
+                    )}
+                    {filteredSubCategories.length > 0 &&
+                      (openCategory === cat._id ? (
+                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      ))}
+                  </div>
+                </button>
+
+                {openCategory === cat._id && filteredSubCategories.length > 0 && (
+                  <div className="ml-6 mt-1 space-y-1">
+                    {filteredSubCategories.map((sub) => (
+                      <button
+                        key={sub._id}
+                        onClick={() => handleSubCategoryClick(sub._id, cat._id)}
+                        className={`w-full text-left px-4 py-2 rounded transition-colors flex items-center gap-3 ${
+                          selectedSubCategory === sub._id
+                            ? "bg-red-50 text-[#B30000] font-medium"
+                            : "hover:bg-gray-50 text-gray-600"
+                        }`}
+                      >
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            selectedSubCategory === sub._id
+                              ? "bg-[#B30000]"
+                              : "bg-gray-400"
+                          }`}
+                        ></div>
+                        <span className="capitalize text-sm">
+                          {sub.subCatName}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500">No categories found</p>
+          </div>
+        )}
+      </div>
     </div>
-  </Link>
-);
-};
-
-
-  // Get current page title
-  const getPageTitle = () => {
-    if (selectedSubCategory) {
-      const subCat = subCategories.find(s => s._id === selectedSubCategory);
-      return subCat?.subCatName || 'Subcategory';
-    } else if (selectedCategory) {
-      const cat = categories.find(c => c._id === selectedCategory);
-      return cat?.categoryname || 'Category';
-    }
-    return ;
-  };
-
-  // Get current description
-  const getPageDescription = () => {
-    if (selectedSubCategory) {
-      const cat = categories.find(c => c._id === selectedCategory);
-      return `Subcategory under ${cat?.categoryname || 'Category'}`;
-    } else if (selectedCategory) {
-      const subCatsCount = getSubCategoriesForCategory(selectedCategory).length;
-      return `Category with ${subCatsCount} subcategories`;
-    }
-    return `Browse ${categories.length} categories`;
-  };
-
-  // Get item count
-  const getItemCount = () => {
-    const items = getDisplayItems();
-    return items.length;
-  };
+  );
 
   return (
     <div className="min-h-screen bg-yellow-50">
@@ -756,19 +879,15 @@ export default function CategoryPage() {
       <nav className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14">
-            {/* Logo */}
-           
-
-            {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-6">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={`text-sm font-medium transition-colors ${
-                    item.active 
-                      ? 'text-[#B30000]' 
-                      : 'text-gray-700 hover:text-[#B30000]'
+                    item.active
+                      ? "text-[#B30000]"
+                      : "text-gray-700 hover:text-[#B30000]"
                   }`}
                 >
                   {item.name}
@@ -776,7 +895,7 @@ export default function CategoryPage() {
               ))}
             </div>
 
-            <button 
+            <button
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -784,7 +903,6 @@ export default function CategoryPage() {
             </button>
           </div>
 
-          {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-gray-200">
               <div className="flex flex-col space-y-3">
@@ -793,9 +911,9 @@ export default function CategoryPage() {
                     key={item.name}
                     href={item.href}
                     className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                      item.active 
-                        ? 'bg-red-50 text-[#B30000]' 
-                        : 'text-gray-700 hover:bg-gray-50'
+                      item.active
+                        ? "bg-red-50 text-[#B30000]"
+                        : "text-gray-700 hover:bg-gray-50"
                     }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -808,164 +926,60 @@ export default function CategoryPage() {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar - Categories - Your design from Frame 32 */}
-          <div className="lg:w-80">
-<div className="bg-orange-50 rounded-xl border border-gray-200 p-6 lg:sticky lg:top-24 shadow-sm">
-              {/* Header - "Categories" title */}
-           
-              {/* Search Box - Like in your image */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  <input
-                    type="text"
-                    placeholder="Search Product ...."
-                    value={categorySearchTerm}
-                    onChange={(e) => setCategorySearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#B30000] focus:border-transparent placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
+      {/* ✅ MOBILE FIXED FILTER BUTTON (100% FIXED) */}
+      <div className="lg:hidden fixed top-[56px] left-0 right-0 z-40 bg-yellow-50 pt-4 pb-3">
+        <div className="container mx-auto px-4">
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-[#B30000]" />
+              <span className="font-semibold text-gray-800">Filters</span>
+            </div>
+            <span className="text-xs text-gray-500">
+              {selectedCategory || selectedSubCategory ? "Selected" : "All"}
+            </span>
+          </button>
+        </div>
+      </div>
 
-              {/* Categories List - Exactly like your Frame 32 design */}
-              <div className="space-y-1">
-                {/* All Categories - Like in your image */}
-                <button
-                  onClick={handleAllCategories}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
-                    !selectedCategory && !selectedSubCategory
-                      ? 'bg-gray-100 text-gray-900 font-medium'
-                      : 'hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${!selectedCategory && !selectedSubCategory ? 'bg-[#B30000]' : 'bg-gray-400'}`}></div>
-                    <span className="font-medium">All Categories</span>
-                  </div>
-                  <span className="text-xs text-gray-500">{categories.length}</span>
-                </button>
+      {/* ✅ MOBILE SIDEBAR DRAWER */}
+      {mobileSidebarOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
 
-                {/* Categories - Your bullet point design */}
-                {loading ? (
-                  <div className="space-y-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <Skeleton key={i} className="h-10 w-full" />
-                    ))}
-                  </div>
-                ) : filteredCategories.length > 0 ? (
-                  filteredCategories.map((cat) => {
-                    const catSubCategories = getSubCategoriesForCategory(cat._id);
-                    const filteredSubCategories = catSubCategories.filter(sub =>
-                      !categorySearchTerm || 
-                      sub.subCatName?.toLowerCase().includes(categorySearchTerm.toLowerCase())
-                    );
+          <div className="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white z-50 lg:hidden shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+              <h2 className="font-bold text-gray-900">{getSidebarTitle()}</h2>
+              <button
+                onClick={() => setMobileSidebarOpen(false)}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-                    const shouldShow = !categorySearchTerm || 
-                      cat.categoryname.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
-                      filteredSubCategories.length > 0;
-
-                    if (!shouldShow) return null;
-
-                    return (
-                      <div key={cat._id} className="rounded-lg overflow-hidden">
-                        {/* Main Category - With bullet point */}
-                        <button
-                          onClick={() => handleCategoryClick(cat._id)}
-                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
-                            selectedCategory === cat._id && !selectedSubCategory
-                              ? 'bg-gray-100 text-gray-900 font-medium'
-                              : selectedCategory === cat._id && selectedSubCategory
-                                ? 'bg-gray-50 text-gray-800'
-                                : 'hover:bg-gray-50 text-gray-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {/* Bullet point indicator */}
-                            <div className={`w-2 h-2 rounded-full ${selectedCategory === cat._id ? 'bg-[#B30000]' : 'bg-gray-400'}`}></div>
-                            <span className="capitalize font-medium">{cat.categoryname}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {filteredSubCategories.length > 0 && (
-                              <span className="text-xs text-gray-500">
-                                {filteredSubCategories.length}
-                              </span>
-                            )}
-                            {filteredSubCategories.length > 0 && (
-                              openCategory === cat._id ? (
-                                <ChevronUp className="h-4 w-4 text-gray-500" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-gray-500" />
-                              )
-                            )}
-                          </div>
-                        </button>
-
-                        {/* Subcategories - Indented with smaller bullet points */}
-                        {openCategory === cat._id && filteredSubCategories.length > 0 && (
-                          <div className="ml-6 mt-1 space-y-1">
-                            {filteredSubCategories.map((sub) => (
-                              <button
-                                key={sub._id}
-                                onClick={() => handleSubCategoryClick(sub._id, cat._id)}
-                                className={`w-full text-left px-4 py-2 rounded transition-colors flex items-center gap-3 ${
-                                  selectedSubCategory === sub._id
-                                    ? 'bg-red-50 text-[#B30000] font-medium'
-                                    : 'hover:bg-gray-50 text-gray-600'
-                                }`}
-                              >
-                                {/* Small bullet point for subcategories */}
-                                <div className={`w-1.5 h-1.5 rounded-full ${selectedSubCategory === sub._id ? 'bg-[#B30000]' : 'bg-gray-400'}`}></div>
-                                <span className="capitalize text-sm">{sub.subCatName}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500">No categories found</p>
-                  </div>
-                )}
-              </div>
+            <div className="h-[calc(100%-64px)] overflow-y-auto p-4">
+              <SidebarContent />
             </div>
           </div>
+        </>
+      )}
 
-          {/* Right Content - Main Grid */}
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8 lg:pt-8 pt-28">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Desktop Sidebar */}
+          <div className="lg:w-80 hidden lg:block">
+            <SidebarContent />
+          </div>
+
+          {/* Right Content */}
           <div className="flex-2">
-            {/* Header */}
-            <div className="mb-0">
-              <div className="flex items-center justify-between mb-0">
-                <div>
-                  {/* <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 capitalize">
-                    {getPageTitle()}
-                  </h1> */}
-                  {/* <p className="text-gray-600">
-                    {getPageDescription()}
-                  </p> */}
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="px-3 py-1.5 bg-gray-100 rounded-full">
-                    <span className="text-sm text-gray-700 font-medium">
-                    </span>
-                  </div>
-                  {(selectedCategory || selectedSubCategory || categorySearchTerm) && (
-                    <button
-                      onClick={clearAllFilters}
-                      className="text-sm text-[#B30000] hover:text-red-700 font-medium"
-                    >
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Main Grid - Your card design from image.png */}
             <div className="max-w-7xl mx-auto bg-orange-50 p-8 rounded-[2rem] border border-gray-50 shadow-sm min-h-full">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
                 {loading ? (
@@ -991,7 +1005,7 @@ export default function CategoryPage() {
                     </p>
                     {categorySearchTerm && (
                       <button
-                        onClick={() => setCategorySearchTerm('')}
+                        onClick={() => setCategorySearchTerm("")}
                         className="px-4 py-2 bg-[#E22E2E] text-white rounded-lg text-sm font-medium hover:bg-[#c12727]"
                       >
                         Clear Search

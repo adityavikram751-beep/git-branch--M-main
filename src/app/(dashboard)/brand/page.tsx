@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ChevronUp,
@@ -15,8 +15,9 @@ import {
   Layers,
   Building2,
   Filter,
-  ChevronRight
-} from 'lucide-react';
+  ChevronRight,
+  SlidersHorizontal,
+} from "lucide-react";
 
 interface Brand {
   _id: string;
@@ -40,60 +41,70 @@ interface SubCategory {
   catId: string;
 }
 
-type ViewMode = 'brands' | 'categories' | 'subcategories';
+type ViewMode = "brands" | "categories" | "subcategories";
 
 export default function CategoryPage() {
   const router = useRouter();
-  
+
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  
-  const [viewMode, setViewMode] = useState<ViewMode>('brands');
+
+  const [viewMode, setViewMode] = useState<ViewMode>("brands");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
-  
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(
+    null
+  );
+
   const [loading, setLoading] = useState(true);
+
+  // 🔥 Mobile top nav
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // 🔥 Mobile Sidebar Drawer
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState("");
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [openBrand, setOpenBrand] = useState<string | null>(null);
 
- const BASE_URL = "https://barber-syndicate.vercel.app";
+  const BASE_URL = "https://barber-syndicate.vercel.app";
 
-// 🔥 Dynamic Token (Login se jo store hota hai)
-const getToken = () => {
-  if (typeof window !== "undefined") {
-    return (
-      localStorage.getItem("token") || // agar login me token key "token" hai
-      localStorage.getItem("authToken") || // agar key authToken hai
-      sessionStorage.getItem("token") ||
-      ""
-    );
-  }
-  return "";
-};
-
-const getHeaders = () => {
-  const token = getToken();
-  return {
-    Authorization: token ? `Bearer ${token}` : "",
-    "Content-Type": "application/json",
-    Accept: "application/json",
+  // 🔥 Dynamic Token
+  const getToken = () => {
+    if (typeof window !== "undefined") {
+      return (
+        localStorage.getItem("token") ||
+        localStorage.getItem("authToken") ||
+        sessionStorage.getItem("token") ||
+        ""
+      );
+    }
+    return "";
   };
-};
 
+  const getHeaders = () => {
+    const token = getToken();
+    return {
+      Authorization: token ? `Bearer ${token}` : "",
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-      const [brandsRes, categoriesRes, subCategoriesRes] = await Promise.all([
-  fetch(`${BASE_URL}/api/v1/brands/getall`, { headers: getHeaders() }),
-  fetch(`${BASE_URL}/api/v1/category`, { headers: getHeaders() }),
-  fetch(`${BASE_URL}/api/v1/subcategory/getSubCat`, { headers: getHeaders() }),
-]);
+
+        const [brandsRes, categoriesRes, subCategoriesRes] = await Promise.all([
+          fetch(`${BASE_URL}/api/v1/brands/getall`, { headers: getHeaders() }),
+          fetch(`${BASE_URL}/api/v1/category`, { headers: getHeaders() }),
+          fetch(`${BASE_URL}/api/v1/subcategory/getSubCat`, {
+            headers: getHeaders(),
+          }),
+        ]);
 
         const brandsData = await brandsRes.json();
         const categoriesData = await categoriesRes.json();
@@ -101,144 +112,181 @@ const getHeaders = () => {
 
         if (brandsData?.success) setBrands(brandsData.data || []);
         if (categoriesData?.success) setCategories(categoriesData.data || []);
-        if (subCategoriesData?.status === "success") setSubCategories(subCategoriesData.data || []);
-
+        if (subCategoriesData?.status === "success")
+          setSubCategories(subCategoriesData.data || []);
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
-  const handleBrandSidebarClick = useCallback((brandId: string) => {
-    if (openBrand === brandId) {
-      setOpenBrand(null);
-      setSelectedBrand(null);
-      setSelectedCategory(null);
-      setSelectedSubCategory(null);
-      setOpenCategory(null);
-      setViewMode('brands');
-    } else {
-      setOpenBrand(brandId);
-      setSelectedBrand(brandId);
-      setSelectedCategory(null);
-      setSelectedSubCategory(null);
-      setOpenCategory(null);
-      // Keep viewMode as 'brands' to show the brand card
-      setViewMode('brands');
-    }
-  }, [openBrand]);
+  // =======================
+  // ✅ SIDEBAR HANDLERS
+  // =======================
+  const handleBrandSidebarClick = useCallback(
+    (brandId: string) => {
+      if (openBrand === brandId) {
+        setOpenBrand(null);
+        setSelectedBrand(null);
+        setSelectedCategory(null);
+        setSelectedSubCategory(null);
+        setOpenCategory(null);
+        setViewMode("brands");
+      } else {
+        setOpenBrand(brandId);
+        setSelectedBrand(brandId);
+        setSelectedCategory(null);
+        setSelectedSubCategory(null);
+        setOpenCategory(null);
+        setViewMode("brands");
+      }
+    },
+    [openBrand]
+  );
 
-  const handleCategorySidebarClick = useCallback((catId: string, brandId: string) => {
-    if (openCategory === catId) {
-      setOpenCategory(null);
-      setSelectedCategory(null);
-      setSelectedSubCategory(null);
-      // Go back to showing brand card
-      setViewMode('brands');
-    } else {
-      setOpenCategory(catId);
-      setSelectedCategory(catId);
-      setSelectedBrand(brandId);
-      setSelectedSubCategory(null);
-      setViewMode('categories');
-    }
-  }, [openCategory]);
+  const handleCategorySidebarClick = useCallback(
+    (catId: string, brandId: string) => {
+      if (openCategory === catId) {
+        setOpenCategory(null);
+        setSelectedCategory(null);
+        setSelectedSubCategory(null);
+        setViewMode("brands");
+      } else {
+        setOpenCategory(catId);
+        setSelectedCategory(catId);
+        setSelectedBrand(brandId);
+        setSelectedSubCategory(null);
+        setViewMode("categories");
+      }
+    },
+    [openCategory]
+  );
 
-  const handleSubCategorySidebarClick = useCallback((subCatId: string, catId: string, brandId: string) => {
-    if (selectedSubCategory === subCatId) {
-      setSelectedSubCategory(null);
-      setSelectedCategory(catId);
-      setSelectedBrand(brandId);
-      setViewMode('categories');
-    } else {
-      setSelectedSubCategory(subCatId);
-      setSelectedCategory(catId);
-      setSelectedBrand(brandId);
-      setViewMode('subcategories');
-    }
-  }, [selectedSubCategory]);
+  const handleSubCategorySidebarClick = useCallback(
+    (subCatId: string, catId: string, brandId: string) => {
+      if (selectedSubCategory === subCatId) {
+        setSelectedSubCategory(null);
+        setSelectedCategory(catId);
+        setSelectedBrand(brandId);
+        setViewMode("categories");
+      } else {
+        setSelectedSubCategory(subCatId);
+        setSelectedCategory(catId);
+        setSelectedBrand(brandId);
+        setViewMode("subcategories");
+      }
+    },
+    [selectedSubCategory]
+  );
 
-  const handleBrandGridClick = useCallback((brandId: string) => {
-    router.push(`/product?brand=${brandId}`);
-  }, [router]);
+  // =======================
+  // ✅ GRID CLICK HANDLERS
+  // =======================
+  const handleBrandGridClick = useCallback(
+    (brandId: string) => {
+      router.push(`/product?brand=${brandId}`);
+    },
+    [router]
+  );
 
-  const handleCategoryGridClick = useCallback((catId: string) => {
-    if (selectedBrand) {
-      router.push(`/product?brand=${selectedBrand}&category=${catId}`);
-    } else {
-      router.push(`/product?category=${catId}`);
-    }
-  }, [router, selectedBrand]);
+  const handleCategoryGridClick = useCallback(
+    (catId: string) => {
+      if (selectedBrand) {
+        router.push(`/product?brand=${selectedBrand}&category=${catId}`);
+      } else {
+        router.push(`/product?category=${catId}`);
+      }
+    },
+    [router, selectedBrand]
+  );
 
-  const handleSubCategoryGridClick = useCallback((subCatId: string) => {
-    const params = new URLSearchParams();
-    
-    if (selectedBrand) params.append('brand', selectedBrand);
-    if (selectedCategory) params.append('category', selectedCategory);
-    params.append('subcategory', subCatId);
-    
-    router.push(`/product?${params.toString()}`);
-  }, [router, selectedBrand, selectedCategory]);
+  const handleSubCategoryGridClick = useCallback(
+    (subCatId: string) => {
+      const params = new URLSearchParams();
+      if (selectedBrand) params.append("brand", selectedBrand);
+      if (selectedCategory) params.append("category", selectedCategory);
+      params.append("subcategory", subCatId);
+
+      router.push(`/product?${params.toString()}`);
+    },
+    [router, selectedBrand, selectedCategory]
+  );
+
+  // =======================
+  // ✅ HELPERS
+  // =======================
+  const getUniqueBrands = useCallback(() => {
+    return brands.filter(
+      (brand, index, self) =>
+        index === self.findIndex((b) => b._id === brand._id)
+    );
+  }, [brands]);
+
+  const getCurrentBrand = useCallback(
+    () => brands.find((b) => b._id === selectedBrand),
+    [selectedBrand, brands]
+  );
+
+  const getCurrentCategory = useCallback(
+    () => categories.find((c) => c._id === selectedCategory),
+    [selectedCategory, categories]
+  );
+
+  const getCategoriesForBrand = useCallback(
+    (brandId: string) => {
+      const brandCategoryIds = brands
+        .filter((brand) => brand._id === brandId)
+        .map((brand) => brand.category);
+
+      const uniqueCategoryIds = [...new Set(brandCategoryIds)];
+      return categories.filter((cat) => uniqueCategoryIds.includes(cat._id));
+    },
+    [brands, categories]
+  );
+
+  const getSubCategoriesForCategory = useCallback(
+    (catId: string) => {
+      return subCategories.filter((sub) => sub.catId === catId);
+    },
+    [subCategories]
+  );
 
   const getCategoriesForSelectedBrand = useCallback(() => {
     if (!selectedBrand) return [];
-    
+
     const brandCategoryIds = brands
-      .filter(brand => brand._id === selectedBrand)
-      .map(brand => brand.category);
-    
+      .filter((brand) => brand._id === selectedBrand)
+      .map((brand) => brand.category);
+
     const uniqueCategoryIds = [...new Set(brandCategoryIds)];
-    
-    return categories.filter(cat => uniqueCategoryIds.includes(cat._id));
+    return categories.filter((cat) => uniqueCategoryIds.includes(cat._id));
   }, [selectedBrand, brands, categories]);
 
   const getSubCategoriesForSelectedCategory = useCallback(() => {
     if (!selectedCategory) return [];
-    return subCategories.filter(sub => sub.catId === selectedCategory);
+    return subCategories.filter((sub) => sub.catId === selectedCategory);
   }, [selectedCategory, subCategories]);
 
-  const getUniqueBrands = useCallback(() => {
-    return brands.filter((brand, index, self) =>
-      index === self.findIndex((b) => b._id === brand._id)
-    );
-  }, [brands]);
-
-  const getCurrentBrand = useCallback(() => 
-    brands.find(b => b._id === selectedBrand), [selectedBrand, brands]);
-  
-  const getCurrentCategory = useCallback(() => 
-    categories.find(c => c._id === selectedCategory), [selectedCategory, categories]);
-
-  const getCategoriesForBrand = useCallback((brandId: string) => {
-    const brandCategoryIds = brands
-      .filter(brand => brand._id === brandId)
-      .map(brand => brand.category);
-    
-    const uniqueCategoryIds = [...new Set(brandCategoryIds)];
-    
-    return categories.filter(cat => uniqueCategoryIds.includes(cat._id));
-  }, [brands, categories]);
-
-  const getSubCategoriesForCategory = useCallback((catId: string) => {
-    return subCategories.filter(sub => sub.catId === catId);
-  }, [subCategories]);
-
+  // =======================
+  // ✅ BACK & CLEAR
+  // =======================
   const handleBackToBrands = useCallback(() => {
-    setViewMode('brands');
+    setViewMode("brands");
     setSelectedBrand(null);
     setSelectedCategory(null);
     setSelectedSubCategory(null);
     setOpenBrand(null);
     setOpenCategory(null);
-    setSearchTerm('');
+    setSearchTerm("");
   }, []);
 
   const handleBackToCategories = useCallback(() => {
     if (selectedBrand) {
-      setViewMode('categories');
+      setViewMode("categories");
       setSelectedCategory(null);
       setSelectedSubCategory(null);
       setOpenCategory(null);
@@ -255,55 +303,92 @@ const getHeaders = () => {
     setSelectedSubCategory(null);
     setOpenBrand(null);
     setOpenCategory(null);
-    setViewMode('brands');
+    setViewMode("brands");
   }, []);
 
+  // =======================
+  // ✅ GRID ITEMS (NO SEARCH FILTER)
+  // =======================
   const getDisplayItems = useCallback(() => {
-    const searchLower = searchTerm.toLowerCase();
-    
     switch (viewMode) {
-      case 'brands':
-        // If a brand is selected, show only that brand
+      case "brands":
         if (selectedBrand) {
-          const brand = brands.find(b => b._id === selectedBrand);
+          const brand = brands.find((b) => b._id === selectedBrand);
           return brand ? [brand] : [];
         }
-        // Otherwise show all brands
-        const uniqueBrands = getUniqueBrands();
-        if (!searchTerm) return uniqueBrands;
-        return uniqueBrands.filter(brand => 
-          brand.brand.toLowerCase().includes(searchLower)
-        );
-        
-      case 'categories':
+        return getUniqueBrands();
+
+      case "categories":
         if (selectedCategory) {
-          const category = categories.find(c => c._id === selectedCategory);
+          const category = categories.find((c) => c._id === selectedCategory);
           return category ? [category] : [];
         }
         if (selectedBrand) {
-          const brandCategories = getCategoriesForSelectedBrand();
-          if (!searchTerm) return brandCategories;
-          return brandCategories.filter(cat => 
-            cat.categoryname.toLowerCase().includes(searchLower)
-          );
+          return getCategoriesForSelectedBrand();
         }
         return [];
-        
-      case 'subcategories':
+
+      case "subcategories":
         if (selectedCategory) {
-          const categorySubCategories = getSubCategoriesForSelectedCategory();
-          if (!searchTerm) return categorySubCategories;
-          return categorySubCategories.filter(sub => 
-            sub.subCatName.toLowerCase().includes(searchLower)
-          );
+          return getSubCategoriesForSelectedCategory();
         }
         return [];
-        
+
       default:
         return [];
     }
-  }, [viewMode, selectedBrand, selectedCategory, searchTerm, brands, categories, getUniqueBrands, getCategoriesForSelectedBrand, getSubCategoriesForSelectedCategory]);
+  }, [
+    viewMode,
+    selectedBrand,
+    selectedCategory,
+    brands,
+    categories,
+    getUniqueBrands,
+    getCategoriesForSelectedBrand,
+    getSubCategoriesForSelectedCategory,
+  ]);
 
+  const displayItems = getDisplayItems();
+
+  // =======================
+  // ✅ SIDEBAR SEARCH FILTER (ONLY SIDEBAR)
+  // =======================
+  const sidebarSearchLower = searchTerm.toLowerCase();
+
+  const filteredSidebarBrands = !searchTerm
+    ? getUniqueBrands()
+    : getUniqueBrands().filter((b) =>
+        b.brand.toLowerCase().includes(sidebarSearchLower)
+      );
+
+  const filteredSidebarCategories = (brandId: string) => {
+    const cats = getCategoriesForBrand(brandId);
+    if (!searchTerm) return cats;
+    return cats.filter((c) =>
+      c.categoryname.toLowerCase().includes(sidebarSearchLower)
+    );
+  };
+
+  const filteredSidebarSubCategories = (catId: string) => {
+    const subs = getSubCategoriesForCategory(catId);
+    if (!searchTerm) return subs;
+    return subs.filter((s) =>
+      s.subCatName.toLowerCase().includes(sidebarSearchLower)
+    );
+  };
+
+  // =======================
+  // ✅ SIDEBAR TITLE (MOBILE TOP)
+  // =======================
+  const getSidebarTitle = useCallback(() => {
+    if (viewMode === "brands") return "Brands";
+    if (viewMode === "categories") return "Categories";
+    return "Subcategories";
+  }, [viewMode]);
+
+  // =======================
+  // ✅ NAV ITEMS
+  // =======================
   const navItems = [
     { name: "Home", icon: Home, href: "/" },
     { name: "Products", icon: ShoppingBag, href: "/product" },
@@ -314,131 +399,337 @@ const getHeaders = () => {
 
   const getPageTitle = useCallback(() => {
     if (selectedSubCategory) {
-      const subCat = subCategories.find(s => s._id === selectedSubCategory);
-      return subCat ? `${subCat.subCatName}` : 'Subcategories';
+      const subCat = subCategories.find((s) => s._id === selectedSubCategory);
+      return subCat ? `${subCat.subCatName}` : "Subcategories";
     }
     if (selectedCategory) {
       const category = getCurrentCategory();
-      return category ? `${category.categoryname} - Categories` : 'Categories';
+      return category ? `${category.categoryname} - Categories` : "Categories";
     }
     if (selectedBrand) {
       const brand = getCurrentBrand();
-      return brand ? `${brand.brand}` : 'Brands';
+      return brand ? `${brand.brand}` : "Brands";
     }
     return `All Brands (${getUniqueBrands().length})`;
-  }, [selectedBrand, selectedCategory, selectedSubCategory, getCurrentBrand, getCurrentCategory, getUniqueBrands, subCategories]);
+  }, [
+    selectedBrand,
+    selectedCategory,
+    selectedSubCategory,
+    getCurrentBrand,
+    getCurrentCategory,
+    getUniqueBrands,
+    subCategories,
+  ]);
 
-  const getPageDescription = useCallback(() => {
-    if (selectedCategory && viewMode === 'subcategories') {
-      const subCatsCount = getSubCategoriesForSelectedCategory().length;
-      return `${subCatsCount} subcategories available`;
-    }
-    if (selectedBrand && viewMode === 'categories') {
-      const categoriesCount = getCategoriesForSelectedBrand().length;
-      return `${categoriesCount} categories available`;
-    }
-    if (selectedBrand) {
-      return `Click "View Details" to see all products from this brand`;
-    }
-    return `Browse ${getUniqueBrands().length} premium brands`;
-  }, [selectedBrand, selectedCategory, viewMode, getUniqueBrands, getCategoriesForSelectedBrand, getSubCategoriesForSelectedCategory]);
+  const ProductCard = ({
+    item,
+    type,
+  }: {
+    item: any;
+    type: "brand" | "category" | "subcategory";
+  }) => {
+    let title = "";
+    let description = "";
+    let image = "";
+    let bgColor = "";
 
-  const displayItems = getDisplayItems();
-
- const ProductCard = ({ item, type }: { item: any, type: 'brand' | 'category' | 'subcategory' }) => {
-  let title = '';
-  let description = '';
-  let image = '';
-  let bgColor = '';
-
-  if (type === 'brand') {
-    title = item.brand;
-    image = item.icons;
-    bgColor = 'from-gray-50 to-gray-100';
-  } else if (type === 'category') {
-    title = item.categoryname;
-    image = item.catImg;
-    bgColor = 'from-green-50 to-emerald-100';
-  } else {
-    title = item.subCatName;
-    description = item.subCatTitle;
-    image = item.icon;
-    bgColor = 'from-purple-50 to-violet-100';
-  }
-
-  const handleClick = () => {
     if (type === "brand") {
-      handleBrandGridClick(item._id);
+      title = item.brand;
+      image = item.icons;
+      bgColor = "from-gray-50 to-gray-100";
     } else if (type === "category") {
-      handleCategoryGridClick(item._id);
+      title = item.categoryname;
+      image = item.catImg;
+      bgColor = "from-green-50 to-emerald-100";
     } else {
-      handleSubCategoryGridClick(item._id);
+      title = item.subCatName;
+      description = item.subCatTitle;
+      image = item.icon;
+      bgColor = "from-purple-50 to-violet-100";
     }
+
+    const handleClick = () => {
+      if (type === "brand") handleBrandGridClick(item._id);
+      else if (type === "category") handleCategoryGridClick(item._id);
+      else handleSubCategoryGridClick(item._id);
+    };
+
+    return (
+      <div
+        onClick={handleClick}
+        className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full cursor-pointer"
+      >
+        <div
+          className={`relative w-full h-[220px] sm:h-[240px] lg:h-[260px] bg-gradient-to-br ${bgColor}`}
+        >
+          <img
+            src={image || "https://via.placeholder.com/400"}
+            alt={title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = "https://via.placeholder.com/400";
+            }}
+          />
+        </div>
+
+        <div className="p-6 flex flex-col flex-grow">
+          <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
+            {title}
+          </h3>
+
+          <div className="mb-3">
+            {type === "brand" && (
+              <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
+                Brand
+              </span>
+            )}
+            {type === "category" && (
+              <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
+                Category
+              </span>
+            )}
+            {type === "subcategory" && (
+              <span className="inline-block px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md border border-purple-200">
+                Subcategory
+              </span>
+            )}
+          </div>
+
+          {description && (
+            <p className="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-2 flex-grow">
+              {description}
+            </p>
+          )}
+
+          <div className="mt-auto bg-[#FF6B6B] text-black px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 justify-center hover:bg-[#ff4f4f] transition-colors">
+            View Details <ChevronRight className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+    );
   };
-
-  return (
-    <div
-      onClick={handleClick}
-      className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-500 h-full cursor-pointer"
-    >
-      {/* IMAGE (FULL) */}
-      <div className={`relative w-full h-[220px] sm:h-[240px] lg:h-[260px] bg-gradient-to-br ${bgColor}`}>
-        <img
-          src={image || "https://via.placeholder.com/400"}
-          alt={title}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "https://via.placeholder.com/400";
-          }}
-        />
-      </div>
-
-      {/* CONTENT */}
-      <div className="p-6 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold text-gray-800 mb-2 capitalize">
-          {title}
-        </h3>
-
-        <div className="mb-3">
-          {type === 'brand' && (
-            <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-200">
-              Brand
-            </span>
-          )}
-          {type === 'category' && (
-            <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200">
-              Category
-            </span>
-          )}
-          {type === 'subcategory' && (
-            <span className="inline-block px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md border border-purple-200">
-              Subcategory
-            </span>
-          )}
-        </div>
-
-        {description && (
-          <p className="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-2 flex-grow">
-            {description}
-          </p>
-        )}
-
-        {/* BUTTON LOOK SAME - but click full card */}
-        <div className="mt-auto bg-[#FF6B6B] text-black px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 justify-center hover:bg-[#ff4f4f] transition-colors">
-          View Details <ChevronRight className="w-4 h-4" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
 
   const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
   );
 
+  // =======================
+  // ✅ SIDEBAR COMPONENT
+  // =======================
+  const SidebarContent = () => (
+    <div className="bg-orange-50 rounded-xl border border-gray-200 p-6 lg:sticky lg:top-20 shadow-sm">
+      {viewMode !== "brands" && (
+        <button
+          onClick={handleBackToCategories}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 mb-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium text-sm"
+        >
+          <ChevronRight className="w-4 h-4 rotate-180" />
+          Back to {viewMode === "categories" ? "Brand" : "Categories"}
+        </button>
+      )}
+
+      {selectedBrand && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center border border-blue-200">
+              {getCurrentBrand()?.icons ? (
+                <img
+                  src={getCurrentBrand()?.icons}
+                  alt={getCurrentBrand()?.brand}
+                  className="w-8 h-8 object-contain"
+                />
+              ) : (
+                <Building2 className="w-6 h-6 text-blue-500" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 capitalize">
+                {getCurrentBrand()?.brand}
+              </p>
+              <p className="text-xs text-gray-500">Selected Brand</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search in Brand..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#B30000] focus:border-transparent placeholder:text-gray-400"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <button
+          onClick={handleAllBrands}
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
+            !selectedBrand && !selectedCategory && !selectedSubCategory
+              ? "bg-gray-100 text-gray-900 font-medium"
+              : "hover:bg-gray-50 text-gray-700"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                !selectedBrand && !selectedCategory && !selectedSubCategory
+                  ? "bg-[#B30000]"
+                  : "bg-gray-400"
+              }`}
+            ></div>
+            <span className="font-medium">All Brands</span>
+          </div>
+          <span className="text-xs text-gray-500">
+            {getUniqueBrands().length}
+          </span>
+        </button>
+
+        {loading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : filteredSidebarBrands.length > 0 ? (
+          filteredSidebarBrands.map((brand) => {
+            const brandCategories = filteredSidebarCategories(brand._id);
+
+            return (
+              <div key={brand._id} className="rounded-lg overflow-hidden">
+                <button
+                  onClick={() => handleBrandSidebarClick(brand._id)}
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
+                    selectedBrand === brand._id
+                      ? "bg-gray-100 text-gray-900 font-medium"
+                      : "hover:bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        selectedBrand === brand._id
+                          ? "bg-[#B30000]"
+                          : "bg-gray-400"
+                      }`}
+                    ></div>
+                    <span className="capitalize font-medium">{brand.brand}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      {brandCategories.length}
+                    </span>
+                    {openBrand === brand._id && brandCategories.length > 0 ? (
+                      <ChevronUp className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    )}
+                  </div>
+                </button>
+
+                {openBrand === brand._id && brandCategories.length > 0 && (
+                  <div className="ml-6 mt-1 space-y-1">
+                    {brandCategories.map((cat) => {
+                      const catSubCategories = filteredSidebarSubCategories(
+                        cat._id
+                      );
+
+                      return (
+                        <div key={cat._id} className="rounded-lg overflow-hidden">
+                          <button
+                            onClick={() =>
+                              handleCategorySidebarClick(cat._id, brand._id)
+                            }
+                            className={`w-full text-left px-4 py-2 rounded transition-colors flex items-center justify-between ${
+                              selectedCategory === cat._id
+                                ? "bg-red-50 text-[#B30000] font-medium"
+                                : "hover:bg-gray-50 text-gray-600"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  selectedCategory === cat._id
+                                    ? "bg-[#B30000]"
+                                    : "bg-gray-400"
+                                }`}
+                              ></div>
+                              <span className="capitalize text-sm">
+                                {cat.categoryname}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">
+                                {catSubCategories.length}
+                              </span>
+                              {openCategory === cat._id &&
+                              catSubCategories.length > 0 ? (
+                                <ChevronUp className="h-3 w-3 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="h-3 w-3 text-gray-500" />
+                              )}
+                            </div>
+                          </button>
+
+                          {openCategory === cat._id &&
+                            catSubCategories.length > 0 && (
+                              <div className="ml-6 mt-1 space-y-1">
+                                {catSubCategories.map((sub) => (
+                                  <button
+                                    key={sub._id}
+                                    onClick={() =>
+                                      handleSubCategorySidebarClick(
+                                        sub._id,
+                                        cat._id,
+                                        brand._id
+                                      )
+                                    }
+                                    className={`w-full text-left px-4 py-1.5 rounded transition-colors flex items-center gap-3 ${
+                                      selectedSubCategory === sub._id
+                                        ? "bg-red-100 text-[#B30000] font-medium"
+                                        : "hover:bg-gray-50 text-gray-600"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`w-1 h-1 rounded-full ${
+                                        selectedSubCategory === sub._id
+                                          ? "bg-[#B30000]"
+                                          : "bg-gray-400"
+                                      }`}
+                                    ></div>
+                                    <span className="capitalize text-xs">
+                                      {sub.subCatName}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500">No brands found</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-yellow-50">
+      {/* =======================
+          ✅ TOP NAVBAR
+      ======================= */}
       <nav className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14">
@@ -446,7 +737,9 @@ const getHeaders = () => {
               <div className="w-8 h-8 bg-[#B30000] rounded flex items-center justify-center">
                 <span className="text-white font-bold text-sm">BS</span>
               </div>
-              <h1 className="text-xl font-bold text-gray-900">Barber Syndicate</h1>
+              <h1 className="text-xl font-bold text-gray-900">
+                Barber Syndicate
+              </h1>
             </div>
 
             <div className="hidden md:flex items-center gap-6">
@@ -455,9 +748,9 @@ const getHeaders = () => {
                   key={item.name}
                   href={item.href}
                   className={`text-sm font-medium transition-colors ${
-                    item.active 
-                      ? 'text-[#B30000]' 
-                      : 'text-gray-700 hover:text-[#B30000]'
+                    item.active
+                      ? "text-[#B30000]"
+                      : "text-gray-700 hover:text-[#B30000]"
                   }`}
                 >
                   {item.name}
@@ -465,11 +758,15 @@ const getHeaders = () => {
               ))}
             </div>
 
-            <button 
+            <button
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </button>
           </div>
 
@@ -481,9 +778,9 @@ const getHeaders = () => {
                     key={item.name}
                     href={item.href}
                     className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                      item.active 
-                        ? 'bg-red-50 text-[#B30000]' 
-                        : 'text-gray-700 hover:bg-gray-50'
+                      item.active
+                        ? "bg-red-50 text-[#B30000]"
+                        : "text-gray-700 hover:bg-gray-50"
                     }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -496,180 +793,64 @@ const getHeaders = () => {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="lg:w-80">
-<div className="bg-orange-50 rounded-xl border border-gray-200 p-6 lg:sticky lg:top-20 shadow-sm">
-              {viewMode !== 'brands' && (
-                <button
-                  onClick={viewMode === 'categories' ? handleBackToCategories : handleBackToCategories}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 mb-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium text-sm"
-                >
-                  <ChevronRight className="w-4 h-4 rotate-180" />
-                  Back to {viewMode === 'categories' ? 'Brand' : 'Categories'}
-                </button>
-              )}
+      {/* ✅ MOBILE FIXED FILTER BUTTON */}
+      <div className="lg:hidden sticky top-14 z-30 bg-yellow-50 pt-4 pb-3">
+        <div className="container mx-auto px-4">
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-[#B30000]" />
+              <span className="font-semibold text-gray-800">Filters</span>
+            </div>
+            <span className="text-xs text-gray-500">
+              {selectedBrand ? "Selected" : ""}
+            </span>
+          </button>
+        </div>
+      </div>
 
-              {selectedBrand && (
-                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center border border-blue-200">
-                      {getCurrentBrand()?.icons ? (
-                        <img 
-                          src={getCurrentBrand()?.icons} 
-                          alt={getCurrentBrand()?.brand}
-                          className="w-8 h-8 object-contain"
-                        />
-                      ) : (
-                        <Building2 className="w-6 h-6 text-blue-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 capitalize">
-                        {getCurrentBrand()?.brand}
-                      </p>
-                      <p className="text-xs text-gray-500">Selected Brand</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+      {/* =======================
+          ✅ MOBILE SIDEBAR DRAWER
+      ======================= */}
+      {mobileSidebarOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
 
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  <input
-                    type="text"
-                    placeholder={`Search ${viewMode}...`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#B30000] focus:border-transparent placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
+          <div className="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white z-50 lg:hidden shadow-2xl">
+            {/* 🔥 Dynamic Title */}
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+              <h2 className="font-bold text-gray-900">{getSidebarTitle()}</h2>
+              <button
+                onClick={() => setMobileSidebarOpen(false)}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div className="space-y-1">
-                <button
-                  onClick={handleAllBrands}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
-                    !selectedBrand && !selectedCategory && !selectedSubCategory
-                      ? 'bg-gray-100 text-gray-900 font-medium'
-                      : 'hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${!selectedBrand && !selectedCategory && !selectedSubCategory ? 'bg-[#B30000]' : 'bg-gray-400'}`}></div>
-                    <span className="font-medium">All Brands</span>
-                  </div>
-                  <span className="text-xs text-gray-500">{getUniqueBrands().length}</span>
-                </button>
-
-                {loading ? (
-                  <div className="space-y-2">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-10 w-full" />
-                    ))}
-                  </div>
-                ) : getUniqueBrands().length > 0 ? (
-                  getUniqueBrands().map((brand) => {
-                    const brandCategories = getCategoriesForBrand(brand._id);
-                    
-                    return (
-                      <div key={brand._id} className="rounded-lg overflow-hidden">
-                        <button
-                          onClick={() => handleBrandSidebarClick(brand._id)}
-                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
-                            selectedBrand === brand._id
-                              ? 'bg-gray-100 text-gray-900 font-medium'
-                              : 'hover:bg-gray-50 text-gray-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${selectedBrand === brand._id ? 'bg-[#B30000]' : 'bg-gray-400'}`}></div>
-                            <span className="capitalize font-medium">{brand.brand}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">
-                              {brandCategories.length}
-                            </span>
-                            {openBrand === brand._id && brandCategories.length > 0 ? (
-                              <ChevronUp className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 text-gray-500" />
-                            )}
-                          </div>
-                        </button>
-
-                        {openBrand === brand._id && brandCategories.length > 0 && (
-                          <div className="ml-6 mt-1 space-y-1">
-                            {brandCategories.map((cat) => {
-                              const catSubCategories = getSubCategoriesForCategory(cat._id);
-                              
-                              return (
-                                <div key={cat._id} className="rounded-lg overflow-hidden">
-                                  <button
-                                    onClick={() => handleCategorySidebarClick(cat._id, brand._id)}
-                                    className={`w-full text-left px-4 py-2 rounded transition-colors flex items-center justify-between ${
-                                      selectedCategory === cat._id
-                                        ? 'bg-red-50 text-[#B30000] font-medium'
-                                        : 'hover:bg-gray-50 text-gray-600'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div className={`w-1.5 h-1.5 rounded-full ${selectedCategory === cat._id ? 'bg-[#B30000]' : 'bg-gray-400'}`}></div>
-                                      <span className="capitalize text-sm">{cat.categoryname}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-gray-500">
-                                        {catSubCategories.length}
-                                      </span>
-                                      {openCategory === cat._id && catSubCategories.length > 0 ? (
-                                        <ChevronUp className="h-3 w-3 text-gray-500" />
-                                      ) : (
-                                        <ChevronDown className="h-3 w-3 text-gray-500" />
-                                      )}
-                                    </div>
-                                  </button>
-
-                                  {openCategory === cat._id && catSubCategories.length > 0 && (
-                                    <div className="ml-6 mt-1 space-y-1">
-                                      {catSubCategories.map((sub) => (
-                                        <button
-                                          key={sub._id}
-                                          onClick={() => handleSubCategorySidebarClick(sub._id, cat._id, brand._id)}
-                                          className={`w-full text-left px-4 py-1.5 rounded transition-colors flex items-center gap-3 ${
-                                            selectedSubCategory === sub._id
-                                              ? 'bg-red-100 text-[#B30000] font-medium'
-                                              : 'hover:bg-gray-50 text-gray-600'
-                                          }`}
-                                        >
-                                          <div className={`w-1 h-1 rounded-full ${selectedSubCategory === sub._id ? 'bg-[#B30000]' : 'bg-gray-400'}`}></div>
-                                          <span className="capitalize text-xs">{sub.subCatName}</span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500">No brands found</p>
-                  </div>
-                )}
-              </div>
-
-                <div className="flex items-center justify-between mb-2">
-                 
-                
-              </div>
+            <div className="h-[calc(100%-64px)] overflow-y-auto p-4">
+              <SidebarContent />
             </div>
           </div>
+        </>
+      )}
 
+      {/* =======================
+          ✅ MAIN CONTENT
+      ======================= */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Desktop Sidebar */}
+          <div className="lg:w-80 hidden lg:block">
+            <SidebarContent />
+          </div>
+
+          {/* Right Content */}
           <div className="flex-1">
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
@@ -677,12 +858,13 @@ const getHeaders = () => {
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                     {getPageTitle()}
                   </h1>
-                 
                 </div>
-                
+
                 <div className="flex items-center gap-3">
-                  
-                  {(selectedBrand || selectedCategory || selectedSubCategory || searchTerm) && (
+                  {(selectedBrand ||
+                    selectedCategory ||
+                    selectedSubCategory ||
+                    searchTerm) && (
                     <button
                       onClick={clearAllFilters}
                       className="text-sm text-[#B30000] hover:text-red-700 font-medium flex items-center gap-1"
@@ -695,49 +877,51 @@ const getHeaders = () => {
               </div>
             </div>
 
-<div className="max-w-7xl mx-auto bg-orange-50 p-6 sm:p-8 rounded-[2rem] border border-gray-50 shadow-sm mb-10">
+            <div className="max-w-7xl mx-auto bg-orange-50 p-6 sm:p-8 rounded-[2rem] border border-gray-50 shadow-sm mb-10">
               {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Skeleton key={i} className="h-[400px] w-full rounded-2xl" />
+                    <div
+                      key={i}
+                      className="animate-pulse bg-gray-200 rounded-2xl h-[400px] w-full"
+                    />
                   ))}
                 </div>
               ) : displayItems.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
                   {(() => {
-                   switch (viewMode) {
-  case "brands":
-    return displayItems.map((item) => (
-      <ProductCard key={item._id} item={item as Brand} type="brand" />
-    ));
-
-  case "categories":
-    return displayItems.map((item) => (
-      <ProductCard key={item._id} item={item as Category} type="category" />
-    ));
-
-  case "subcategories":
-    return displayItems.map((item) => (
-      <ProductCard key={item._id} item={item as SubCategory} type="subcategory" />
-    ));
-
-  default:
-    return null;
-}
-
+                    switch (viewMode) {
+                      case "brands":
+                        return displayItems.map((item) => (
+                          <ProductCard
+                            key={item._id}
+                            item={item as Brand}
+                            type="brand"
+                          />
+                        ));
+                      case "categories":
+                        return displayItems.map((item) => (
+                          <ProductCard
+                            key={item._id}
+                            item={item as Category}
+                            type="category"
+                          />
+                        ));
+                      case "subcategories":
+                        return displayItems.map((item) => (
+                          <ProductCard
+                            key={item._id}
+                            item={item as SubCategory}
+                            type="subcategory"
+                          />
+                        ));
+                      default:
+                        return null;
+                    }
                   })()}
                 </div>
               ) : (
                 <div className="col-span-3 text-center py-12">
-                  <div className="h-12 w-12 text-gray-400 mx-auto mb-4">
-                    {viewMode === 'brands' ? (
-                      <Building2 className="h-12 w-12" />
-                    ) : viewMode === 'categories' ? (
-                      <Layers className="h-12 w-12" />
-                    ) : (
-                      <TagIcon className="h-12 w-12" />
-                    )}
-                  </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     No {viewMode} found
                   </h3>
@@ -746,10 +930,11 @@ const getHeaders = () => {
                       ? `No ${viewMode} matching "${searchTerm}"`
                       : `No ${viewMode} available`}
                   </p>
+
                   <div className="flex gap-3 justify-center">
                     {searchTerm && (
                       <button
-                        onClick={() => setSearchTerm('')}
+                        onClick={() => setSearchTerm("")}
                         className="px-4 py-2 bg-[#E22E2E] text-white rounded-lg text-sm font-medium hover:bg-[#c12727]"
                       >
                         Clear Search
