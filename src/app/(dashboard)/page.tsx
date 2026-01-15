@@ -606,7 +606,7 @@ useEffect(() => {
         </div>
 
         {/* ================= DOTS ================= */}
-        <div className="absolute bottom-9 left-0 right-0 z-20">
+        <div className="absolute bottom-8 left-0 right-0 z-20">
           <div className="flex justify-center gap-3">
             {BEAUTY_SLIDES.map((_, i) => (
               <button
