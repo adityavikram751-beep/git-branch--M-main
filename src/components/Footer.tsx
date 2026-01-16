@@ -49,13 +49,13 @@ export default function Footer() {
             
             {/* Icons Section - Fixed Alignment */}
             <div className="flex items-center gap-6 pt-2">
-              <a href="#" className="hover:text-[#FFD700] transition-all duration-300">
+              <a href="https://www.facebook.com/" className="hover:text-[#FFD700] transition-all duration-300">
                 <Facebook size={24} strokeWidth={1.5} />
               </a>
-              <a href="#" className="hover:text-[#FFD700] transition-all duration-300">
+              <a href="https://www.instagram.com/" className="hover:text-[#FFD700] transition-all duration-300">
                 <Instagram size={24} strokeWidth={1.5} />
               </a>
-              <a href="#" className="hover:text-[#FFD700] transition-all duration-300 flex items-center">
+              <a href="https://twitter.com/" className="hover:text-[#FFD700] transition-all duration-300 flex items-center">
                 <span className="text-2xl font-bold italic leading-none">X</span>
               </a>
             </div>
