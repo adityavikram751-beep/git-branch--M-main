@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -10,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Package, RefreshCw, MoreVertical, Eye, EyeOff } from "lucide-react";
+import { Package, RefreshCw, MoreVertical, Eye, EyeOff, Search } from "lucide-react";
 import { AddProduct } from "./product-manage/AddProduct";
 import { EditProduct } from "./product-manage/EditProduct";
 import { DeleteProduct } from "./product-manage/DeleteProduct";
@@ -23,6 +24,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface Product {
   id: string;
@@ -40,7 +42,7 @@ interface Product {
   isFeatured?: boolean;
   variants?: { price: string; quantity: string }[];
   images?: string[];
-  image?: string; // ✅ added
+  image?: string;
   isActivate?: boolean;
   status?: string;
 }
@@ -73,6 +75,8 @@ interface ApiResponse {
   products: ApiProduct[];
 }
 
+type StatusFilter = "all" | "active" | "inactive";
+
 // Utility functions to truncate text
 const truncateText = (text: string, maxWords: number = 4): string => {
   if (!text) return "";
@@ -99,6 +103,10 @@ export function ProductManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(false);
+
+  // ✅ Search + Filter state
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   // ✅ FIX: variants default [] so undefined never breaks build
   const extractPricingFromVariants = (
@@ -179,17 +187,6 @@ export function ProductManagement() {
           carton = parseFloat(highestQty.price) || 0;
         }
       }
-
-      if (carton === 0) {
-        const largeVariant = variants.find(
-          (v) =>
-            v.quantity.toLowerCase().includes("large") ||
-            v.quantity.toLowerCase().includes("big") ||
-            v.quantity.toLowerCase().includes("xl") ||
-            v.quantity.toLowerCase().includes("xxl")
-        );
-        if (largeVariant) carton = parseFloat(largeVariant.price) || 0;
-      }
     }
 
     return { single, dozen, carton };
@@ -249,7 +246,7 @@ export function ProductManagement() {
             quantity: v.quantity,
           })),
           images: apiProduct.images || [],
-          image: apiProduct.images?.[0] || "", // ✅ always set
+          image: apiProduct.images?.[0] || "",
           isActivate: apiProduct.isActivate,
           status: apiProduct.isActivate ? "active" : "inactive",
         };
@@ -275,34 +272,37 @@ export function ProductManagement() {
 
   const handleAddProduct = (newProduct: Product) => {
     setProducts((prev) => [newProduct, ...prev]);
-
-    setTimeout(() => {
-      fetchProducts();
-    }, 300);
-
     toast.success("Product added successfully!");
+    setTimeout(() => fetchProducts(), 600);
   };
 
+  // ✅ FIXED: instant update in table
   const handleUpdateProduct = (updatedProduct: Product) => {
-    const pricing = extractPricingFromVariants(updatedProduct.variants || []);
+    const pricingFromEdit = updatedProduct.pricing;
+    const pricingFromVariants = extractPricingFromVariants(updatedProduct.variants || []);
+
+    const finalPricing =
+      pricingFromEdit &&
+      (pricingFromEdit.single > 0 ||
+        pricingFromEdit.dozen > 0 ||
+        pricingFromEdit.carton > 0)
+        ? pricingFromEdit
+        : pricingFromVariants;
 
     const productWithPricing: Product = {
       ...updatedProduct,
-      pricing,
-      image: updatedProduct.image || updatedProduct.images?.[0] || "", // ✅ safety
+      pricing: finalPricing,
+      image: updatedProduct.image || updatedProduct.images?.[0] || "",
     };
 
     setProducts((prev) =>
-      prev.map((product) =>
-        product.id === productWithPricing.id ? productWithPricing : product
-      )
+      prev.map((p) => (p.id === productWithPricing.id ? productWithPricing : p))
     );
 
-    setTimeout(() => {
-      fetchProducts();
-    }, 300);
-
     toast.success("Product updated successfully!");
+
+    // ❌ Remove fast refetch (it overwrites with old data sometimes)
+    // setTimeout(() => fetchProducts(), 300);
   };
 
   const handleDeleteProduct = (productId: string) => {
@@ -310,10 +310,7 @@ export function ProductManagement() {
     toast.success("Product deleted successfully!");
   };
 
-  const handleToggleStatus = async (
-    productId: string,
-    currentIsActivate: boolean
-  ) => {
+  const handleToggleStatus = async (productId: string, currentIsActivate: boolean) => {
     try {
       const adminToken = localStorage.getItem("adminToken");
       if (!adminToken) {
@@ -338,9 +335,7 @@ export function ProductManagement() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("API Error:", errorText);
-        throw new Error(
-          `Failed to update product status. Status: ${response.status}`
-        );
+        throw new Error(`Failed to update product status. Status: ${response.status}`);
       }
 
       const result = await response.json();
@@ -349,35 +344,14 @@ export function ProductManagement() {
         const newIsActivate = newStatus === "activate";
 
         setProducts((prev) =>
-          prev.map((product) =>
-            product.id === productId
-              ? {
-                  ...product,
-                  isActivate: newIsActivate,
-                  status: newIsActivate ? "active" : "inactive",
-                }
-              : product
+          prev.map((p) =>
+            p.id === productId
+              ? { ...p, isActivate: newIsActivate, status: newIsActivate ? "active" : "inactive" }
+              : p
           )
         );
 
-        setProducts((prev) =>
-          [...prev].sort((a, b) => {
-            if (a.isActivate && !b.isActivate) return -1;
-            if (!a.isActivate && b.isActivate) return 1;
-            return 0;
-          })
-        );
-
-        toast.success(
-          result.message ||
-            `Product ${
-              newStatus === "activate" ? "activated" : "deactivated"
-            } successfully!`
-        );
-
-        setTimeout(() => {
-          fetchProducts();
-        }, 500);
+        toast.success(result.message || `Product ${newIsActivate ? "activated" : "deactivated"} successfully!`);
       } else {
         throw new Error(result.message || "Failed to update status");
       }
@@ -398,13 +372,36 @@ export function ProductManagement() {
     setRefreshTrigger((prev) => !prev);
   };
 
+  // ✅ FILTERED PRODUCTS (Search + Status)
+  const filteredProducts = useMemo(() => {
+    let list = [...products];
+
+    // status filter
+    if (statusFilter === "active") {
+      list = list.filter((p) => p.isActivate === true);
+    }
+    if (statusFilter === "inactive") {
+      list = list.filter((p) => p.isActivate === false);
+    }
+
+    // search filter
+    const q = search.trim().toLowerCase();
+    if (q.length > 0) {
+      list = list.filter((p) => {
+        const name = (p.name || "").toLowerCase();
+        const desc = (p.description || "").toLowerCase();
+        return name.includes(q) || desc.includes(q);
+      });
+    }
+
+    return list;
+  }, [products, search, statusFilter]);
+
   return (
     <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-rose-900">
-            Product Management
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-900">Product Management</h1>
           <p className="text-rose-600">Manage your cosmetic product catalog</p>
         </div>
 
@@ -414,9 +411,7 @@ export function ProductManagement() {
             className="px-4 py-2 bg-rose-100 text-rose-700 rounded hover:bg-rose-200 transition-colors flex items-center gap-2"
             disabled={isLoading}
           >
-            <RefreshCw
-              className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </button>
 
@@ -437,10 +432,49 @@ export function ProductManagement() {
       )}
 
       <Card className="border-rose-200 bg-white/70 backdrop-blur-sm">
-        <CardHeader>
+        <CardHeader className="space-y-4">
           <CardTitle className="text-rose-900 flex items-center gap-2">
             <Package className="h-5 w-5" /> Product Catalog
           </CardTitle>
+
+          {/* ✅ SEARCH + FILTER BAR */}
+          <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+            {/* Search */}
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-rose-500" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search product name / description..."
+                className="pl-9 border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+              />
+            </div>
+
+            {/* Dropdown Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-rose-200 text-rose-700 hover:bg-rose-50 w-full md:w-auto"
+                >
+                  Filter:{" "}
+                  <span className="ml-2 font-semibold capitalize">{statusFilter}</span>
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem className="cursor-pointer" onClick={() => setStatusFilter("all")}>
+                  All
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer" onClick={() => setStatusFilter("active")}>
+                  Active
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer" onClick={() => setStatusFilter("inactive")}>
+                  Inactive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
 
         <CardContent>
@@ -462,17 +496,14 @@ export function ProductManagement() {
               </TableHeader>
 
               <TableBody>
-                {products.length === 0 && !isLoading ? (
+                {filteredProducts.length === 0 && !isLoading ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center text-rose-700 py-8"
-                    >
-                      No products found. Add your first product!
+                    <TableCell colSpan={8} className="text-center text-rose-700 py-8">
+                      No products found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  products.map((product) => (
+                  filteredProducts.map((product) => (
                     <TableRow
                       key={product.id}
                       className={`border-rose-200 hover:bg-rose-50 ${
@@ -494,10 +525,7 @@ export function ProductManagement() {
                       </TableCell>
 
                       <TableCell>
-                        <div
-                          className="font-medium text-rose-900 cursor-help"
-                          title={product.name}
-                        >
+                        <div className="font-medium text-rose-900 cursor-help" title={product.name}>
                           {truncateProductName(product.name)}
                         </div>
 
@@ -509,33 +537,21 @@ export function ProductManagement() {
                       </TableCell>
 
                       <TableCell className="text-rose-700 hidden md:table-cell">
-                        <div
-                          className="truncate cursor-help"
-                          title={product.description}
-                        >
+                        <div className="truncate cursor-help" title={product.description}>
                           {truncateDescription(product.description)}
                         </div>
                       </TableCell>
 
                       <TableCell className="text-rose-700">
-                        $
-                        {product.pricing.single > 0
-                          ? product.pricing.single.toFixed(2)
-                          : "0.00"}
+                        ${product.pricing.single > 0 ? product.pricing.single.toFixed(2) : "0.00"}
                       </TableCell>
 
                       <TableCell className="text-rose-700">
-                        $
-                        {product.pricing.dozen > 0
-                          ? product.pricing.dozen.toFixed(2)
-                          : "0.00"}
+                        ${product.pricing.dozen > 0 ? product.pricing.dozen.toFixed(2) : "0.00"}
                       </TableCell>
 
                       <TableCell className="text-rose-700">
-                        $
-                        {product.pricing.carton > 0
-                          ? product.pricing.carton.toFixed(2)
-                          : "0.00"}
+                        ${product.pricing.carton > 0 ? product.pricing.carton.toFixed(2) : "0.00"}
                       </TableCell>
 
                       <TableCell>
@@ -545,12 +561,7 @@ export function ProductManagement() {
                               ? "bg-green-100 text-green-800 hover:bg-green-200"
                               : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                           }`}
-                          onClick={() =>
-                            handleToggleStatus(
-                              product.id,
-                              product.isActivate || false
-                            )
-                          }
+                          onClick={() => handleToggleStatus(product.id, product.isActivate || false)}
                         >
                           {product.isActivate ? "Active" : "Inactive"}
                         </Badge>
@@ -566,12 +577,7 @@ export function ProductManagement() {
 
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem
-                              onClick={() =>
-                                handleToggleStatus(
-                                  product.id,
-                                  product.isActivate || false
-                                )
-                              }
+                              onClick={() => handleToggleStatus(product.id, product.isActivate || false)}
                               className="cursor-pointer"
                             >
                               {product.isActivate ? (
@@ -589,7 +595,6 @@ export function ProductManagement() {
 
                             <DropdownMenuSeparator />
 
-                            {/* ✅ FINAL FIX: always pass image to EditProduct */}
                             <EditProduct
                               product={{
                                 ...product,
