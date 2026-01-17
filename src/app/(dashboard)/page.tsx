@@ -622,92 +622,144 @@ useEffect(() => {
           </div>
         </div>
       </section>
+{/* ================= EXPLORE CATEGORIES ================= */}
+<section className="py-20 bg-red-100">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
 
-      {/* ================= EXPLORE CATEGORIES ================= */}
-      <section className="py-20 bg-red-100 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Heading */}
-          <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-serif font-semibold text-gray-800">
-              Explore Our Categories
-            </h2>
-            <p className="text-gray-600 mt-3">
-              Discover our curated collection of premium products
-            </p>
-            <p className="text-gray-500">
-              across different categories
-            </p>
-          </div>
+    {/* ===== Header ===== */}
+    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
+      <div>
+        <h2 className="text-[40px] font-serif font-semibold text-gray-800">
+          Explore Categories
+        </h2>
+        <p className="text-gray-600 mt-2 max-w-xl">
+          Discover our curated collection of premium products across different categories.
+        </p>
+      </div>
 
-          {/* SLIDER */}
-          <div className="relative overflow-hidden">
-            <div
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{
-                transform: `translateX(-${
-                  categoryIndex *
-                  (typeof window !== "undefined" && window.innerWidth >= 768 ? 25 : 100)
-                }%)`,
-              }}
-            >
-              {categories.length > 0 ? (
-                categories.map((cat) => (
-                  <div
-                    key={cat._id}
-                    className="
-                      min-w-full
-                      sm:min-w-[50%]
-                      md:min-w-[25%]
-                      px-2
-                    "
-                  >
-                    <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden h-full">
-                      {/* IMAGE */}
-                      <div className="relative h-48 md:h-56 overflow-hidden">
-                        <img
-                          src={cat.catImg}
-                          alt={cat.categoryname}
-                          className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        />
+      <Link
+        href="/category"
+        className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition"
+      >
+        View All Categories <span>→</span>
+      </Link>
+    </div>
 
-                        {cat.trending && (
-                          <span className="absolute top-3 right-3 bg-red-500 text-white text-xs px-3 py-1 rounded-full shadow">
-                            🔥 Trending
-                          </span>
-                        )}
-                      </div>
+    {loading ? (
+      <div className="text-center py-12 text-gray-600">Loading categories...</div>
+    ) : categories.length > 0 ? (
+      <div className="relative">
 
-                      {/* TITLE */}
-                      <div className="p-5 text-center">
-                        <h3 className="font-semibold text-gray-800 text-lg">
-                          {cat.categoryname}
-                        </h3>
-                      </div>
+        {/* ✅ Responsive slider calculations */}
+        {(() => {
+          const slidesPerView =
+            typeof window !== "undefined"
+              ? window.innerWidth >= 1024
+                ? 3
+                : window.innerWidth >= 640
+                ? 2
+                : 1
+              : 1;
+
+          const slideWidth = 100 / slidesPerView;
+          const maxIndex = Math.max(0, categories.length - slidesPerView);
+
+          return (
+            <>
+             {/* LEFT ARROW */}
+<button
+  onClick={() =>
+    setCategoryIndex((prev) => Math.max(0, prev - slidesPerView))
+  }
+  disabled={categoryIndex === 0}
+  className={`absolute -left-4 top-1/2 -translate-y-1/2 z-10
+    w-12 h-12 rounded-full text-white text-2xl
+    flex items-center justify-center shadow-xl transition
+    ${categoryIndex === 0 ? "bg-gray-400 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"}`}
+>
+  ‹
+</button>
+
+{/* RIGHT ARROW */}
+<button
+  onClick={() =>
+    setCategoryIndex((prev) => Math.min(maxIndex, prev + slidesPerView))
+  }
+  disabled={categoryIndex === maxIndex}
+  className={`absolute -right-4 top-1/2 -translate-y-1/2 z-10
+    w-12 h-12 rounded-full text-white text-2xl
+    flex items-center justify-center shadow-xl transition
+    ${categoryIndex === maxIndex ? "bg-gray-400 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"}`}
+>
+  ›
+</button>
+
+
+              {/* TRACK */}
+              <div className="overflow-hidden">
+                <div
+                  className="flex transition-transform duration-700 ease-in-out"
+                  style={{
+                    transform: `translateX(-${categoryIndex * slideWidth}%)`,
+                  }}
+                >
+                  {categories.map((cat) => (
+                    <div
+                      key={cat._id}
+                      style={{ minWidth: `${slideWidth}%` }}
+                      className="px-3"
+                    >
+                      {/* CARD CLICK => FILTER */}
+                      <Link
+                        href={`/product?category=${cat._id}`}
+                        className="block h-full"
+                      >
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden
+                          transition-all duration-300 hover:-translate-y-2 hover:shadow-xl
+                          h-[420px] flex flex-col cursor-pointer"
+                        >
+                          {/* IMAGE */}
+                          <div className="relative h-[220px] bg-gray-100 overflow-hidden">
+                            <img
+                              src={cat.catImg || "/placeholder.jpg"}
+                              alt={cat.categoryname}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
+                              Category
+                            </span>
+                          </div>
+
+                          {/* CONTENT */}
+                          <div className="p-5 flex flex-col flex-1">
+                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
+                              {cat.categoryname}
+                            </h3>
+
+                            <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
+                              Explore products under this category.
+                            </p>
+
+                            <span className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium w-fit">
+                              Explore →
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="min-w-full text-center py-12">
-                  <p className="text-gray-500">Loading categories...</p>
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+    ) : (
+      <div className="text-center py-12 text-gray-600">No categories available</div>
+    )}
+  </div>
+</section>
 
-          {/* DOTS */}
-          <div className="flex justify-center gap-2 mt-10">
-            {categories.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCategoryIndex(i)}
-                className={`w-3 h-3 rounded-full transition ${
-                  categoryIndex === i ? "bg-red-500" : "bg-red-200"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
 
      
 
