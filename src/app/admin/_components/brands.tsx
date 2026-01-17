@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 
 // --- Type definitions ---
 interface Brand {
@@ -45,8 +45,12 @@ interface MutateBrandResponse {
 
 // Token Utility
 const getToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('adminToken') || localStorage.getItem('authToken') || localStorage.getItem('token');
+  if (typeof window !== "undefined") {
+    return (
+      localStorage.getItem("adminToken") ||
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("token")
+    );
   }
   return null;
 };
@@ -60,16 +64,18 @@ const useBrands = () => {
   const [error, setError] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState<boolean>(false);
 
-  const getAuthHeaders = (contentType: 'json' | 'multipart' = 'json'): HeadersInit => {
+  const getAuthHeaders = (
+    contentType: "json" | "multipart" = "json"
+  ): HeadersInit => {
     const token = getToken();
     const headers: HeadersInit = {};
-    
-    if (contentType === 'json') {
-      headers['Content-Type'] = 'application/json';
+
+    if (contentType === "json") {
+      headers["Content-Type"] = "application/json";
     }
-    
+
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
     return headers;
   };
@@ -77,36 +83,42 @@ const useBrands = () => {
   // Fetch Categories
   const fetchCategories = useCallback(async () => {
     try {
-      const headers = getAuthHeaders('json');
-      const response = await fetch('https://barber-syndicate.vercel.app/api/v1/category', {
-        method: 'GET',
-        headers: headers,
-      });
+      const headers = getAuthHeaders("json");
+      const response = await fetch(
+        "https://barber-syndicate.vercel.app/api/v1/category",
+        {
+          method: "GET",
+          headers: headers,
+        }
+      );
 
-      if (!response.ok) throw new Error('Failed to fetch categories');
+      if (!response.ok) throw new Error("Failed to fetch categories");
 
       const data: CategoryResponse = await response.json();
       setCategories(data.data);
     } catch (err) {
-      console.error('Error fetching categories:', err);
+      console.error("Error fetching categories:", err);
     }
   }, []);
 
   // Fetch Subcategories
   const fetchSubcategories = useCallback(async () => {
     try {
-      const headers = getAuthHeaders('json');
-      const response = await fetch('https://barber-syndicate.vercel.app/api/v1/subcategory/getSubCat', {
-        method: 'GET',
-        headers: headers,
-      });
+      const headers = getAuthHeaders("json");
+      const response = await fetch(
+        "https://barber-syndicate.vercel.app/api/v1/subcategory/getSubCat",
+        {
+          method: "GET",
+          headers: headers,
+        }
+      );
 
-      if (!response.ok) throw new Error('Failed to fetch subcategories');
+      if (!response.ok) throw new Error("Failed to fetch subcategories");
 
       const data: SubcategoryResponse = await response.json();
-      setSubcategories(data.data.filter(sub => !sub.isDelete));
+      setSubcategories(data.data.filter((sub) => !sub.isDelete));
     } catch (err) {
-      console.error('Error fetching subcategories:', err);
+      console.error("Error fetching subcategories:", err);
     }
   }, []);
 
@@ -116,11 +128,14 @@ const useBrands = () => {
       setLoading(true);
       setError(null);
 
-      const headers = getAuthHeaders('json');
-      const response = await fetch('https://barber-syndicate.vercel.app/api/v1/brands/getall', {
-        method: 'GET',
-        headers: headers,
-      });
+      const headers = getAuthHeaders("json");
+      const response = await fetch(
+        "https://barber-syndicate.vercel.app/api/v1/brands/getall",
+        {
+          method: "GET",
+          headers: headers,
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -132,44 +147,48 @@ const useBrands = () => {
         setBrands(data.data);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching brands');
-      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : "Error fetching brands");
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Create Brand
-  const createBrand = async (name: string, file: File | null, categoryId: string, subcategoryId: string): Promise<boolean> => {
+  const createBrand = async (
+    name: string,
+    file: File | null,
+    categoryId: string,
+    subcategoryId: string
+  ): Promise<boolean> => {
     try {
       setIsMutating(true);
       setError(null);
 
       const formData = new FormData();
-      formData.append('name', name.trim());
-      formData.append('brand', name.trim());
-      
-      if (file) {
-        formData.append('file', file);
-      }
-      if (categoryId) {
-        formData.append('category', categoryId);
-      }
-      if (subcategoryId) {
-        formData.append('subcategory', subcategoryId);
-      }
-      
-      const headers = getAuthHeaders('multipart');
+      formData.append("name", name.trim());
+      formData.append("brand", name.trim());
 
-      const response = await fetch('https://barber-syndicate.vercel.app/api/v1/brands', {
-        method: 'POST',
-        headers: headers,
-        body: formData,
-      });
+      if (file) formData.append("file", file);
+      if (categoryId) formData.append("category", categoryId);
+      if (subcategoryId) formData.append("subcategory", subcategoryId);
+
+      const headers = getAuthHeaders("multipart");
+
+      const response = await fetch(
+        "https://barber-syndicate.vercel.app/api/v1/brands",
+        {
+          method: "POST",
+          headers: headers,
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! Status: ${response.status}`
+        );
       }
 
       const data: MutateBrandResponse = await response.json();
@@ -178,11 +197,11 @@ const useBrands = () => {
         await fetchBrands();
         return true;
       } else {
-        throw new Error(data.message || 'Failed to create brand');
+        throw new Error(data.message || "Failed to create brand");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error creating brand');
-      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : "Error creating brand");
+      console.error("Error:", err);
       return false;
     } finally {
       setIsMutating(false);
@@ -190,36 +209,41 @@ const useBrands = () => {
   };
 
   // Update Brand
-  const updateBrand = async (id: string, name: string, file: File | null, categoryId: string, subcategoryId: string): Promise<boolean> => {
+  const updateBrand = async (
+    id: string,
+    name: string,
+    file: File | null,
+    categoryId: string,
+    subcategoryId: string
+  ): Promise<boolean> => {
     try {
       setIsMutating(true);
       setError(null);
 
       const formData = new FormData();
-      formData.append('name', name.trim());
-      formData.append('brand', name.trim());
-      
-      if (file) {
-        formData.append('file', file);
-      }
-      if (categoryId) {
-        formData.append('category', categoryId);
-      }
-      if (subcategoryId) {
-        formData.append('subcategory', subcategoryId);
-      }
-      
-      const headers = getAuthHeaders('multipart');
+      formData.append("name", name.trim());
+      formData.append("brand", name.trim());
 
-      const response = await fetch(`https://barber-syndicate.vercel.app/api/v1/brands/${id}`, {
-        method: 'PUT',
-        headers: headers,
-        body: formData,
-      });
+      if (file) formData.append("file", file);
+      if (categoryId) formData.append("category", categoryId);
+      if (subcategoryId) formData.append("subcategory", subcategoryId);
+
+      const headers = getAuthHeaders("multipart");
+
+      const response = await fetch(
+        `https://barber-syndicate.vercel.app/api/v1/brands/${id}`,
+        {
+          method: "PUT",
+          headers: headers,
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! Status: ${response.status}`
+        );
       }
 
       const data: MutateBrandResponse = await response.json();
@@ -228,39 +252,46 @@ const useBrands = () => {
         await fetchBrands();
         return true;
       } else {
-        throw new Error(data.message || 'Failed to update brand');
+        throw new Error(data.message || "Failed to update brand");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error updating brand');
-      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : "Error updating brand");
+      console.error("Error:", err);
       return false;
     } finally {
       setIsMutating(false);
     }
   };
 
-  // Delete Brand
+  // ✅ Delete Brand (NEW API)
   const deleteBrand = async (id: string): Promise<boolean> => {
     try {
       setIsMutating(true);
       setError(null);
 
-      const headers = getAuthHeaders('json');
+      const headers = getAuthHeaders("json");
 
-      const response = await fetch(`https://barber-syndicate.vercel.app/api/v1/brands/${id}`, {
-        method: 'DELETE',
-        headers: headers,
-      });
+      const response = await fetch(
+        `https://barber-syndicate.vercel.app/api/v1/brands/delete-brand?brand_id=${id}`,
+        {
+          method: "DELETE",
+          headers,
+        }
+      );
+
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        throw new Error(
+          data?.message || `HTTP error! Status: ${response.status}`
+        );
       }
 
       await fetchBrands();
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting brand');
-      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : "Error deleting brand");
+      console.error("Error:", err);
       return false;
     } finally {
       setIsMutating(false);
@@ -273,32 +304,54 @@ const useBrands = () => {
     fetchSubcategories();
   }, [fetchBrands, fetchCategories, fetchSubcategories]);
 
-  return { brands, categories, subcategories, loading, error, isMutating, refetch: fetchBrands, createBrand, updateBrand, deleteBrand };
+  return {
+    brands,
+    categories,
+    subcategories,
+    loading,
+    error,
+    isMutating,
+    refetch: fetchBrands,
+    createBrand,
+    updateBrand,
+    deleteBrand,
+  };
 };
 
 // --- Main Component ---
 const Brands = () => {
-  const { brands: brandsList, categories, subcategories, loading, error, isMutating, refetch, createBrand, updateBrand, deleteBrand } = useBrands();
-  
+  const {
+    brands: brandsList,
+    categories,
+    subcategories,
+    loading,
+    error,
+    isMutating,
+    refetch,
+    createBrand,
+    updateBrand,
+    deleteBrand,
+  } = useBrands();
+
   // Form States
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    subcategory: '',
+    name: "",
+    category: "",
+    subcategory: "",
     file: null as File | null,
-    previewUrl: '' as string
+    previewUrl: "" as string,
   });
 
   // Filter States
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
 
   // Get filtered subcategories based on selected category in modal
   const getFilteredSubcategoriesForModal = () => {
     if (!formData.category) return subcategories;
-    return subcategories.filter(sub => sub.catId === formData.category);
+    return subcategories.filter((sub) => sub.catId === formData.category);
   };
 
   // Get filtered brands based on selected filters
@@ -306,11 +359,13 @@ const Brands = () => {
     let filtered = [...brandsList];
 
     if (selectedCategory) {
-      filtered = filtered.filter(brand => brand.category === selectedCategory);
+      filtered = filtered.filter((brand) => brand.category === selectedCategory);
     }
 
     if (selectedSubcategory) {
-      filtered = filtered.filter(brand => brand.subcategory === selectedSubcategory);
+      filtered = filtered.filter(
+        (brand) => brand.subcategory === selectedSubcategory
+      );
     }
 
     return filtered;
@@ -318,26 +373,32 @@ const Brands = () => {
 
   // Get category name by ID
   const getCategoryName = (categoryId: string) => {
-    const category = categories.find(cat => cat._id === categoryId);
-    return category ? category.categoryname : 'Unknown';
+    const category = categories.find((cat) => cat._id === categoryId);
+    return category ? category.categoryname : "Unknown";
   };
 
   // Get subcategory name by ID
   const getSubcategoryName = (subcategoryId: string) => {
-    const subcategory = subcategories.find(sub => sub._id === subcategoryId);
-    return subcategory ? subcategory.subCatName : 'Unknown';
+    const subcategory = subcategories.find((sub) => sub._id === subcategoryId);
+    return subcategory ? subcategory.subCatName : "Unknown";
   };
 
   // Reset filters
   const resetFilters = () => {
-    setSelectedCategory('');
-    setSelectedSubcategory('');
+    setSelectedCategory("");
+    setSelectedSubcategory("");
   };
 
   // Open modal for creating
   const handleOpenCreate = () => {
     setEditingBrand(null);
-    setFormData({ name: '', category: '', subcategory: '', file: null, previewUrl: '' });
+    setFormData({
+      name: "",
+      category: "",
+      subcategory: "",
+      file: null,
+      previewUrl: "",
+    });
     setShowModal(true);
   };
 
@@ -346,10 +407,10 @@ const Brands = () => {
     setEditingBrand(brand);
     setFormData({
       name: brand.brand,
-      category: brand.category || '',
-      subcategory: brand.subcategory || '',
+      category: brand.category || "",
+      subcategory: brand.subcategory || "",
       file: null,
-      previewUrl: brand.icons || ''
+      previewUrl: brand.icons || "",
     });
     setShowModal(true);
   };
@@ -358,37 +419,37 @@ const Brands = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         file: file,
-        previewUrl: URL.createObjectURL(file)
+        previewUrl: URL.createObjectURL(file),
       }));
     }
   };
 
   // Handle category change in modal - reset subcategory
   const handleCategoryChangeInModal = (categoryId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       category: categoryId,
-      subcategory: '' // Reset subcategory when category changes
+      subcategory: "",
     }));
   };
 
   // Handle form submit
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      alert('⚠️ Brand name is required!');
+      alert("⚠️ Brand name is required!");
       return;
     }
 
     if (!formData.file && !editingBrand) {
-      alert('⚠️ Please upload a brand logo!');
+      alert("⚠️ Please upload a brand logo!");
       return;
     }
 
     let success = false;
-    
+
     if (editingBrand) {
       success = await updateBrand(
         editingBrand._id,
@@ -408,10 +469,16 @@ const Brands = () => {
 
     if (success) {
       setShowModal(false);
-      setFormData({ name: '', category: '', subcategory: '', file: null, previewUrl: '' });
-      alert(editingBrand ? '✅ Brand updated successfully!' : '✅ Brand created successfully!');
+      setFormData({
+        name: "",
+        category: "",
+        subcategory: "",
+        file: null,
+        previewUrl: "",
+      });
+      alert(editingBrand ? "✅ Brand updated successfully!" : "✅ Brand created successfully!");
     } else {
-      alert(`❌ Operation failed: ${error || 'Unknown error'}`);
+      alert(`❌ Operation failed: ${error || "Unknown error"}`);
     }
   };
 
@@ -430,17 +497,15 @@ const Brands = () => {
 
   return (
     <div className="min-h-screen bg-rose-50 p-6">
-      
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-6">
         <div className="bg-white rounded-lg shadow p-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Brand Management</h1>
-            {/* <p className="text-sm text-gray-500 mt-1">
-              Showing {filteredBrands.length} of {brandsList.length} brands
-            </p> */}
+            <h1 className="text-2xl font-bold text-gray-800">
+              Brand Management
+            </h1>
           </div>
-          
+
           <div className="flex gap-3">
             <button
               onClick={handleOpenCreate}
@@ -450,7 +515,7 @@ const Brands = () => {
               <span className="text-lg">+</span>
               Add Brand
             </button>
-            
+
             <button
               onClick={refetch}
               disabled={loading || isMutating}
@@ -461,60 +526,6 @@ const Brands = () => {
           </div>
         </div>
       </div>
-
-      {/* Filter Section
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-semibold mb-2 text-gray-700">Filter by Category</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setSelectedSubcategory(''); // Reset subcategory when category changes
-                }}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none bg-white"
-              >
-                <option value="">All Categories</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.categoryname}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-semibold mb-2 text-gray-700">Filter by Subcategory</label>
-              <select
-                value={selectedSubcategory}
-                onChange={(e) => setSelectedSubcategory(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none bg-white"
-                disabled={!selectedCategory}
-              >
-                <option value="">All Subcategories</option>
-                {subcategories
-                  .filter(sub => !selectedCategory || sub.catId === selectedCategory)
-                  .map((sub) => (
-                    <option key={sub._id} value={sub._id}>
-                      {sub.subCatName}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {(selectedCategory || selectedSubcategory) && (
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
-        </div>
-      </div> */}
 
       {/* Error Alert */}
       {error && (
@@ -533,24 +544,64 @@ const Brands = () => {
         {filteredBrands.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredBrands.map((brand) => (
-              <div key={brand._id} className="bg-white rounded-lg shadow hover:shadow-xl transition-all duration-300 overflow-hidden group relative">
-                
-                {/* Edit Button - Top Right Corner */}
-                <button
-                  onClick={() => handleOpenEdit(brand)}
-                  disabled={isMutating}
-                  className="absolute top-3 right-3 z-10 bg-white text-blue-600 p-2 rounded-lg hover:bg-blue-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md opacity-0 group-hover:opacity-100"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
+              <div
+                key={brand._id}
+                className="bg-white rounded-lg shadow hover:shadow-xl transition-all duration-300 overflow-hidden group relative"
+              >
+                {/* ✅ BOTH ICONS TOP RIGHT */}
+                <div className="absolute top-3 right-3 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                  
+                  {/* EDIT BUTTON */}
+                  <button
+                    onClick={() => handleOpenEdit(brand)}
+                    disabled={isMutating}
+                    className="bg-white text-blue-600 p-2 rounded-lg hover:bg-blue-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                    title="Edit Brand"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* DELETE BUTTON */}
+                  <button
+                    onClick={async () => {
+                      const confirmDelete = confirm(`Delete brand "${brand.brand}"?`);
+                      if (!confirmDelete) return;
+
+                      const success = await deleteBrand(brand._id);
+
+                      if (success) {
+                        alert("🗑️ Brand deleted successfully!");
+                      } else {
+                        alert(`❌ Delete failed: ${error || "Unknown error"}`);
+                      }
+                    }}
+                    disabled={isMutating}
+                    className="bg-white text-red-600 p-2 rounded-lg hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                    title="Delete Brand"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m-4 0h14"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
                 {/* Image Container */}
                 <div className="h-48 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6 border-b">
                   {brand.icons ? (
-                    <img 
-                      src={brand.icons} 
+                    <img
+                      src={brand.icons}
                       alt={brand.brand}
                       className="max-h-full max-w-full object-contain"
                     />
@@ -563,11 +614,14 @@ const Brands = () => {
 
                 {/* Info Section */}
                 <div className="p-4">
-                  <h3 className="text-lg font-bold text-center text-gray-800 mb-2">{brand.brand}</h3>
+                  <h3 className="text-lg font-bold text-center text-gray-800 mb-2">
+                    {brand.brand}
+                  </h3>
                   {brand.category && (
                     <p className="text-xs text-gray-500 text-center">
                       {getCategoryName(brand.category)}
-                      {brand.subcategory && ` • ${getSubcategoryName(brand.subcategory)}`}
+                      {brand.subcategory &&
+                        ` • ${getSubcategoryName(brand.subcategory)}`}
                     </p>
                   )}
                 </div>
@@ -577,56 +631,51 @@ const Brands = () => {
         ) : (
           <div className="bg-white rounded-lg shadow-lg p-16 text-center">
             <div className="text-7xl mb-6">📦</div>
-            <h3 className="text-2xl font-bold mb-3 text-gray-800">No Brands Found</h3>
+            <h3 className="text-2xl font-bold mb-3 text-gray-800">
+              No Brands Found
+            </h3>
             <p className="text-gray-500 mb-6">
-              {selectedCategory || selectedSubcategory 
-                ? 'No brands match your filters. Try adjusting your selection.' 
-                : 'Get started by adding your first brand'}
+              {selectedCategory || selectedSubcategory
+                ? "No brands match your filters. Try adjusting your selection."
+                : "Get started by adding your first brand"}
             </p>
-            {selectedCategory || selectedSubcategory ? (
-              <button
-                onClick={resetFilters}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium text-lg shadow-lg transition-all hover:scale-105"
-              >
-                Clear Filters
-              </button>
-            ) : (
-              <button
-                onClick={handleOpenCreate}
-                className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-medium text-lg shadow-lg transition-all hover:scale-105"
-              >
-                + Add First Brand
-              </button>
-            )}
+
+            <button
+              onClick={handleOpenCreate}
+              className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-medium text-lg shadow-lg transition-all hover:scale-105"
+            >
+              + Add First Brand
+            </button>
           </div>
         )}
       </div>
 
       {/* Modal with Blur Background */}
       {showModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 overflow-y-auto"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.4)",
+            backdropFilter: "blur(8px)",
+          }}
           onClick={() => setShowModal(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-xl shadow-2xl max-w-md w-full mb-20"
             onClick={(e) => e.stopPropagation()}
           >
-            
             {/* Modal Header */}
             <div className="p-5 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-xl">
               <h2 className="text-2xl font-bold">
-                {editingBrand ? '✏️ Edit Brand' : '➕ Add New Brand'}
+                {editingBrand ? "✏️ Edit Brand" : "➕ Add New Brand"}
               </h2>
               <p className="text-sm text-blue-100 mt-1">
-                {editingBrand ? 'Update brand information' : 'Create a new brand entry'}
+                {editingBrand ? "Update brand information" : "Create a new brand entry"}
               </p>
             </div>
 
             {/* Modal Form */}
             <div className="p-6 space-y-5">
-              
               {/* Logo Preview Section */}
               <div>
                 <label className="block text-sm font-semibold mb-3 text-gray-700 text-center">
@@ -636,14 +685,28 @@ const Brands = () => {
                   <div className="relative">
                     <div className="w-32 h-32 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden border-4 border-gray-300 shadow-lg">
                       {formData.previewUrl ? (
-                        <img src={formData.previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <img
+                          src={formData.previewUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <span className="text-5xl">🖼️</span>
                       )}
                     </div>
                     <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors shadow-lg">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                        />
                       </svg>
                       <input
                         type="file"
@@ -655,9 +718,6 @@ const Brands = () => {
                     </label>
                   </div>
                 </div>
-                {!editingBrand && (
-                  <p className="text-xs text-center text-gray-500 mt-2">Image is required for new brands</p>
-                )}
               </div>
 
               {/* Brand Name Input */}
@@ -668,16 +728,20 @@ const Brands = () => {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   placeholder="e.g., Nike, Adidas"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
                   disabled={isMutating}
                 />
               </div>
 
-              Category Dropdown
+              {/* Category Dropdown */}
               <div>
-                <label className="block text-sm font-semibold mb-2 text-gray-700">Category</label>
+                <label className="block text-sm font-semibold mb-2 text-gray-700">
+                  Category
+                </label>
                 <select
                   value={formData.category}
                   onChange={(e) => handleCategoryChangeInModal(e.target.value)}
@@ -695,10 +759,17 @@ const Brands = () => {
 
               {/* Subcategory Dropdown */}
               <div>
-                <label className="block text-sm font-semibold mb-2 text-gray-700">Subcategory</label>
+                <label className="block text-sm font-semibold mb-2 text-gray-700">
+                  Subcategory
+                </label>
                 <select
                   value={formData.subcategory}
-                  onChange={(e) => setFormData(prev => ({ ...prev, subcategory: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      subcategory: e.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none bg-white"
                   disabled={isMutating || !formData.category}
                 >
@@ -709,9 +780,6 @@ const Brands = () => {
                     </option>
                   ))}
                 </select>
-                {!formData.category && (
-                  <p className="text-xs text-gray-500 mt-1">Select a category first</p>
-                )}
               </div>
 
               {/* Action Buttons */}
@@ -725,7 +793,11 @@ const Brands = () => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={isMutating || !formData.name.trim() || (!formData.file && !editingBrand)}
+                  disabled={
+                    isMutating ||
+                    !formData.name.trim() ||
+                    (!formData.file && !editingBrand)
+                  }
                   className="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white px-5 py-3 rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg"
                 >
                   {isMutating ? (
@@ -733,8 +805,10 @@ const Brands = () => {
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Saving...
                     </span>
+                  ) : editingBrand ? (
+                    "💾 Update Brand"
                   ) : (
-                    editingBrand ? '💾 Update Brand' : '✨ Create Brand'
+                    "✨ Create Brand"
                   )}
                 </button>
               </div>
