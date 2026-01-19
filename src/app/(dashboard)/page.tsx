@@ -555,103 +555,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= SEARCH BAR (API CONNECTED) ================= */}
-      <section className="bg-yellow-50 py-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative" ref={searchWrapperRef}>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="text-gray-500 text-lg">🔍</div>
-
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => {
-                    if (searchQuery.trim()) setShowSearchDropdown(true)
-                  }}
-                  className="w-full outline-none bg-transparent text-gray-700 placeholder:text-gray-400"
-                />
-
-                {/* ✅ CLEAR BUTTON */}
-                {searchQuery.trim().length > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    className="w-8 h-8 rounded-full flex items-center justify-center
-                      hover:bg-gray-100 transition"
-                    aria-label="Clear search"
-                  >
-                    <X className="w-4 h-4 text-gray-500" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Dropdown Results */}
-            {showSearchDropdown && (
-              <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
-                {searchLoading ? (
-                  <div className="p-4 text-sm text-gray-600">Searching...</div>
-                ) : searchResults.length > 0 ? (
-                  <div className="max-h-80 overflow-auto">
-                    {searchResults.slice(0, 8).map((item: any) => (
-                      <Link
-                        key={item?._id}
-                        href={`/product/${item?._id}`}
-                        onClick={() => {
-                          setShowSearchDropdown(false)
-                          setSearchQuery("")
-                        }}
-                        className="flex items-center gap-3 p-3 hover:bg-gray-50 transition"
-                      >
-                        <img
-                          src={item?.images?.[0] || "/placeholder.jpg"}
-                          alt={item?.name || "Product"}
-                          className="w-12 h-12 rounded-lg object-cover bg-gray-100"
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-800 line-clamp-1">
-                            {item?.name}
-                          </p>
-                          <p className="text-xs text-gray-500 line-clamp-1">
-                            {item?.description || "View product details"}
-                          </p>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400" />
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-sm text-gray-600">
-                    No products found
-                  </div>
-                )}
-
-                {/* View All */}
-                {searchResults.length > 0 && (
-                  <Link
-                    href={`/product?search=${encodeURIComponent(
-                      searchQuery.trim()
-                    )}`}
-                    onClick={() => {
-                      setShowSearchDropdown(false)
-                    }}
-                    className="block text-center py-3 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition"
-                  >
-                    View All Results
-                  </Link>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+   
 
       {/* ================= WHY CHOOSE ================= */}
-      <section className="py-16 md:py-24 bg-[#F6DBC6]">
+      <section className="py-16 md:py-24 bg-yellow-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
