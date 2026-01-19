@@ -190,6 +190,14 @@ export default function EnquiryPage() {
 
   const userInfo = enquiries[0].user_id;
 
+  // ✅ ALL ENQUIRIES TOTAL (Grand Total)
+  const orderTotal = enquiries.reduce((grandTotal, enquiry) => {
+    const enquiryTotal =
+      enquiry.variants?.reduce((sum, v) => sum + (v.price || 0), 0) || 0;
+
+    return grandTotal + enquiryTotal;
+  }, 0);
+
   // ✅ Sidebar Component (Reusable)
   const CustomerSidebar = () => (
     <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 lg:sticky lg:top-24">
@@ -378,7 +386,9 @@ export default function EnquiryPage() {
                         <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
                           <img
                             src={
-                              enquiry.productId.images[selectedImages[enquiry._id]] ||
+                              enquiry.productId.images[
+                                selectedImages[enquiry._id]
+                              ] ||
                               enquiry.productId.images[0] ||
                               "/placeholder-image.jpg"
                             }
@@ -389,23 +399,29 @@ export default function EnquiryPage() {
 
                         {enquiry.productId.images.length > 1 && (
                           <div className="grid grid-cols-4 gap-1 sm:gap-2">
-                            {enquiry.productId.images.slice(0, 4).map((image, imgIndex) => (
-                              <button
-                                key={imgIndex}
-                                onClick={() => handleImageSelect(enquiry._id, imgIndex)}
-                                className={`aspect-square rounded overflow-hidden border transition-all ${
-                                  selectedImages[enquiry._id] === imgIndex
-                                    ? "border-blue-500 ring-1 sm:ring-2 ring-blue-200"
-                                    : "border-gray-200 hover:border-gray-300"
-                                }`}
-                              >
-                                <img
-                                  src={image}
-                                  alt={`${enquiry.productId!.name} ${imgIndex + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                              </button>
-                            ))}
+                            {enquiry.productId.images
+                              .slice(0, 4)
+                              .map((image, imgIndex) => (
+                                <button
+                                  key={imgIndex}
+                                  onClick={() =>
+                                    handleImageSelect(enquiry._id, imgIndex)
+                                  }
+                                  className={`aspect-square rounded overflow-hidden border transition-all ${
+                                    selectedImages[enquiry._id] === imgIndex
+                                      ? "border-blue-500 ring-1 sm:ring-2 ring-blue-200"
+                                      : "border-gray-200 hover:border-gray-300"
+                                  }`}
+                                >
+                                  <img
+                                    src={image}
+                                    alt={`${enquiry.productId!.name} ${
+                                      imgIndex + 1
+                                    }`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </button>
+                              ))}
                           </div>
                         )}
                       </div>
@@ -472,18 +488,6 @@ export default function EnquiryPage() {
                                   : `+${enquiry.variants.length - 2} more variants`}
                               </button>
                             )}
-
-                            <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                              <p className="text-sm font-medium text-gray-700">
-                                Total Price
-                              </p>
-                              <p className="text-lg font-bold text-blue-600">
-                                ₹
-                                {enquiry.variants
-                                  .reduce((total, v) => total + (v.price || 0), 0)
-                                  .toLocaleString()}
-                              </p>
-                            </div>
                           </div>
                         </div>
 
@@ -502,18 +506,21 @@ export default function EnquiryPage() {
                               Key Features
                             </h4>
                             <ul className="space-y-1">
-                              {enquiry.productId.points.slice(0, 3).map((point, pointIndex) => (
-                                <li
-                                  key={pointIndex}
-                                  className="flex items-start gap-2 text-xs sm:text-sm text-gray-700"
-                                >
-                                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></span>
-                                  <span className="line-clamp-2">{point}</span>
-                                </li>
-                              ))}
+                              {enquiry.productId.points
+                                .slice(0, 3)
+                                .map((point, pointIndex) => (
+                                  <li
+                                    key={pointIndex}
+                                    className="flex items-start gap-2 text-xs sm:text-sm text-gray-700"
+                                  >
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></span>
+                                    <span className="line-clamp-2">{point}</span>
+                                  </li>
+                                ))}
                               {enquiry.productId.points.length > 3 && (
                                 <li className="text-xs sm:text-sm text-gray-500 pl-3.5">
-                                  +{enquiry.productId.points.length - 3} more features
+                                  +{enquiry.productId.points.length - 3} more
+                                  features
                                 </li>
                               )}
                             </ul>
@@ -525,6 +532,13 @@ export default function EnquiryPage() {
                 </CardContent>
               </Card>
             ))}
+
+            {/* ✅ ONE TIME TOTAL PRICE (Bottom - Before Footer) */}
+            <div className="mt-6">
+              <div className="w-full bg-blue-600 text-white font-bold text-center py-3 rounded-lg shadow">
+                Total Cart Price : ₹{orderTotal.toLocaleString()}
+              </div>
+            </div>
           </div>
         </div>
       </div>
