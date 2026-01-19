@@ -47,7 +47,6 @@ interface Brand {
   brand: string
 }
 
-// SubCategory interface
 interface SubCategory {
   _id: string
   subCatName: string
@@ -88,15 +87,19 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     points: "",
     isFeature: false,
   })
+
+  // ✅ 3 required variants fixed
   const [variants, setVariants] = useState<Variant[]>([
     { price: "", quantity: "1" },
     { price: "", quantity: "12Pcs" },
     { price: "", quantity: "Carton" },
   ])
+
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
   const [subCategories, setSubCategories] = useState<SubCategory[]>([])
@@ -109,7 +112,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     if (!isOpen) return
 
     const token = localStorage.getItem("adminToken")
-    
+
     if (!token) {
       setError("Authentication token not found. Please log in again.")
       return
@@ -117,15 +120,11 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/v1/category`, { 
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await fetch(`${BASE_URL}/api/v1/category`, {
+          headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
-        if (data.success) {
-          setCategories(data.data)
-        } else {
-          console.error("Failed to fetch categories:", data.message)
-        }
+        if (data.success) setCategories(data.data)
       } catch (err) {
         console.error("Error fetching categories:", err)
       }
@@ -134,20 +133,19 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     const fetchBrands = async () => {
       const url = `${BASE_URL}/api/v1/brands/getAll`
       try {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }})
-        if (!res.ok) {
-          console.error(`Brand fetch failed with status ${res.status}`)
-          return
-        }
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
 
         const data = await res.json()
         if (data.success && Array.isArray(data.data)) {
           setBrands(data.data)
         } else {
-          console.error("Failed to fetch brands:", data.message || data)
+          setBrands([])
         }
       } catch (err) {
         console.error("Error fetching brands:", err)
+        setBrands([])
       }
     }
 
@@ -162,7 +160,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
     if (!categoryId || !token) {
       setSubCategories([])
-      setFormData(prev => ({ ...prev, subcategoryId: "" }))
+      setFormData((prev) => ({ ...prev, subcategoryId: "" }))
       return
     }
 
@@ -172,30 +170,23 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
       try {
         const res = await fetch(url, {
-          method: 'GET', // API expects GET method with query parameter
-          headers: { 
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         })
-        
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`)
-        }
-        
+
         const data = await res.json()
-        
+
         if (data.status === "success" && Array.isArray(data.data)) {
-          // Filter only active subcategories (not deleted)
           const activeSubCats = data.data.filter((sub: SubCategory) => !sub.isDelete)
           setSubCategories(activeSubCats)
-          
-          // Reset subcategoryId if current selection is not in new list
+
           if (!activeSubCats.find((sub: SubCategory) => sub._id === formData.subcategoryId)) {
-            setFormData(prev => ({ ...prev, subcategoryId: "" }))
+            setFormData((prev) => ({ ...prev, subcategoryId: "" }))
           }
         } else {
-          console.error("Failed to fetch subcategories:", data.message || data)
           setSubCategories([])
         }
       } catch (err) {
@@ -209,33 +200,31 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     fetchSubCategories()
   }, [formData.categoryId, formData.subcategoryId])
 
-  // --- 3. Handlers ---
+  // --- Handlers ---
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newCatId = e.target.value
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData((prev) => ({
+      ...prev,
       categoryId: newCatId,
-      subcategoryId: "" // Reset subcategory when category changes
+      subcategoryId: "",
     }))
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { id, value, type } = e.target
-    
-    if (type === 'checkbox') {
-      const checkbox = e.target as HTMLInputElement
-      setFormData(prev => ({ ...prev, [id]: checkbox.checked }))
-    } else {
-      setFormData(prev => ({ ...prev, [id]: value }))
-    }
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { id, value } = e.target
+    setFormData((prev) => ({ ...prev, [id]: value }))
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    if (images.length + files.length > 5) {
-      setError("You can only upload a maximum of 5 images")
+
+    if (images.length + files.length > 7) {
+      setError("You can only upload a maximum of 7 images")
       return
     }
+
     setImages((prev) => [...prev, ...files])
     setImagePreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))])
     setError(null)
@@ -251,12 +240,21 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
   }
 
   const updateVariant = (index: number, field: keyof Variant, value: string) => {
-    if (field === "price" && value && !/^\d*\.?\d*$/.test(value)) {
-      return
-    }
+    if (field === "price" && value && !/^\d*\.?\d*$/.test(value)) return
     const updated = [...variants]
     updated[index][field] = value
     setVariants(updated)
+  }
+
+  // ✅ Add custom variant
+  const addVariant = () => {
+    setVariants((prev) => [...prev, { price: "", quantity: "" }])
+  }
+
+  // ✅ Remove custom variant (only index >= 3)
+  const removeVariant = (index: number) => {
+    if (index < 3) return
+    setVariants((prev) => prev.filter((_, i) => i !== index))
   }
 
   // Reset form when dialog is closed
@@ -265,11 +263,13 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       setImages([])
       imagePreviews.forEach((url) => URL.revokeObjectURL(url))
       setImagePreviews([])
+
       setVariants([
         { price: "", quantity: "1" },
         { price: "", quantity: "12Pcs" },
         { price: "", quantity: "Carton" },
       ])
+
       setFormData({
         name: "",
         description: "",
@@ -279,6 +279,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
         points: "",
         isFeature: false,
       })
+
       setError(null)
       setSubCategories([])
       setIsSubCatLoading(false)
@@ -287,23 +288,33 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
   // Submit form
   const handleSubmit = async () => {
-    // Validation
     if (!formData.name || !formData.categoryId || !formData.subcategoryId || !formData.brand) {
       setError("Please fill in all required fields (Name, Category, Subcategory, Brand).")
       return
     }
+
     if (images.length === 0) {
-      setError("Please add at least one image (max 5).")
+      setError("Please add at least one image (max 7).")
       return
     }
+
     if (!variants[0]?.price || !variants[1]?.price || !variants[2]?.price) {
       setError("Please fill in all pricing fields (Single, Dozen, Carton).")
+      return
+    }
+
+    // validate custom variants (if added)
+    const customVariants = variants.slice(3)
+    const invalidCustom = customVariants.some((v) => !v.quantity || !v.price)
+    if (invalidCustom) {
+      setError("Please fill price + quantity for all custom variants (or remove empty ones).")
       return
     }
 
     try {
       setUploading(true)
       setError(null)
+
       const token = localStorage.getItem("adminToken")
       if (!token) {
         setError("Authentication token not found. Please log in.")
@@ -311,29 +322,28 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       }
 
       const data = new FormData()
-      
-      // Basic Fields
+
       data.append("name", formData.name)
       data.append("description", formData.description)
       data.append("categoryId", formData.categoryId)
       data.append("subcategoryId", formData.subcategoryId)
       data.append("brand", formData.brand)
       data.append("isFeature", formData.isFeature ? "true" : "false")
-      
-      // Points
-      const pointsArray = formData.points && formData.points.trim() !== "" 
-        ? formData.points.split("\n").map((s) => s.trim()).filter(Boolean) 
-        : []
+
+      const pointsArray =
+        formData.points && formData.points.trim() !== ""
+          ? formData.points.split("\n").map((s) => s.trim()).filter(Boolean)
+          : []
       data.append("points", JSON.stringify(pointsArray))
 
-      // Variants
-      const cleanedVariants = variants.map((v) => ({ ...v, price: v.price || "0" }))
+      const cleanedVariants = variants.map((v) => ({
+        price: v.price || "0",
+        quantity: v.quantity,
+      }))
       data.append("variants", JSON.stringify(cleanedVariants))
-      
-      // Images
+
       images.forEach((img) => data.append("image", img))
 
-      // Submit to API
       const res = await fetch(`${BASE_URL}/api/v1/product`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -341,7 +351,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       })
 
       const result = await res.json()
-      
+
       if (res.ok && result.success) {
         const newProduct: Product = {
           id: result._id || result.data?._id || crypto.randomUUID(),
@@ -361,6 +371,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
           variants: cleanedVariants,
           images: result.images || result.data?.images || imagePreviews,
         }
+
         onAddProduct(newProduct)
         setIsOpen(false)
       } else {
@@ -382,6 +393,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
           Add Product
         </Button>
       </DialogTrigger>
+
       <DialogContent className="border-rose-200 max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         <DialogHeader className="p-6 border-b border-rose-100 bg-gradient-to-r from-rose-50 to-pink-50">
           <DialogTitle className="text-2xl font-bold text-rose-900 flex items-center">
@@ -392,6 +404,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             Create a new product in your catalog with detailed pricing options
           </DialogDescription>
         </DialogHeader>
+
         <div className="p-6 space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -401,32 +414,32 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
               </div>
             </div>
           )}
-          
-          {/* 1. Product Name and Brand Section */}
+
+          {/* Product Name + Brand */}
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium text-gray-700">
                 Product Name <span className="text-red-500">*</span>
               </Label>
-              <Input 
-                id="name" 
-                value={formData.name} 
-                onChange={handleInputChange} 
-                className="border-rose-200 focus:border-rose-500 focus:ring-rose-500" 
-                placeholder="Enter product name" 
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+                placeholder="Enter product name"
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="brand" className="text-sm font-medium text-gray-700">
                 Brand <span className="text-red-500">*</span>
               </Label>
-              <select 
-                id="brand" 
-                value={formData.brand} 
-                onChange={handleInputChange} 
-                className="w-full px-3 py-2 border border-rose-200 rounded-md focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-white" 
+              <select
+                id="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-rose-200 rounded-md focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-white"
                 required
               >
                 <option value="">Select Brand</option>
@@ -439,9 +452,8 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             </div>
           </div>
 
-          {/* 2. Category and Subcategory Section */}
+          {/* Category + Subcategory */}
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Category Select */}
             <div className="space-y-2">
               <Label htmlFor="categoryId" className="text-sm font-medium text-gray-700">
                 Category <span className="text-red-500">*</span>
@@ -461,8 +473,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                 ))}
               </select>
             </div>
-            
-            {/* Subcategory Select */}
+
             <div className="space-y-2">
               <Label htmlFor="subcategoryId" className="text-sm font-medium text-gray-700">
                 Subcategory <span className="text-red-500">*</span>
@@ -476,13 +487,13 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                 disabled={!formData.categoryId || isSubCatLoading}
               >
                 <option value="">
-                  {!formData.categoryId 
-                    ? 'Select category first'
-                    : isSubCatLoading 
-                    ? 'Loading subcategories...' 
+                  {!formData.categoryId
+                    ? "Select category first"
+                    : isSubCatLoading
+                    ? "Loading subcategories..."
                     : subCategories.length === 0
-                    ? 'No subcategories found'
-                    : 'Select Subcategory'}
+                    ? "No subcategories found"
+                    : "Select Subcategory"}
                 </option>
                 {subCategories.map((subCat) => (
                   <option key={subCat._id} value={subCat._id}>
@@ -493,30 +504,31 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             </div>
           </div>
 
-          {/* 3. Description, Featured, and Points Section */}
+          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description" className="text-sm font-medium text-gray-700">
               Description
             </Label>
-            <Textarea 
-              id="description" 
-              value={formData.description} 
-              onChange={handleInputChange} 
-              className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 min-h-[100px]" 
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              className="border-rose-200 focus:border-rose--500 focus:ring-rose-500 min-h-[100px]"
               placeholder="Enter product description..."
             />
           </div>
 
+          {/* Featured */}
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
-                Featured Product
-              </Label>
+              <Label className="text-sm font-medium text-gray-700">Featured Product</Label>
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="isFeature" 
-                  checked={formData.isFeature} 
-                  onCheckedChange={(checked) => setFormData({ ...formData, isFeature: !!checked })} 
+                <Checkbox
+                  id="isFeature"
+                  checked={formData.isFeature}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, isFeature: !!checked })
+                  }
                   className="border-rose-200 focus:ring-rose-500"
                 />
                 <Label htmlFor="isFeature" className="text-sm text-gray-600">
@@ -526,40 +538,43 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             </div>
           </div>
 
+          {/* Points */}
           <div className="space-y-2">
             <Label htmlFor="points" className="text-sm font-medium text-gray-700">
               Product Points (one per line)
             </Label>
-            <Textarea 
-              id="points" 
-              value={formData.points} 
-              onChange={handleInputChange} 
-              className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 min-h-[80px]" 
+            <Textarea
+              id="points"
+              value={formData.points}
+              onChange={handleInputChange}
+              className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 min-h-[80px]"
               placeholder="Enter product points/benefits, one per line..."
             />
           </div>
 
-          {/* 4. Pricing Section */}
+          {/* Pricing */}
           <div className="bg-gradient-to-r from-rose-50 to-pink-50 p-6 rounded-lg border border-rose-100">
             <h3 className="text-lg font-semibold text-rose-900 mb-4 flex items-center">
               Pricing Structure <span className="text-sm text-rose-600 ml-2">(Required)</span>
             </h3>
+
             <div className="space-y-4">
+              {/* Required 3 variants */}
               {variants.slice(0, 3).map((v, i) => {
-                const labels = ['Single Unit', 'Dozen (12 Pieces)', 'Carton']
+                const labels = ["Single Unit", "Dozen (12 Pieces)", "Carton"]
                 return (
                   <div key={i} className="flex items-end gap-3 bg-white p-4 rounded-md shadow-sm border border-rose-100">
                     <div className="flex-1 space-y-1">
                       <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
                         {labels[i]}
                       </Label>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        placeholder={`Price for ${labels[i].toLowerCase()}`} 
-                        value={v.price} 
-                        onChange={(e) => updateVariant(i, "price", e.target.value)} 
-                        className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 text-lg font-medium" 
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder={`Price for ${labels[i].toLowerCase()}`}
+                        value={v.price}
+                        onChange={(e) => updateVariant(i, "price", e.target.value)}
+                        className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 text-lg font-medium"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">{v.quantity}</p>
@@ -567,38 +582,90 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                   </div>
                 )
               })}
+
+              {/* Custom variants */}
+              {variants.length > 3 && (
+                <div className="border-t border-rose-200 pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">
+                    Additional Variants
+                  </h4>
+
+                  {variants.slice(3).map((v, i) => {
+                    const actualIndex = i + 3
+                    return (
+                      <div key={actualIndex} className="flex items-center gap-3 mb-3 p-3 bg-gray-50 rounded-md">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Price"
+                          value={v.price}
+                          onChange={(e) => updateVariant(actualIndex, "price", e.target.value)}
+                          className="flex-1 border-rose-200 focus:border-rose-500"
+                        />
+                        <Input
+                          type="text"
+                          placeholder="Quantity"
+                          value={v.quantity}
+                          onChange={(e) => updateVariant(actualIndex, "quantity", e.target.value)}
+                          className="flex-1 border-rose-200 focus:border-rose-500"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeVariant(actualIndex)}
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Add Variant Button */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addVariant}
+                className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
+              >
+                + Add Custom Variant
+              </Button>
             </div>
           </div>
 
-          {/* 5. Images Section */}
+          {/* Images */}
           <div className="space-y-2">
             <Label htmlFor="images" className="text-sm font-medium text-gray-700">
               Product Images <span className="text-rose-600">(At least 1, max 7)</span>
             </Label>
-            <Input 
-              id="images" 
-              type="file" 
-              accept="image/*" 
-              multiple 
-              onChange={handleImageChange} 
+            <Input
+              id="images"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
               className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
             />
+
             {imagePreviews.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3">
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="relative group">
                     <div className="relative w-full h-24 bg-gray-100 rounded-md overflow-hidden border border-rose-200">
-                      <Image 
-                        src={preview} 
-                        alt={`Preview ${index + 1}`} 
-                        fill 
-                        className="object-cover" 
+                      <Image
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        fill
+                        className="object-cover"
                         sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 33vw"
                       />
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveImage(index)} 
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
                       className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
                     >
                       <X className="h-3 w-3" />
@@ -607,23 +674,18 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                 ))}
               </div>
             )}
-            {imagePreviews.length < 7 && (
-              <p className="text-xs text-gray-500 mt-1">
-                You can upload {7 - imagePreviews.length} more image{7 - imagePreviews.length !== 1 ? 's' : ''}
-              </p>
-            )}
           </div>
 
-          {/* Submit Button */}
+          {/* Submit */}
           <Button
             onClick={handleSubmit}
             className="w-full bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white font-semibold py-3 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={
-              uploading || 
-              !formData.name || 
-              !formData.categoryId || 
-              !formData.subcategoryId || 
-              !formData.brand || 
+              uploading ||
+              !formData.name ||
+              !formData.categoryId ||
+              !formData.subcategoryId ||
+              !formData.brand ||
               images.length === 0 ||
               !variants[0]?.price ||
               !variants[1]?.price ||
