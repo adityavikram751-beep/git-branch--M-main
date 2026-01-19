@@ -269,7 +269,7 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#fff9f2] border-b shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-2 lg:px-0">
         <div className="h-16 flex items-center justify-between gap-4">
           {/* LEFT: Mobile menu + Logo */}
           <div className="flex items-center gap-3">
