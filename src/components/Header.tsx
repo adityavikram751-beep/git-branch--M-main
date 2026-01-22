@@ -182,9 +182,10 @@ export default function Header() {
   const navItems = [
     { href: "/", label: "Home", icon: "🏠" },
     { href: "/product", label: "Products", icon: "🛍️" },
-    { href: "/contact", label: "Contacts", icon: "📞" },
+  
     { href: "/brand", label: "Brands", icon: "🏢" },
     { href: "/category", label: "Category", icon: "📁" },
+      { href: "/contact", label: "Contacts", icon: "📞" },
   ]
 
   // ✅ Search API Call (Debounce)
