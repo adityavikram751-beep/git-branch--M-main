@@ -11,7 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Package, RefreshCw, MoreVertical, Eye, EyeOff, Search } from "lucide-react";
+import {
+  Package,
+  RefreshCw,
+  MoreVertical,
+  Eye,
+  EyeOff,
+  Search,
+} from "lucide-react";
 import { AddProduct } from "./product-manage/AddProduct";
 import { EditProduct } from "./product-manage/EditProduct";
 import { DeleteProduct } from "./product-manage/DeleteProduct";
@@ -37,7 +44,11 @@ interface Product {
   };
   brand?: string;
   categoryId?: string;
+
+  // ✅ subcategory display
   subcategoryId?: string;
+  subcategoryName?: string;
+
   points?: string[];
   isFeatured?: boolean;
   variants?: { price: string; quantity: string }[];
@@ -59,7 +70,15 @@ interface ApiProduct {
   }[];
   brand: string;
   categoryId: string;
-  subcategoryId: string;
+
+  // ✅ FIX: subcategoryId is object OR null (as per your API)
+  subcategoryId:
+    | {
+        _id: string;
+        subCatName: string;
+      }
+    | null;
+
   points: string[];
   isFeature: boolean;
   isActivate: boolean;
@@ -204,7 +223,7 @@ export function ProductManagement() {
       }
 
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product?page=${currentPage}`,
+        `https://4frnn03l-3000.inc1.devtunnels.ms/api/v1/product?page=${currentPage}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -238,7 +257,11 @@ export function ProductManagement() {
           pricing,
           brand: apiProduct.brand,
           categoryId: apiProduct.categoryId,
-          subcategoryId: apiProduct.subcategoryId,
+
+          // ✅ IMPORTANT: subcategory name directly from object
+          subcategoryId: apiProduct.subcategoryId?._id || "",
+          subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
+
           points: apiProduct.points || [],
           isFeatured: apiProduct.isFeature || false,
           variants: apiProduct.variants.map((v) => ({
@@ -279,7 +302,9 @@ export function ProductManagement() {
   // ✅ FIXED: instant update in table
   const handleUpdateProduct = (updatedProduct: Product) => {
     const pricingFromEdit = updatedProduct.pricing;
-    const pricingFromVariants = extractPricingFromVariants(updatedProduct.variants || []);
+    const pricingFromVariants = extractPricingFromVariants(
+      updatedProduct.variants || []
+    );
 
     const finalPricing =
       pricingFromEdit &&
@@ -293,6 +318,7 @@ export function ProductManagement() {
       ...updatedProduct,
       pricing: finalPricing,
       image: updatedProduct.image || updatedProduct.images?.[0] || "",
+      subcategoryName: updatedProduct.subcategoryName || "—",
     };
 
     setProducts((prev) =>
@@ -300,9 +326,6 @@ export function ProductManagement() {
     );
 
     toast.success("Product updated successfully!");
-
-    // ❌ Remove fast refetch (it overwrites with old data sometimes)
-    // setTimeout(() => fetchProducts(), 300);
   };
 
   const handleDeleteProduct = (productId: string) => {
@@ -310,7 +333,10 @@ export function ProductManagement() {
     toast.success("Product deleted successfully!");
   };
 
-  const handleToggleStatus = async (productId: string, currentIsActivate: boolean) => {
+  const handleToggleStatus = async (
+    productId: string,
+    currentIsActivate: boolean
+  ) => {
     try {
       const adminToken = localStorage.getItem("adminToken");
       if (!adminToken) {
@@ -321,7 +347,7 @@ export function ProductManagement() {
       const newStatus = currentIsActivate ? "deactivate" : "activate";
 
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive/${productId}`,
+        `https://4frnn03l-3000.inc1.devtunnels.ms/api/v1/product/active-deactive/${productId}`,
         {
           method: "PUT",
           headers: {
@@ -335,7 +361,9 @@ export function ProductManagement() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("API Error:", errorText);
-        throw new Error(`Failed to update product status. Status: ${response.status}`);
+        throw new Error(
+          `Failed to update product status. Status: ${response.status}`
+        );
       }
 
       const result = await response.json();
@@ -346,12 +374,21 @@ export function ProductManagement() {
         setProducts((prev) =>
           prev.map((p) =>
             p.id === productId
-              ? { ...p, isActivate: newIsActivate, status: newIsActivate ? "active" : "inactive" }
+              ? {
+                  ...p,
+                  isActivate: newIsActivate,
+                  status: newIsActivate ? "active" : "inactive",
+                }
               : p
           )
         );
 
-        toast.success(result.message || `Product ${newIsActivate ? "activated" : "deactivated"} successfully!`);
+        toast.success(
+          result.message ||
+            `Product ${
+              newIsActivate ? "activated" : "deactivated"
+            } successfully!`
+        );
       } else {
         throw new Error(result.message || "Failed to update status");
       }
@@ -390,7 +427,8 @@ export function ProductManagement() {
       list = list.filter((p) => {
         const name = (p.name || "").toLowerCase();
         const desc = (p.description || "").toLowerCase();
-        return name.includes(q) || desc.includes(q);
+        const sub = (p.subcategoryName || "").toLowerCase();
+        return name.includes(q) || desc.includes(q) || sub.includes(q);
       });
     }
 
@@ -401,7 +439,9 @@ export function ProductManagement() {
     <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-rose-900">Product Management</h1>
+          <h1 className="text-3xl font-bold text-rose-900">
+            Product Management
+          </h1>
           <p className="text-rose-600">Manage your cosmetic product catalog</p>
         </div>
 
@@ -411,7 +451,9 @@ export function ProductManagement() {
             className="px-4 py-2 bg-rose-100 text-rose-700 rounded hover:bg-rose-200 transition-colors flex items-center gap-2"
             disabled={isLoading}
           >
-            <RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </button>
 
@@ -445,7 +487,7 @@ export function ProductManagement() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search product name / description..."
+                placeholder="Search product name / description / subcategory..."
                 className="pl-9 border-rose-200 focus:border-rose-500 focus:ring-rose-500"
               />
             </div>
@@ -458,18 +500,29 @@ export function ProductManagement() {
                   className="border-rose-200 text-rose-700 hover:bg-rose-50 w-full md:w-auto"
                 >
                   Filter:{" "}
-                  <span className="ml-2 font-semibold capitalize">{statusFilter}</span>
+                  <span className="ml-2 font-semibold capitalize">
+                    {statusFilter}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem className="cursor-pointer" onClick={() => setStatusFilter("all")}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => setStatusFilter("all")}
+                >
                   All
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer" onClick={() => setStatusFilter("active")}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => setStatusFilter("active")}
+                >
                   Active
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer" onClick={() => setStatusFilter("inactive")}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => setStatusFilter("inactive")}
+                >
                   Inactive
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -484,6 +537,12 @@ export function ProductManagement() {
                 <TableRow className="border-rose-200">
                   <TableHead className="text-rose-700">Image</TableHead>
                   <TableHead className="text-rose-700">Product</TableHead>
+
+                  {/* ✅ Subcategory Column */}
+                  <TableHead className="text-rose-700 hidden md:table-cell">
+                    Subcategory
+                  </TableHead>
+
                   <TableHead className="text-rose-700 hidden md:table-cell">
                     Description
                   </TableHead>
@@ -498,7 +557,10 @@ export function ProductManagement() {
               <TableBody>
                 {filteredProducts.length === 0 && !isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-rose-700 py-8">
+                    <TableCell
+                      colSpan={9}
+                      className="text-center text-rose-700 py-8"
+                    >
                       No products found.
                     </TableCell>
                   </TableRow>
@@ -525,7 +587,10 @@ export function ProductManagement() {
                       </TableCell>
 
                       <TableCell>
-                        <div className="font-medium text-rose-900 cursor-help" title={product.name}>
+                        <div
+                          className="font-medium text-rose-900 cursor-help"
+                          title={product.name}
+                        >
                           {truncateProductName(product.name)}
                         </div>
 
@@ -536,22 +601,44 @@ export function ProductManagement() {
                         )}
                       </TableCell>
 
+                      {/* ✅ Subcategory Name Show */}
                       <TableCell className="text-rose-700 hidden md:table-cell">
-                        <div className="truncate cursor-help" title={product.description}>
+                        <span
+                          className="cursor-help"
+                          title={product.subcategoryName || ""}
+                        >
+                          {product.subcategoryName || "—"}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="text-rose-700 hidden md:table-cell">
+                        <div
+                          className="truncate cursor-help"
+                          title={product.description}
+                        >
                           {truncateDescription(product.description)}
                         </div>
                       </TableCell>
 
                       <TableCell className="text-rose-700">
-                        ${product.pricing.single > 0 ? product.pricing.single.toFixed(2) : "0.00"}
+                        $
+                        {product.pricing.single > 0
+                          ? product.pricing.single.toFixed(2)
+                          : "0.00"}
                       </TableCell>
 
                       <TableCell className="text-rose-700">
-                        ${product.pricing.dozen > 0 ? product.pricing.dozen.toFixed(2) : "0.00"}
+                        $
+                        {product.pricing.dozen > 0
+                          ? product.pricing.dozen.toFixed(2)
+                          : "0.00"}
                       </TableCell>
 
                       <TableCell className="text-rose-700">
-                        ${product.pricing.carton > 0 ? product.pricing.carton.toFixed(2) : "0.00"}
+                        $
+                        {product.pricing.carton > 0
+                          ? product.pricing.carton.toFixed(2)
+                          : "0.00"}
                       </TableCell>
 
                       <TableCell>
@@ -561,7 +648,12 @@ export function ProductManagement() {
                               ? "bg-green-100 text-green-800 hover:bg-green-200"
                               : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                           }`}
-                          onClick={() => handleToggleStatus(product.id, product.isActivate || false)}
+                          onClick={() =>
+                            handleToggleStatus(
+                              product.id,
+                              product.isActivate || false
+                            )
+                          }
                         >
                           {product.isActivate ? "Active" : "Inactive"}
                         </Badge>
@@ -577,7 +669,12 @@ export function ProductManagement() {
 
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem
-                              onClick={() => handleToggleStatus(product.id, product.isActivate || false)}
+                              onClick={() =>
+                                handleToggleStatus(
+                                  product.id,
+                                  product.isActivate || false
+                                )
+                              }
                               className="cursor-pointer"
                             >
                               {product.isActivate ? (
