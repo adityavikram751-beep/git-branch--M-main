@@ -444,22 +444,25 @@ export function ProductManagement() {
         <CardContent>
           {/* ================== FINAL GRID TABLE ================== */}
           <div className="w-full border border-rose-200 rounded-md overflow-hidden">
-            {/* HEADER */}
-            <div className="grid grid-cols-[70px_1.4fr_1fr_1.3fr_260px_90px_70px] bg-white sticky top-0 z-30 border-b border-rose-200">
+            {/* ✅ FIXED HEADER */}
+            <div className="grid grid-cols-[70px_1.4fr_1fr_1.3fr_260px_105px_70px] bg-white sticky top-0 z-30 border-b border-rose-200">
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Image
               </div>
+
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Product
               </div>
-              <div className="px-2 py-2 font-semibold text-rose-700 hidden md:block border-r border-rose-100">
+
+              <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Subcategory
               </div>
-              <div className="px-2 py-2 font-semibold text-rose-700 hidden md:block border-r border-rose-100">
+
+              <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Description
               </div>
 
-              {/* ✅ SINGLE HORIZONTAL SCROLL HEADER (SMALL WIDTH) */}
+              {/* ✅ SINGLE HORIZONTAL SCROLL HEADER */}
               <div
                 ref={variantHeaderRef}
                 className="overflow-x-auto max-w-[260px] border-l border-r border-rose-200"
@@ -476,16 +479,17 @@ export function ProductManagement() {
                 </div>
               </div>
 
-              <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
+              <div className="px-2 py-2 font-semibold text-rose-700  ">
                 Status
               </div>
-              <div className="px-2 py-2 font-semibold text-rose-700">
+
+              <div className="px-1 py-2 font-semibold text-rose-700  ">
                 Actions
               </div>
             </div>
 
-            {/* BODY (NO VERTICAL SCROLL + NO BOTTOM HORIZONTAL SCROLL) */}
-            <div className="overflow-visible">
+            {/* ✅ BODY SCROLL (HEADER FIXED) */}
+            <div className="max-h-[520px] overflow-y-auto">
               {filteredProducts.length === 0 && !isLoading ? (
                 <div className="text-center text-rose-700 py-10">
                   No products found.
@@ -516,10 +520,10 @@ export function ProductManagement() {
                       )}
                     </div>
 
-                    {/* Product */}
-                    <div className="px-2 py-2 border-r border-rose-100">
+                    {/* ✅ Product (NO EXTRA WORD IN NEXT COLUMN) */}
+                    <div className="px-4 py-4 border-r border-rose-100 min-w-0">
                       <div
-                        className="font-medium text-rose-900 cursor-help whitespace-nowrap overflow-hidden text-ellipsis"
+                        className="font-medium text-rose-900 cursor-help truncate"
                         title={product.name}
                       >
                         {truncateProductName(product.name)}
@@ -532,20 +536,22 @@ export function ProductManagement() {
                       )}
                     </div>
 
-                    {/* Subcategory (SINGLE LINE) */}
+                    {/* ✅ Subcategory (ELLIPSIS) */}
                     <div
-                      className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 whitespace-nowrap overflow-hidden text-ellipsis"
+                      className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 min-w-0"
                       title={product.subcategoryName || "—"}
                     >
-                      {product.subcategoryName || "—"}
+                      <div className="truncate">{product.subcategoryName || "—"}</div>
                     </div>
 
-                    {/* Description */}
+                    {/* ✅ Description (ELLIPSIS) */}
                     <div
-                      className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 whitespace-nowrap overflow-hidden text-ellipsis"
+                      className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 min-w-0"
                       title={product.description}
                     >
-                      {truncateDescription(product.description)}
+                      <div className="truncate">
+                        {truncateDescription(product.description)}
+                      </div>
                     </div>
 
                     {/* Variants */}
@@ -585,7 +591,7 @@ export function ProductManagement() {
                     </div>
 
                     {/* Status */}
-                    <div className="px-2 py-2 border-r border-rose-100">
+                    <div className="px-2 py-2  ">
                       <Badge
                         className={`cursor-pointer ${
                           product.isActivate
