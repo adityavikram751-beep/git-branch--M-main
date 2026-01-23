@@ -20,18 +20,26 @@ import { Pencil, X, Trash2, Loader2, RefreshCw, Plus } from "lucide-react"
 interface Product {
   id: string
   name: string
-  image: string
+  image?: string
   description: string
-  pricing: {
-    single: number
-    dozen: number
-    carton: number
+
+  // ✅ pricing optional (error fix)
+  pricing?: {
+    single?: number
+    dozen?: number
+    carton?: number
   }
+
   brand?: string
   categoryId?: string
+
   subcategoryId?: string
+  subcategoryName?: string
+
   points?: string[]
   isFeature?: boolean
+  isFeatured?: boolean
+
   variants?: { price: string; quantity: string }[]
   images?: string[]
 }
@@ -85,7 +93,6 @@ export function EditProduct({
   const [isOpen, setIsOpen] = useState(false)
 
   const MAX_IMAGES = 7
-
   const [loadingProduct, setLoadingProduct] = useState(false)
 
   const [formData, setFormData] = useState<FormDataType>({
@@ -147,10 +154,8 @@ export function EditProduct({
   // ✅ Dialog open => fetch categories/brands + fetch latest product (GET API)
   useEffect(() => {
     if (!isOpen) return
-
     fetchAllData()
-    fetchSingleProduct() // 🔥 GET call
-
+    fetchSingleProduct()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
@@ -164,7 +169,6 @@ export function EditProduct({
         `https://barber-syndicate.vercel.app/api/v1/product/single/${product.id}`
       )
       const data = await res.json()
-      console.log("SINGLE PRODUCT API:", data)
 
       if (res.ok && (data.success || data.status === "success")) {
         const p = data.data || data.product || data
@@ -174,7 +178,11 @@ export function EditProduct({
           description: p.description || "",
           brand: p.brand || "",
           categoryId: p.categoryId || "",
-          subcategoryId: p.subcategoryId || "",
+          // ✅ subcategoryId may be object OR string
+          subcategoryId:
+            typeof p.subcategoryId === "object" && p.subcategoryId?._id
+              ? p.subcategoryId._id
+              : p.subcategoryId || "",
           points: p.points ? p.points.join("\n") : "",
           isFeature: p.isFeature || false,
         })
@@ -251,9 +259,12 @@ export function EditProduct({
       setLoading((prev) => ({ ...prev, brands: true }))
       const token = localStorage.getItem("adminToken")
 
-      const res = await fetch("https://barber-syndicate.vercel.app/api/v1/brands/getall", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
+      const res = await fetch(
+        "https://barber-syndicate.vercel.app/api/v1/brands/getall",
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      )
 
       const data = await res.json()
 
@@ -387,7 +398,6 @@ export function EditProduct({
       )
 
       const result = await res.json()
-      console.log("ADD IMAGE API:", result)
 
       if (res.ok && (result.success || result.status === "success")) {
         const updatedImages =
@@ -396,7 +406,6 @@ export function EditProduct({
           result?.images ||
           result?.data?.product?.images
 
-        // ✅ backend se latest images list aayi toh sync
         if (Array.isArray(updatedImages) && updatedImages.length > 0) {
           setImagePreviews(updatedImages.slice(0, MAX_IMAGES))
         }
@@ -478,7 +487,7 @@ export function EditProduct({
       fd.append("isFeature", String(formData.isFeature))
       fd.append("positions", JSON.stringify(["0"]))
 
-      // ✅ IMPORTANT: existingImages = current imagePreviews
+      // ✅ existingImages = current imagePreviews
       fd.append("existingImages", JSON.stringify(imagePreviews.slice(0, MAX_IMAGES)))
 
       // ✅ send replaced files + index
@@ -500,7 +509,6 @@ export function EditProduct({
       )
 
       const result = await res.json()
-      console.log("UPDATE PRODUCT API:", result)
 
       if (res.ok && result.success) {
         setSuccess("✅ Product updated successfully!")
@@ -516,8 +524,7 @@ export function EditProduct({
           isFeature: formData.isFeature,
           variants: cleanedVariants,
           images: imagePreviews.slice(0, MAX_IMAGES),
-          image: imagePreviews[0] || product.image,
-          pricing: product.pricing,
+          image: imagePreviews[0] || product.image || "",
         }
 
         if (onUpdateProduct) onUpdateProduct(updatedProduct)
