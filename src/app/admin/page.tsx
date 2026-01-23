@@ -9,7 +9,9 @@ import { ProductManagement } from './_components/product-management';
 import Category from './_components/category';
 import UserEnquiry from './_components/UserEnquiry';
 import Brands from './_components/brands';
-import ContactUs from './_components/contact-us'; // ✅ ADD
+
+import ContactUs from './_components/contact-us';
+import SlidingBanners from './_components/sliding-banners'; // ✅ ADD
 import AdminLogin from './admin-login/_components/AdminLogin';
 
 export default function AdminPanel() {
@@ -53,6 +55,9 @@ export default function AdminPanel() {
 
       case 'contact-us':                 // ✅ FIX
         return <ContactUs />;
+
+      case 'sliding-banners':            // ✅ ADD
+        return <SlidingBanners />;
 
       default:
         return null;                      // ❌ products mat dikhao
