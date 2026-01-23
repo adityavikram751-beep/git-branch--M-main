@@ -88,12 +88,8 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     isFeature: false,
   })
 
-  // ✅ 3 required variants fixed
-  const [variants, setVariants] = useState<Variant[]>([
-    { price: "", quantity: "1" },
-    { price: "", quantity: "12Pcs" },
-    { price: "", quantity: "Carton" },
-  ])
+  // ✅ No fixed variants now (start with 1 empty variant)
+  const [variants, setVariants] = useState<Variant[]>([{ price: "", quantity: "" }])
 
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -246,15 +242,17 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     setVariants(updated)
   }
 
-  // ✅ Add custom variant
+  // ✅ Add Variant
   const addVariant = () => {
     setVariants((prev) => [...prev, { price: "", quantity: "" }])
   }
 
-  // ✅ Remove custom variant (only index >= 3)
+  // ✅ Remove Variant (now allowed for all, but keep at least 1)
   const removeVariant = (index: number) => {
-    if (index < 3) return
-    setVariants((prev) => prev.filter((_, i) => i !== index))
+    setVariants((prev) => {
+      if (prev.length === 1) return prev
+      return prev.filter((_, i) => i !== index)
+    })
   }
 
   // Reset form when dialog is closed
@@ -264,11 +262,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       imagePreviews.forEach((url) => URL.revokeObjectURL(url))
       setImagePreviews([])
 
-      setVariants([
-        { price: "", quantity: "1" },
-        { price: "", quantity: "12Pcs" },
-        { price: "", quantity: "Carton" },
-      ])
+      setVariants([{ price: "", quantity: "" }])
 
       setFormData({
         name: "",
@@ -298,16 +292,14 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       return
     }
 
-    if (!variants[0]?.price || !variants[1]?.price || !variants[2]?.price) {
-      setError("Please fill in all pricing fields (Single, Dozen, Carton).")
+    if (variants.length === 0) {
+      setError("Please add at least 1 variant.")
       return
     }
 
-    // validate custom variants (if added)
-    const customVariants = variants.slice(3)
-    const invalidCustom = customVariants.some((v) => !v.quantity || !v.price)
-    if (invalidCustom) {
-      setError("Please fill price + quantity for all custom variants (or remove empty ones).")
+    const invalidVariant = variants.some((v) => !v.quantity || !v.price)
+    if (invalidVariant) {
+      setError("Please fill price + quantity for all variants (or remove empty ones).")
       return
     }
 
@@ -552,86 +544,56 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             />
           </div>
 
-          {/* Pricing */}
+          {/* Variants */}
           <div className="bg-gradient-to-r from-rose-50 to-pink-50 p-6 rounded-lg border border-rose-100">
             <h3 className="text-lg font-semibold text-rose-900 mb-4 flex items-center">
-              Pricing Structure <span className="text-sm text-rose-600 ml-2">(Required)</span>
+              Variants <span className="text-sm text-rose-600 ml-2">(Required)</span>
             </h3>
 
-            <div className="space-y-4">
-              {/* Required 3 variants */}
-              {variants.slice(0, 3).map((v, i) => {
-                const labels = ["Single Unit", "Dozen (12 Pieces)", "Carton"]
-                return (
-                  <div key={i} className="flex items-end gap-3 bg-white p-4 rounded-md shadow-sm border border-rose-100">
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                        {labels[i]}
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder={`Price for ${labels[i].toLowerCase()}`}
-                        value={v.price}
-                        onChange={(e) => updateVariant(i, "price", e.target.value)}
-                        className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 text-lg font-medium"
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">{v.quantity}</p>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="space-y-3">
+              {variants.map((v, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 p-3 bg-white rounded-md shadow-sm border border-rose-100"
+                >
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Price"
+                    value={v.price}
+                    onChange={(e) => updateVariant(i, "price", e.target.value)}
+                    className="flex-1 border-rose-200 focus:border-rose-500"
+                  />
 
-              {/* Custom variants */}
-              {variants.length > 3 && (
-                <div className="border-t border-rose-200 pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">
-                    Additional Variants
-                  </h4>
+                  <Input
+                    type="text"
+                    placeholder="Quantity (eg: 1Pc, 12Pcs, Carton)"
+                    value={v.quantity}
+                    onChange={(e) => updateVariant(i, "quantity", e.target.value)}
+                    className="flex-1 border-rose-200 focus:border-rose-500"
+                  />
 
-                  {variants.slice(3).map((v, i) => {
-                    const actualIndex = i + 3
-                    return (
-                      <div key={actualIndex} className="flex items-center gap-3 mb-3 p-3 bg-gray-50 rounded-md">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Price"
-                          value={v.price}
-                          onChange={(e) => updateVariant(actualIndex, "price", e.target.value)}
-                          className="flex-1 border-rose-200 focus:border-rose-500"
-                        />
-                        <Input
-                          type="text"
-                          placeholder="Quantity"
-                          value={v.quantity}
-                          onChange={(e) => updateVariant(actualIndex, "quantity", e.target.value)}
-                          className="flex-1 border-rose-200 focus:border-rose-500"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeVariant(actualIndex)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )
-                  })}
+                  {variants.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeVariant(i)}
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-              )}
+              ))}
 
-              {/* Add Variant Button */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={addVariant}
                 className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
               >
-                + Add Custom Variant
+                + Add Variant
               </Button>
             </div>
           </div>
@@ -687,9 +649,8 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
               !formData.subcategoryId ||
               !formData.brand ||
               images.length === 0 ||
-              !variants[0]?.price ||
-              !variants[1]?.price ||
-              !variants[2]?.price
+              variants.length === 0 ||
+              variants.some((v) => !v.price || !v.quantity)
             }
           >
             {uploading ? (
