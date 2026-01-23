@@ -1,16 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Package,
   RefreshCw,
@@ -37,23 +29,21 @@ interface Product {
   id: string;
   name: string;
   description: string;
-  pricing: {
-    single: number;
-    dozen: number;
-    carton: number;
-  };
+
   brand?: string;
   categoryId?: string;
 
-  // ✅ subcategory display
   subcategoryId?: string;
   subcategoryName?: string;
 
   points?: string[];
   isFeatured?: boolean;
+
   variants?: { price: string; quantity: string }[];
+
   images?: string[];
   image?: string;
+
   isActivate?: boolean;
   status?: string;
 }
@@ -71,7 +61,6 @@ interface ApiProduct {
   brand: string;
   categoryId: string;
 
-  // ✅ FIX: subcategoryId is object OR null (as per your API)
   subcategoryId:
     | {
         _id: string;
@@ -96,7 +85,7 @@ interface ApiResponse {
 
 type StatusFilter = "all" | "active" | "inactive";
 
-// Utility functions to truncate text
+/* ---------------- Utility functions ---------------- */
 const truncateText = (text: string, maxWords: number = 4): string => {
   if (!text) return "";
   const words = text.trim().split(/\s+/);
@@ -127,89 +116,8 @@ export function ProductManagement() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  // ✅ FIX: variants default [] so undefined never breaks build
-  const extractPricingFromVariants = (
-    variants: { price: string; quantity: string }[] = []
-  ) => {
-    let single = 0;
-    let dozen = 0;
-    let carton = 0;
-
-    variants.forEach((variant) => {
-      const qty = (variant.quantity || "").toLowerCase().trim();
-      const price = parseFloat(variant.price) || 0;
-
-      // Single piece (1 pc)
-      if (
-        qty === "1" ||
-        qty === "1pc" ||
-        qty === "1pcs" ||
-        qty === "single" ||
-        qty === "1 piece" ||
-        qty === "1 pc" ||
-        qty === "1p" ||
-        qty.startsWith("1 ")
-      ) {
-        single = price;
-      }
-
-      // Dozen (12 pcs)
-      if (
-        qty === "12" ||
-        qty === "12pcs" ||
-        qty === "12 pcs" ||
-        qty === "12pc" ||
-        qty === "12p" ||
-        qty.includes("dozen") ||
-        qty.includes("12 pieces") ||
-        qty === "12 pieces" ||
-        qty === "12 piece" ||
-        qty === "12-pack"
-      ) {
-        dozen = price;
-      }
-
-      // Carton (bulk)
-      if (
-        qty.includes("carton") ||
-        qty.includes("ctn") ||
-        qty.includes("box") ||
-        qty.includes("case") ||
-        qty.includes("pack") ||
-        qty.includes("bulk") ||
-        qty.includes("crate") ||
-        qty.includes("package") ||
-        qty.includes("lot")
-      ) {
-        carton = price;
-      }
-
-      const qtyNumber = parseInt(qty);
-      if (qtyNumber > 12 && carton === 0) {
-        carton = price;
-      }
-    });
-
-    // fallback for carton
-    if (carton === 0 && variants.length > 0) {
-      const sortedByQty = [...variants].sort((a, b) => {
-        const aNum = parseInt(a.quantity) || 0;
-        const bNum = parseInt(b.quantity) || 0;
-        return bNum - aNum;
-      });
-
-      if (sortedByQty.length > 0) {
-        const highestQty = sortedByQty[0];
-        const highestQtyNum = parseInt(highestQty.quantity) || 0;
-
-        if (highestQtyNum > 12) {
-          carton = parseFloat(highestQty.price) || 0;
-        }
-      }
-    }
-
-    return { single, dozen, carton };
-  };
+  // 🔥 One shared horizontal scroll refs
+  const variantHeaderRef = useRef<HTMLDivElement | null>(null);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -223,7 +131,7 @@ export function ProductManagement() {
       }
 
       const response = await fetch(
-        `https://4frnn03l-3000.inc1.devtunnels.ms/api/v1/product?page=${currentPage}`,
+        `https://barber-syndicate.vercel.app/api/v1/product?page=${currentPage}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -248,26 +156,24 @@ export function ProductManagement() {
       });
 
       const mappedProducts: Product[] = sortedProducts.map((apiProduct) => {
-        const pricing = extractPricingFromVariants(apiProduct.variants);
-
         return {
           id: apiProduct._id,
           name: apiProduct.name,
           description: apiProduct.description,
-          pricing,
           brand: apiProduct.brand,
           categoryId: apiProduct.categoryId,
 
-          // ✅ IMPORTANT: subcategory name directly from object
           subcategoryId: apiProduct.subcategoryId?._id || "",
           subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
 
           points: apiProduct.points || [],
           isFeatured: apiProduct.isFeature || false,
-          variants: apiProduct.variants.map((v) => ({
+
+          variants: (apiProduct.variants || []).map((v) => ({
             price: v.price,
             quantity: v.quantity,
           })),
+
           images: apiProduct.images || [],
           image: apiProduct.images?.[0] || "",
           isActivate: apiProduct.isActivate,
@@ -299,30 +205,16 @@ export function ProductManagement() {
     setTimeout(() => fetchProducts(), 600);
   };
 
-  // ✅ FIXED: instant update in table
   const handleUpdateProduct = (updatedProduct: Product) => {
-    const pricingFromEdit = updatedProduct.pricing;
-    const pricingFromVariants = extractPricingFromVariants(
-      updatedProduct.variants || []
-    );
-
-    const finalPricing =
-      pricingFromEdit &&
-      (pricingFromEdit.single > 0 ||
-        pricingFromEdit.dozen > 0 ||
-        pricingFromEdit.carton > 0)
-        ? pricingFromEdit
-        : pricingFromVariants;
-
-    const productWithPricing: Product = {
+    const productWithFix: Product = {
       ...updatedProduct,
-      pricing: finalPricing,
       image: updatedProduct.image || updatedProduct.images?.[0] || "",
       subcategoryName: updatedProduct.subcategoryName || "—",
+      variants: updatedProduct.variants || [],
     };
 
     setProducts((prev) =>
-      prev.map((p) => (p.id === productWithPricing.id ? productWithPricing : p))
+      prev.map((p) => (p.id === productWithFix.id ? productWithFix : p))
     );
 
     toast.success("Product updated successfully!");
@@ -347,7 +239,7 @@ export function ProductManagement() {
       const newStatus = currentIsActivate ? "deactivate" : "activate";
 
       const response = await fetch(
-        `https://4frnn03l-3000.inc1.devtunnels.ms/api/v1/product/active-deactive/${productId}`,
+        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive/${productId}`,
         {
           method: "PUT",
           headers: {
@@ -413,7 +305,6 @@ export function ProductManagement() {
   const filteredProducts = useMemo(() => {
     let list = [...products];
 
-    // status filter
     if (statusFilter === "active") {
       list = list.filter((p) => p.isActivate === true);
     }
@@ -421,7 +312,6 @@ export function ProductManagement() {
       list = list.filter((p) => p.isActivate === false);
     }
 
-    // search filter
     const q = search.trim().toLowerCase();
     if (q.length > 0) {
       list = list.filter((p) => {
@@ -434,6 +324,29 @@ export function ProductManagement() {
 
     return list;
   }, [products, search, statusFilter]);
+
+  // ✅ Dynamic Variant Columns
+  const variantColumns = useMemo(() => {
+    const set = new Set<string>();
+
+    filteredProducts.forEach((p) => {
+      (p.variants || []).forEach((v) => {
+        const q = (v.quantity || "").trim();
+        if (q) set.add(q);
+      });
+    });
+
+    const arr = Array.from(set);
+
+    arr.sort((a, b) => {
+      const aNum = parseFloat(a);
+      const bNum = parseFloat(b);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return a.localeCompare(b);
+    });
+
+    return arr;
+  }, [filteredProducts]);
 
   return (
     <div className="p-6 space-y-6">
@@ -481,7 +394,6 @@ export function ProductManagement() {
 
           {/* ✅ SEARCH + FILTER BAR */}
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
-            {/* Search */}
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-rose-500" />
               <Input
@@ -492,7 +404,6 @@ export function ProductManagement() {
               />
             </div>
 
-            {/* Dropdown Filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -531,192 +442,227 @@ export function ProductManagement() {
         </CardHeader>
 
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-rose-200">
-                  <TableHead className="text-rose-700">Image</TableHead>
-                  <TableHead className="text-rose-700">Product</TableHead>
+          {/* ================== FINAL GRID TABLE ================== */}
+          <div className="w-full border border-rose-200 rounded-md overflow-hidden">
+            {/* HEADER */}
+            <div className="grid grid-cols-[70px_1.4fr_1fr_1.3fr_260px_90px_70px] bg-white sticky top-0 z-30 border-b border-rose-200">
+              <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
+                Image
+              </div>
+              <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
+                Product
+              </div>
+              <div className="px-2 py-2 font-semibold text-rose-700 hidden md:block border-r border-rose-100">
+                Subcategory
+              </div>
+              <div className="px-2 py-2 font-semibold text-rose-700 hidden md:block border-r border-rose-100">
+                Description
+              </div>
 
-                  {/* ✅ Subcategory Column */}
-                  <TableHead className="text-rose-700 hidden md:table-cell">
-                    Subcategory
-                  </TableHead>
-
-                  <TableHead className="text-rose-700 hidden md:table-cell">
-                    Description
-                  </TableHead>
-                  <TableHead className="text-rose-700">1 pc</TableHead>
-                  <TableHead className="text-rose-700">12 pcs</TableHead>
-                  <TableHead className="text-rose-700">Carton</TableHead>
-                  <TableHead className="text-rose-700">Status</TableHead>
-                  <TableHead className="text-rose-700">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {filteredProducts.length === 0 && !isLoading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={9}
-                      className="text-center text-rose-700 py-8"
+              {/* ✅ SINGLE HORIZONTAL SCROLL HEADER (SMALL WIDTH) */}
+              <div
+                ref={variantHeaderRef}
+                className="overflow-x-auto max-w-[260px] border-l border-r border-rose-200"
+              >
+                <div className="flex">
+                  {variantColumns.map((col) => (
+                    <div
+                      key={col}
+                      className="min-w-[90px] text-center font-semibold text-rose-700 px-2 py-2 whitespace-nowrap border-r border-rose-100"
                     >
-                      No products found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProducts.map((product) => (
-                    <TableRow
-                      key={product.id}
-                      className={`border-rose-200 hover:bg-rose-50 ${
-                        !product.isActivate ? "opacity-60 bg-gray-50" : ""
-                      }`}
-                    >
-                      <TableCell>
-                        {product.images && product.images.length > 0 ? (
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-rose-100 rounded flex items-center justify-center">
-                            <Package className="h-8 w-8 text-rose-400" />
-                          </div>
-                        )}
-                      </TableCell>
+                      {col}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-                      <TableCell>
-                        <div
-                          className="font-medium text-rose-900 cursor-help"
-                          title={product.name}
-                        >
-                          {truncateProductName(product.name)}
+              <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
+                Status
+              </div>
+              <div className="px-2 py-2 font-semibold text-rose-700">
+                Actions
+              </div>
+            </div>
+
+            {/* BODY (NO VERTICAL SCROLL + NO BOTTOM HORIZONTAL SCROLL) */}
+            <div className="overflow-visible">
+              {filteredProducts.length === 0 && !isLoading ? (
+                <div className="text-center text-rose-700 py-10">
+                  No products found.
+                </div>
+              ) : (
+                filteredProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className={`grid grid-cols-[70px_1.4fr_1fr_1.3fr_260px_90px_70px] items-center 
+                    border-b border-rose-200 hover:bg-rose-50/40 transition ${
+                      !product.isActivate
+                        ? "opacity-60 bg-gray-50"
+                        : "bg-white"
+                    }`}
+                  >
+                    {/* Image */}
+                    <div className="px-2 py-2 border-r border-rose-100">
+                      {product.images && product.images.length > 0 ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-rose-100 rounded flex items-center justify-center">
+                          <Package className="h-6 w-6 text-rose-400" />
                         </div>
+                      )}
+                    </div>
 
-                        {product.isFeatured && (
-                          <span className="mt-1 px-2 py-0.5 text-xs bg-rose-100 text-rose-700 rounded inline-block">
-                            Featured
-                          </span>
-                        )}
-                      </TableCell>
+                    {/* Product */}
+                    <div className="px-2 py-2 border-r border-rose-100">
+                      <div
+                        className="font-medium text-rose-900 cursor-help whitespace-nowrap overflow-hidden text-ellipsis"
+                        title={product.name}
+                      >
+                        {truncateProductName(product.name)}
+                      </div>
 
-                      {/* ✅ Subcategory Name Show */}
-                      <TableCell className="text-rose-700 hidden md:table-cell">
-                        <span
-                          className="cursor-help"
-                          title={product.subcategoryName || ""}
-                        >
-                          {product.subcategoryName || "—"}
+                      {product.isFeatured && (
+                        <span className="mt-1 px-2 py-0.5 text-xs bg-rose-100 text-rose-700 rounded inline-block">
+                          Featured
                         </span>
-                      </TableCell>
+                      )}
+                    </div>
 
-                      <TableCell className="text-rose-700 hidden md:table-cell">
-                        <div
-                          className="truncate cursor-help"
-                          title={product.description}
-                        >
-                          {truncateDescription(product.description)}
-                        </div>
-                      </TableCell>
+                    {/* Subcategory (SINGLE LINE) */}
+                    <div
+                      className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 whitespace-nowrap overflow-hidden text-ellipsis"
+                      title={product.subcategoryName || "—"}
+                    >
+                      {product.subcategoryName || "—"}
+                    </div>
 
-                      <TableCell className="text-rose-700">
-                        $
-                        {product.pricing.single > 0
-                          ? product.pricing.single.toFixed(2)
-                          : "0.00"}
-                      </TableCell>
+                    {/* Description */}
+                    <div
+                      className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 whitespace-nowrap overflow-hidden text-ellipsis"
+                      title={product.description}
+                    >
+                      {truncateDescription(product.description)}
+                    </div>
 
-                      <TableCell className="text-rose-700">
-                        $
-                        {product.pricing.dozen > 0
-                          ? product.pricing.dozen.toFixed(2)
-                          : "0.00"}
-                      </TableCell>
-
-                      <TableCell className="text-rose-700">
-                        $
-                        {product.pricing.carton > 0
-                          ? product.pricing.carton.toFixed(2)
-                          : "0.00"}
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          className={`cursor-pointer ${
-                            product.isActivate
-                              ? "bg-green-100 text-green-800 hover:bg-green-200"
-                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                          }`}
-                          onClick={() =>
-                            handleToggleStatus(
-                              product.id,
-                              product.isActivate || false
-                            )
+                    {/* Variants */}
+                    <div className="border-l border-r border-rose-200">
+                      <div
+                        className="overflow-x-auto max-w-[260px]"
+                        onScroll={(e) => {
+                          const el = e.currentTarget;
+                          if (variantHeaderRef.current) {
+                            variantHeaderRef.current.scrollLeft = el.scrollLeft;
                           }
-                        >
-                          {product.isActivate ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
+                        }}
+                      >
+                        <div className="flex">
+                          {variantColumns.map((col) => {
+                            const found = (product.variants || []).find(
+                              (v) =>
+                                (v.quantity || "").trim().toLowerCase() ===
+                                col.trim().toLowerCase()
+                            );
 
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="p-2 hover:bg-rose-100 rounded">
-                              <MoreVertical className="h-4 w-4 text-rose-700" />
-                            </button>
-                          </DropdownMenuTrigger>
+                            const price = found
+                              ? parseFloat(found.price) || 0
+                              : 0;
 
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleToggleStatus(
-                                  product.id,
-                                  product.isActivate || false
-                                )
-                              }
-                              className="cursor-pointer"
-                            >
-                              {product.isActivate ? (
-                                <>
-                                  <EyeOff className="mr-2 h-4 w-4" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Activate
-                                </>
-                              )}
-                            </DropdownMenuItem>
+                            return (
+                              <div
+                                key={col}
+                                className="min-w-[90px] text-center text-rose-700 px-2 py-2 whitespace-nowrap border-r border-rose-100"
+                              >
+                                ${price > 0 ? price.toFixed(2) : "0.00"}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
 
-                            <DropdownMenuSeparator />
+                    {/* Status */}
+                    <div className="px-2 py-2 border-r border-rose-100">
+                      <Badge
+                        className={`cursor-pointer ${
+                          product.isActivate
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        }`}
+                        onClick={() =>
+                          handleToggleStatus(
+                            product.id,
+                            product.isActivate || false
+                          )
+                        }
+                      >
+                        {product.isActivate ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
 
-                            <EditProduct
-                              product={{
-                                ...product,
-                                image: product.image || product.images?.[0] || "",
-                              }}
-                              onUpdateProduct={handleUpdateProduct}
-                            />
+                    {/* Actions */}
+                    <div className="px-2 py-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-2 hover:bg-rose-100 rounded">
+                            <MoreVertical className="h-4 w-4 text-rose-700" />
+                          </button>
+                        </DropdownMenuTrigger>
 
-                            <DropdownMenuSeparator />
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleToggleStatus(
+                                product.id,
+                                product.isActivate || false
+                              )
+                            }
+                            className="cursor-pointer"
+                          >
+                            {product.isActivate ? (
+                              <>
+                                <EyeOff className="mr-2 h-4 w-4" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Activate
+                              </>
+                            )}
+                          </DropdownMenuItem>
 
-                            <DeleteProduct
-                              productId={product.id}
-                              productName={product.name}
-                              onDeleteProduct={handleDeleteProduct}
-                            />
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                          <DropdownMenuSeparator />
+
+                          <EditProduct
+                            product={{
+                              ...product,
+                              image:
+                                product.image || product.images?.[0] || "",
+                            }}
+                            onUpdateProduct={handleUpdateProduct}
+                          />
+
+                          <DropdownMenuSeparator />
+
+                          <DeleteProduct
+                            productId={product.id}
+                            productName={product.name}
+                            onDeleteProduct={handleDeleteProduct}
+                          />
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
+          {/* Pagination */}
           {totalPages > 1 && (
             <nav className="flex justify-center gap-2 mt-4">
               <button
