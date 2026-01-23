@@ -8,6 +8,7 @@ import {
   UserCheck,
   Mail,
   LogOut,
+  ImageIcon,
 } from "lucide-react"
 
 import {
@@ -23,42 +24,19 @@ import {
 } from "@/components/ui/sidebar"
 
 const menuItems = [
-  {
-    title: "User Requests",
-    icon: UserCheck,
-    id: "user-requests",
-  },
-  {
-    title: "Product Management",
-    icon: Package,
-    id: "products",
-  },
-  {
-    title: "Category Management",
-    icon: Package,
-    id: "category",
-  },
-  {
-    title: "User Enquiry",
-    icon: Users,
-    id: "user-enquiry",
-  },
-  {
-    title: "Brands",
-    icon: BarChart3,
-    id: "brands",
-  },
-  {
-    title: "Contact Us",
-    icon: Mail,
-    id: "contact-us",
-  },
+  { title: "User Requests", icon: UserCheck, id: "user-requests" },
+  { title: "Product Management", icon: Package, id: "products" },
+  { title: "Category Management", icon: Package, id: "category" },
+  { title: "User Enquiry", icon: Users, id: "user-enquiry" },
+  { title: "Brands", icon: BarChart3, id: "brands" },
+  { title: "Contact Us", icon: Mail, id: "contact-us" },
+  { title: "Sliding Banners", icon: ImageIcon, id: "sliding-banners" },
 ]
 
 interface AdminSidebarProps {
   activeSection: string
   setActiveSection: (section: string) => void
-  onLogout: () => void          // ✅ logout handler
+  onLogout: () => void
 }
 
 export function AdminSidebar({
@@ -78,14 +56,12 @@ export function AdminSidebar({
             <h2 className="text-lg font-semibold text-rose-900">
               Cosmetic Admin
             </h2>
-            <p className="text-sm text-rose-600">
-              Wholesale Management
-            </p>
+            <p className="text-sm text-rose-600">Wholesale Management</p>
           </div>
         </div>
       </SidebarHeader>
 
-      {/* MAIN MENU */}
+      {/* MENU */}
       <SidebarContent className="flex-1">
         <SidebarGroup>
           <SidebarGroupContent>
@@ -107,7 +83,7 @@ export function AdminSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      {/* 🔽 LOGOUT – FIXED BOTTOM */}
+      {/* LOGOUT */}
       <div className="border-t border-rose-200 p-3">
         <SidebarMenuButton
           onClick={onLogout}
