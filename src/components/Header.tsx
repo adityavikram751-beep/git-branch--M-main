@@ -420,7 +420,7 @@ export default function Header() {
                     className="relative hover:bg-[#f0edff] hover:text-[#3f3cff] transition-colors"
                   >
                     <FileText className="w-5 h-5" />
-                    <span className="ml-2">Enquiries</span>
+                    <span className="ml-2">My Cart</span>
                     {enquiryCount > 0 && showEnquiryBadge && (
                       <Badge
                         variant="destructive"
@@ -632,7 +632,7 @@ export default function Header() {
                         <div className="flex items-center gap-3">
                           <FileText size={18} className="text-gray-600" />
                           <span className="font-semibold text-sm">
-                            My Enquiries
+                            My Cart
                           </span>
                         </div>
                         {enquiryCount > 0 && showEnquiryBadge && (

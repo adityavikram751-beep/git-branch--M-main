@@ -27,7 +27,7 @@ const menuItems = [
   { title: "User Requests", icon: UserCheck, id: "user-requests" },
   { title: "Product Management", icon: Package, id: "products" },
   { title: "Category Management", icon: Package, id: "category" },
-  { title: "User Enquiry", icon: Users, id: "user-enquiry" },
+  { title: "Orders", icon: Users, id: "user-enquiry" },
   { title: "Brands", icon: BarChart3, id: "brands" },
   { title: "Contact Us", icon: Mail, id: "contact-us" },
   { title: "Sliding Banners", icon: ImageIcon, id: "sliding-banners" },

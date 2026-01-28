@@ -2,49 +2,36 @@
 import React, { useState, useEffect } from "react";
 import { Search, Eye, AlertCircle, RefreshCw, X } from "lucide-react";
 
-type Enquiry = {
-  _id: string;
-  user_id?: {
-    _id: string;
-    name?: string;
-    email?: string;
-    [key: string]: any;
-  };
-  AddedAt: string;
-  status?: string;
-  [key: string]: any;
-};
-
-type UserEnquirySummary = {
+type UserOrderSummary = {
   _id?: string;
   name: string;
   email: string;
-  enquiryId: string;
-  enquiryCount: number;
-  latestEnquiry: string;
-  status: string;
-  allEnquiries: Enquiry[];
+  userId: string;
+  orderCount: number;
+  latestOrder?: string; // Will fetch separately
+  status?: string; // Will fetch separately
 };
 
-const AllUserEnquiries = ({
+const AllUserOrders = ({
   onViewUser,
 }: {
   onViewUser?: (user: any) => void;
 }) => {
-  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+  const [users, setUsers] = useState<UserOrderSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // ✅ Modal state
-  const [selectedUser, setSelectedUser] = useState<UserEnquirySummary | null>(
+  const [selectedUser, setSelectedUser] = useState<UserOrderSummary | null>(
     null
   );
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
 
-  const fetchAllUserEnquiries = async () => {
+  const fetchAllUserOrders = async () => {
     try {
       const adminToken = localStorage.getItem("adminToken");
 
@@ -56,7 +43,7 @@ const AllUserEnquiries = ({
       setError(null);
 
       const response = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/enquiry/all",
+        "https://barber-syndicate.vercel.app/api/v1/order/userlist",
         {
           method: "GET",
           headers: {
@@ -72,66 +59,73 @@ const AllUserEnquiries = ({
 
       const result = await response.json();
       if (result.success) {
-        setEnquiries(result.data || []);
+        // Transform API response to match our component
+        const transformedUsers = result.data.map((user: any) => ({
+          _id: user.userId,
+          userId: user.userId,
+          name: user.name,
+          email: user.email,
+          orderCount: user.total || 0,
+          latestOrder: "", // We'll fetch this separately if needed
+          status: "Active", // Default status
+        }));
+        setUsers(transformedUsers);
       } else {
-        throw new Error("Failed to fetch enquiries");
+        throw new Error("Failed to fetch users");
       }
     } catch (error: any) {
-      console.error("Error fetching enquiries:", error);
+      console.error("Error fetching users:", error);
       setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchAllUserEnquiries();
-  }, []);
+  // Function to fetch individual user's orders
+  const fetchUserOrders = async (userId: string) => {
+    try {
+      const adminToken = localStorage.getItem("adminToken");
+      if (!adminToken) return;
 
-  // ✅ Group enquiries by user (FIXED SORT)
-  const uniqueUsers = enquiries.reduce<UserEnquirySummary[]>((acc, enquiry) => {
-    const userId = enquiry.user_id?._id;
-
-    if (userId && !acc.find((user) => user._id === userId)) {
-      const userEnquiries = enquiries.filter(
-        (enq) => enq.user_id?._id === userId
+      setModalLoading(true);
+      const response = await fetch(
+        `https://barber-syndicate.vercel.app/api/v1/order/user/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
       );
 
-      // ✅ FIX: sort on copy (no mutation)
-      const latestEnquiry = [...userEnquiries].sort(
-        (a, b) =>
-          new Date(b.AddedAt).getTime() - new Date(a.AddedAt).getTime()
-      )[0];
-
-      acc.push({
-        _id: enquiry.user_id?._id ?? "",
-        name: enquiry.user_id?.name ?? "Unknown",
-        email: enquiry.user_id?.email ?? "Unknown",
-        enquiryId: enquiry._id,
-        enquiryCount: userEnquiries.length,
-        latestEnquiry: latestEnquiry?.AddedAt ?? enquiry.AddedAt,
-        status: latestEnquiry?.status || "Pending",
-        allEnquiries: userEnquiries,
-      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setUserOrders(result.data || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user orders:", error);
+    } finally {
+      setModalLoading(false);
     }
+  };
 
-    return acc;
+  useEffect(() => {
+    fetchAllUserOrders();
   }, []);
 
   // Apply filters
-  let filteredUsers = uniqueUsers;
+  let filteredUsers = users;
 
   if (searchTerm) {
-    filteredUsers = uniqueUsers.filter(
+    filteredUsers = users.filter(
       (user) =>
         user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user._id ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+        (user.userId ?? "").toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }
-
-  if (statusFilter !== "All") {
-    filteredUsers = filteredUsers.filter((user) => user.status === statusFilter);
   }
 
   // Pagination
@@ -141,21 +135,26 @@ const AllUserEnquiries = ({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm]);
 
   const formatDate = (dateString: string | number | Date) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      return new Date(dateString).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      return "Invalid date";
+    }
   };
 
-  const handleViewUser = (user: UserEnquirySummary) => {
-    // ✅ open modal and show all enquiries
+  const handleViewUser = async (user: UserOrderSummary) => {
     setSelectedUser(user);
+    setUserOrders([]); // Reset previous orders
+    await fetchUserOrders(user.userId);
 
     if (onViewUser) {
       onViewUser(user);
@@ -170,7 +169,7 @@ const AllUserEnquiries = ({
           <span>Error: {error}</span>
         </div>
         <button
-          onClick={fetchAllUserEnquiries}
+          onClick={fetchAllUserOrders}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center mx-auto"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -186,10 +185,10 @@ const AllUserEnquiries = ({
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-semibold text-gray-900">
-            User Enquiries Management
+            User Orders Management
           </h1>
           <button
-            onClick={fetchAllUserEnquiries}
+            onClick={fetchAllUserOrders}
             disabled={loading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50"
           >
@@ -211,8 +210,6 @@ const AllUserEnquiries = ({
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-
-         
         </div>
 
         <div className="mt-3 text-sm text-gray-600">
@@ -232,10 +229,10 @@ const AllUserEnquiries = ({
                 Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Enquiries
+                Orders
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Latest Activity
+                Email
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
@@ -256,17 +253,17 @@ const AllUserEnquiries = ({
             ) : paginatedUsers.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-8 text-gray-500">
-                  {searchTerm || statusFilter !== "All"
-                    ? "No users match your filters"
+                  {searchTerm
+                    ? "No users match your search"
                     : "No users found"}
                 </td>
               </tr>
             ) : (
               paginatedUsers.map((user) => (
-                <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                <tr key={user.userId} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-mono text-gray-900">
-                      #{user._id ? user._id.slice(-6) : "------"}
+                      #{user.userId ? user.userId.slice(-6) : "------"}
                     </span>
                   </td>
 
@@ -275,18 +272,17 @@ const AllUserEnquiries = ({
                       <div className="text-sm font-medium text-gray-900">
                         {user.name}
                       </div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {user.enquiryCount} enquir{user.enquiryCount === 1 ? "y" : "ies"}
+                      {user.orderCount} order{user.orderCount === 1 ? "" : "s"}
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(user.latestEnquiry)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {user.email}
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -295,7 +291,7 @@ const AllUserEnquiries = ({
                       className="text-blue-600 hover:text-blue-900 flex items-center transition-colors"
                     >
                       <Eye className="w-4 h-4 mr-1" />
-                      View Details
+                      View Orders
                     </button>
                   </td>
                 </tr>
@@ -330,16 +326,19 @@ const AllUserEnquiries = ({
         </div>
       )}
 
-      {/* ✅ MODAL (View Details) */}
+      {/* ✅ MODAL (View User Orders) */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-2xl rounded-lg shadow-lg overflow-hidden">
             <div className="flex justify-between items-center p-4 border-b bg-gray-50">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {selectedUser.name} - All Enquiries ({selectedUser.allEnquiries.length})
+                  {selectedUser.name} - Orders ({selectedUser.orderCount})
                 </h2>
                 <p className="text-sm text-gray-600">{selectedUser.email}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  User ID: {selectedUser.userId}
+                </p>
               </div>
 
               <button
@@ -351,34 +350,48 @@ const AllUserEnquiries = ({
             </div>
 
             <div className="p-4 max-h-[60vh] overflow-y-auto">
-              {[...selectedUser.allEnquiries]
-                .sort(
-                  (a, b) =>
-                    new Date(b.AddedAt).getTime() - new Date(a.AddedAt).getTime()
-                )
-                .map((enq, i) => (
+              {modalLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+                  <span>Loading orders...</span>
+                </div>
+              ) : userOrders.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No orders found for this user
+                </div>
+              ) : (
+                userOrders.map((order, i) => (
                   <div
-                    key={enq._id}
+                    key={order._id || i}
                     className="border border-gray-200 rounded-lg p-3 mb-3"
                   >
                     <div className="flex justify-between items-center">
                       <p className="text-sm font-semibold text-gray-900">
-                        Enquiry #{i + 1}
+                        Order #{i + 1}
                       </p>
-                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 border">
-                        {enq.status || "Pending"}
+                      <span className={`text-xs px-2 py-1 rounded-full border ${
+                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.status || "Pending"}
                       </span>
                     </div>
 
-                    <p className="text-sm text-gray-600 mt-2">
-                      <b>Date:</b> {formatDate(enq.AddedAt)}
-                    </p>
+                    {order.createdAt && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        <b>Date:</b> {formatDate(order.createdAt)}
+                      </p>
+                    )}
 
-                    <p className="text-xs text-gray-400 mt-1">
-                      Enquiry ID: {enq._id}
-                    </p>
+                    {order._id && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Order ID: {order._id}
+                      </p>
+                    )}
                   </div>
-                ))}
+                ))
+              )}
             </div>
 
             <div className="p-4 border-t bg-gray-50 flex justify-end">
@@ -396,4 +409,4 @@ const AllUserEnquiries = ({
   );
 };
 
-export default AllUserEnquiries;
+export default AllUserOrders;
