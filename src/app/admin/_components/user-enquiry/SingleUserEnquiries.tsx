@@ -197,7 +197,7 @@ const SingleUserOrders = ({
     }
   };
 
-  // ✅ UPDATED PDF GENERATION - EXACT MATCH TO INVOICE FORMAT
+  // ✅ FINAL PDF GENERATION - PER COLUMN SHOWS PRICE
   const generatePDF = async () => {
     if (!userData || !filteredOrders.length) {
       alert("No orders to download");
@@ -328,26 +328,29 @@ const SingleUserOrders = ({
       // ========== TABLE HEADER ==========
       const tableStartY = yPos;
       
-      // Table structure
+      // ✅ UPDATED TABLE STRUCTURE - PER COLUMN SHOWS QUANTITY + PRICE
       const tableData: any[] = [];
       let grandTotal = 0;
       
       approvedOrders.forEach((order) => {
         if (order.product?.variants) {
           order.product.variants.forEach((variant) => {
-            const quantity = variant.quantity;
+            const quantityValue = variant.quantity; // e.g., "DOZEN", "24DZ CASE", "1", "12Pcs", "Carton"
             const description = order.product.name;
             const rateInclTax = parseFloat(variant.price);
-            const per = "Pcs"; // You can modify this based on product type
+            
+            // ✅ PER COLUMN = QUANTITY + PRICE (formatted properly)
+            const perValue = `${quantityValue}\n${rateInclTax.toFixed(2)}`;
             
             // Add to grand total
             grandTotal += rateInclTax;
             
+            // ✅ UPDATED TABLE ROW
             tableData.push([
-              quantity + " " + per,
-              description,
-              rateInclTax.toFixed(2),
-              per
+              quantityValue,           // Quantity column: "DOZEN", "24DZ CASE", "12Pcs", etc.
+              description,             // Description
+              rateInclTax.toFixed(2), // Rate (price)
+              perValue                // Per column: "DOZEN\n225.00"
             ]);
           });
         }
@@ -359,7 +362,7 @@ const SingleUserOrders = ({
         head: [['Quantity', 'Description of Goods', 'Rate\n(Incl. of Tax)', 'per']],
         body: [
           ...tableData,
-          ['', '', 'Total', `${grandTotal.toFixed(2)}`] // Total without ₹ symbol to save space
+          ['', '', 'Total', `${grandTotal.toFixed(2)}`]
         ],
         theme: 'grid',
         headStyles: {
@@ -380,10 +383,10 @@ const SingleUserOrders = ({
           cellPadding: 3
         },
         columnStyles: {
-          0: { cellWidth: 25, halign: 'center' },
-          1: { cellWidth: 85, halign: 'left' },
-          2: { cellWidth: 30, halign: 'right' },
-          3: { cellWidth: 25, halign: 'right' }
+          0: { cellWidth: 30, halign: 'center' },  // Quantity
+          1: { cellWidth: 80, halign: 'left' },    // Description
+          2: { cellWidth: 30, halign: 'right' },   // Rate
+          3: { cellWidth: 25, halign: 'center', valign: 'middle' }   // Per (shows quantity + price)
         },
         margin: { left: 20, right: 20 },
         tableWidth: 165,
@@ -422,10 +425,8 @@ const SingleUserOrders = ({
       // Jurisdiction text
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.text("SUBJECT TO DELHI JURISDICTION", pageWidth / 2, pageHeight - 22, { align: "center" });
       
       doc.setFont("helvetica", "normal");
-      doc.text("This is a Computer Generated Invoice", pageWidth / 2, pageHeight - 15, { align: "center" });
       
       // Save PDF
       const fileName = `Order_Estimate_${userData.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;

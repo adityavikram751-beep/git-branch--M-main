@@ -20,6 +20,7 @@ type VariantUI = {
   _id: string; // variantId
   variantName: string;
   qty: number; // UI me show karne ke liye
+  qtyDisplay: string; // ✅ Original quantity string (12 Pcs, DOZEN, Carton etc)
   unitPrice: number; // unit price
   totalPrice: number; // ❌ multiply nahi hoga (same as unitPrice)
 };
@@ -192,6 +193,7 @@ export default function InquiryPage() {
         map.set(key, {
           ...prev,
           qty: mergedQty,
+          qtyDisplay: prev.qtyDisplay, // Keep original display
           unitPrice,
           totalPrice: unitPrice,
         });
@@ -280,6 +282,9 @@ export default function InquiryPage() {
               const qtyRaw = v?.selectedQuantity ?? v?.qty ?? v?.quantity ?? 1;
               const qty = Number.isFinite(Number(qtyRaw)) ? Number(qtyRaw) : 1;
 
+              // ✅ Store original quantity string for display
+              const qtyDisplay = String(qtyRaw); // "12 Pcs", "DOZEN", "Carton" etc
+
               const unitPriceRaw = v?.price ?? 0;
               const unitPrice = Number.isFinite(Number(unitPriceRaw))
                 ? Number(unitPriceRaw)
@@ -295,6 +300,7 @@ export default function InquiryPage() {
                   v?.variantColor ||
                   "Default Variant",
                 qty,
+                qtyDisplay, // ✅ Original string
                 unitPrice,
                 totalPrice,
               };
@@ -565,6 +571,9 @@ export default function InquiryPage() {
                   const qtyRaw = v?.selectedQuantity ?? v?.qty ?? v?.quantity ?? 1;
                   const qty = Number.isFinite(Number(qtyRaw)) ? Number(qtyRaw) : 1;
 
+                  // ✅ Store original quantity string for display
+                  const qtyDisplay = String(qtyRaw);
+
                   const unitPriceRaw = v?.price ?? 0;
                   const unitPrice = Number.isFinite(Number(unitPriceRaw))
                     ? Number(unitPriceRaw)
@@ -580,6 +589,7 @@ export default function InquiryPage() {
                       v?.variantColor ||
                       "Default Variant",
                     qty,
+                    qtyDisplay,
                     unitPrice,
                     totalPrice,
                   };
@@ -867,12 +877,12 @@ export default function InquiryPage() {
                                     className="bg-white rounded-lg p-3 border border-gray-200"
                                   >
                                   
-                                    {/* ✅ Quantity SHOW (12 pcs etc) */}
+                                    {/* ✅ Quantity SHOW (Original string from backend) */}
                                     <p className="text-sm text-gray-700 mt-1">
                                       <span className="font-semibold">
                                         Quantity:
                                       </span>{" "}
-                                      {Number(v.qty || 0)} Pcs
+                                      {v.qtyDisplay}
                                     </p>
 
                                     {/* ✅ Unit Price */}
