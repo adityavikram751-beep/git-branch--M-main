@@ -77,6 +77,7 @@ const SingleUserOrders = ({
   const [bulkUpdating, setBulkUpdating] = useState(false);
 
   const API_BASE_URL = "https://barber-syndicate.vercel.app/api/v1/order";
+  const CONFIRM_API_URL = "https://barber-syndicate.vercel.app/api/v1/order/confrim-order";
 
   const fetchUserOrders = async () => {
     try {
@@ -146,16 +147,19 @@ const SingleUserOrders = ({
 
       setUpdatingStatus(orderId);
 
-      const response = await fetch(
-        `${API_BASE_URL}/confrim-order?id=${orderId}&type=${type}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
+      const requestBody = {
+        id: [orderId],
+        type: type
+      };
+
+      const response = await fetch(CONFIRM_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       const responseText = await response.text();
       console.log("Update API Response:", responseText);
@@ -202,7 +206,7 @@ const SingleUserOrders = ({
     }
   };
 
-  // ✅ BULK UPDATE FUNCTION
+  // ✅ UPDATED BULK UPDATE FUNCTION USING NEW POST API
   const bulkUpdateOrders = async (type: "approved" | "cancel") => {
     if (selectedOrders.size === 0) {
       alert("Please select orders first");
@@ -220,57 +224,67 @@ const SingleUserOrders = ({
         return;
       }
 
-      let successCount = 0;
-      let failCount = 0;
+      // Convert Set to Array
+      const orderIds = Array.from(selectedOrders);
+      
+      // Prepare request body
+      const requestBody = {
+        id: orderIds,
+        type: type
+      };
 
-      for (const orderId of selectedOrders) {
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/confrim-order?id=${orderId}&type=${type}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${adminToken}`,
-              },
-            }
-          );
+      console.log("Bulk update request:", requestBody);
 
-          const result = await response.json();
+      // Call the new POST API
+      const response = await fetch(CONFIRM_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-          if (response.ok && (result.status === true || result.success === true)) {
-            successCount++;
-            setUserData(prev => {
-              if (!prev) return null;
-              return {
-                ...prev,
-                orders: prev.orders.map(order => 
-                  order._id === orderId 
-                    ? { 
-                        ...order, 
-                        status: type,
-                        updatedAt: new Date().toISOString()
-                      } 
-                    : order
-                )
-              };
-            });
-          } else {
-            failCount++;
-          }
-        } catch (err) {
-          failCount++;
-          console.error(`Failed to update order ${orderId}:`, err);
-        }
+      const responseText = await response.text();
+      console.log("Bulk Update API Response:", responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("JSON Parse Error:", parseError);
+        console.error("Response was:", responseText);
+        throw new Error(`Server returned invalid JSON. Status: ${response.status}`);
       }
 
-      // Clear selection after bulk update
-      setSelectedOrders(new Set());
+      if (!response.ok) {
+        throw new Error(result?.message || `Failed to update status: ${response.status}`);
+      }
 
-      if (failCount === 0) {
-        alert(`✅ All ${successCount} orders ${type} successfully!`);
+      if (result.status === true || result.success === true) {
+        // Update UI state for all selected orders
+        setUserData(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            orders: prev.orders.map(order => 
+              selectedOrders.has(order._id) 
+                ? { 
+                    ...order, 
+                    status: type,
+                    updatedAt: new Date().toISOString()
+                  } 
+                : order
+            )
+          };
+        });
+
+        // Clear selection after successful update
+        setSelectedOrders(new Set());
+        
+        alert(`✅ ${orderIds.length} orders ${type} successfully!`);
       } else {
-        alert(`✅ ${successCount} orders ${type} successfully.\n❌ ${failCount} orders failed.`);
+        throw new Error(result?.message || "Failed to update order status");
       }
 
     } catch (error: any) {
@@ -431,29 +445,25 @@ const SingleUserOrders = ({
       approvedOrders.forEach((order) => {
         if (order.product?.variants) {
           order.product.variants.forEach((variant) => {
-            const quantityStr = variant.quantity; // e.g., "100ml", "12Pcs", "DOZEN", "24DZ CASE"
-            const totalPrice = parseFloat(variant.price); // Total price for this variant
+            const quantityStr = variant.quantity;
+            const totalPrice = parseFloat(variant.price);
             const description = order.product.name;
             
-            // ✅ Extract numeric quantity from string
-            let numericQuantity = 1; // Default to 1 if no number found
-            const quantityMatch = quantityStr.match(/(\d+)/); // Extract first number
+            let numericQuantity = 1;
+            const quantityMatch = quantityStr.match(/(\d+)/);
             
             if (quantityMatch) {
               numericQuantity = parseInt(quantityMatch[1]);
             }
             
-            // ✅ Calculate per unit rate = Total Price / Quantity
             const perUnitRate = totalPrice / numericQuantity;
-            
             grandTotal += totalPrice;
             
-            // ✅ Rate column shows per unit price, Total column shows total price
             tableData.push([
-              quantityStr,              // Quantity: "100ml", "12Pcs", etc.
-              description,              // Description of Goods
-              perUnitRate.toFixed(2),   // Rate (per unit): 500/100 = 5.00
-              totalPrice.toFixed(2)     // Total: 500.00
+              quantityStr,
+              description,
+              perUnitRate.toFixed(2),
+              totalPrice.toFixed(2)
             ]);
           });
         }
