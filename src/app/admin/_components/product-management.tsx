@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,6 +10,8 @@ import {
   Eye,
   EyeOff,
   Search,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { AddProduct } from "./product-manage/AddProduct";
 import { EditProduct } from "./product-manage/EditProduct";
@@ -29,21 +31,15 @@ interface Product {
   id: string;
   name: string;
   description: string;
-
   brand?: string;
   categoryId?: string;
-
   subcategoryId?: string;
   subcategoryName?: string;
-
   points?: string[];
   isFeatured?: boolean;
-
   variants?: { price: string; quantity: string }[];
-
   images?: string[];
   image?: string;
-
   isActivate?: boolean;
   status?: string;
 }
@@ -60,14 +56,12 @@ interface ApiProduct {
   }[];
   brand: string;
   categoryId: string;
-
   subcategoryId:
     | {
         _id: string;
         subCatName: string;
       }
     | null;
-
   points: string[];
   isFeature: boolean;
   isActivate: boolean;
@@ -116,8 +110,11 @@ export function ProductManagement() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  // 🔥 One shared horizontal scroll refs
-  const variantHeaderRef = useRef<HTMLDivElement | null>(null);
+  // ✅ New state for bulk selection
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
+    new Set()
+  );
+  const [isSelectAll, setIsSelectAll] = useState(false);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -162,18 +159,14 @@ export function ProductManagement() {
           description: apiProduct.description,
           brand: apiProduct.brand,
           categoryId: apiProduct.categoryId,
-
           subcategoryId: apiProduct.subcategoryId?._id || "",
           subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
-
           points: apiProduct.points || [],
           isFeatured: apiProduct.isFeature || false,
-
           variants: (apiProduct.variants || []).map((v) => ({
             price: v.price,
             quantity: v.quantity,
           })),
-
           images: apiProduct.images || [],
           image: apiProduct.images?.[0] || "",
           isActivate: apiProduct.isActivate,
@@ -183,6 +176,10 @@ export function ProductManagement() {
 
       setProducts(mappedProducts);
       setTotalPages(data.totalPages);
+      
+      // Reset selection when products change
+      setSelectedProducts(new Set());
+      setIsSelectAll(false);
     } catch (err: any) {
       const errorMessage =
         err.message || "Failed to load products. Please try again later.";
@@ -239,14 +236,17 @@ export function ProductManagement() {
       const newStatus = currentIsActivate ? "deactivate" : "activate";
 
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive/${productId}`,
+        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${adminToken}`,
           },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({ 
+            id: [productId], 
+            status: !currentIsActivate 
+          }),
         }
       );
 
@@ -260,8 +260,8 @@ export function ProductManagement() {
 
       const result = await response.json();
 
-      if (result.success) {
-        const newIsActivate = newStatus === "activate";
+      if (result.success || result.message) {
+        const newIsActivate = !currentIsActivate;
 
         setProducts((prev) =>
           prev.map((p) =>
@@ -290,6 +290,98 @@ export function ProductManagement() {
     }
   };
 
+  // ✅ BULK STATUS TOGGLE FUNCTION - UPDATED
+  const handleBulkToggleStatus = async (activate: boolean) => {
+    if (selectedProducts.size === 0) {
+      toast.error("Please select at least one product");
+      return;
+    }
+
+    try {
+      const adminToken = localStorage.getItem("adminToken");
+      if (!adminToken) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      // Create array of product IDs
+      const productIds = Array.from(selectedProducts);
+
+      const response = await fetch(
+        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            id: productIds,
+            status: activate // true for active, false for inactive
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", errorText);
+        throw new Error(`Failed to update product status. Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success || result.message) {
+        // Update local state
+        setProducts((prev) =>
+          prev.map((p) =>
+            selectedProducts.has(p.id)
+              ? {
+                  ...p,
+                  isActivate: activate,
+                  status: activate ? "active" : "inactive",
+                }
+              : p
+          )
+        );
+
+        setSelectedProducts(new Set());
+        setIsSelectAll(false);
+
+        toast.success(
+          `${productIds.length} product(s) ${
+            activate ? "activated" : "deactivated"
+          } successfully!`
+        );
+      } else {
+        throw new Error(result.message || "Failed to update product statuses");
+      }
+    } catch (error: any) {
+      console.error("Error in bulk status toggle:", error);
+      toast.error(error.message || "Failed to update product statuses");
+    }
+  };
+
+  // ✅ SELECT/DESELECT FUNCTIONS
+  const handleSelectProduct = (productId: string) => {
+    const newSelected = new Set(selectedProducts);
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId);
+    } else {
+      newSelected.add(productId);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (isSelectAll) {
+      setSelectedProducts(new Set());
+    } else {
+      const allIds = filteredProducts.map((p) => p.id);
+      setSelectedProducts(new Set(allIds));
+    }
+    setIsSelectAll(!isSelectAll);
+  };
+
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -298,6 +390,8 @@ export function ProductManagement() {
 
   const handleRefresh = () => {
     setCurrentPage(1);
+    setSelectedProducts(new Set());
+    setIsSelectAll(false);
     setRefreshTrigger((prev) => !prev);
   };
 
@@ -325,29 +419,6 @@ export function ProductManagement() {
     return list;
   }, [products, search, statusFilter]);
 
-  // ✅ Dynamic Variant Columns
-  const variantColumns = useMemo(() => {
-    const set = new Set<string>();
-
-    filteredProducts.forEach((p) => {
-      (p.variants || []).forEach((v) => {
-        const q = (v.quantity || "").trim();
-        if (q) set.add(q);
-      });
-    });
-
-    const arr = Array.from(set);
-
-    arr.sort((a, b) => {
-      const aNum = parseFloat(a);
-      const bNum = parseFloat(b);
-      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-      return a.localeCompare(b);
-    });
-
-    return arr;
-  }, [filteredProducts]);
-
   return (
     <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
@@ -359,9 +430,29 @@ export function ProductManagement() {
         </div>
 
         <div className="flex gap-2">
+          {/* ✅ BULK ACTION BUTTONS */}
+          {selectedProducts.size > 0 && (
+            <div className="flex gap-2 mr-4">
+              <Button
+                onClick={() => handleBulkToggleStatus(true)}
+                className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Activate ({selectedProducts.size})
+              </Button>
+              <Button
+                onClick={() => handleBulkToggleStatus(false)}
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+              >
+                <EyeOff className="h-4 w-4 mr-2" />
+                Deactivate ({selectedProducts.size})
+              </Button>
+            </div>
+          )}
+
           <button
             onClick={handleRefresh}
-            className="px-4 py-2 bg-rose-100 text-rose-700 rounded hover:bg-rose-200 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-rose-100 text-rose-700 rounded hover:bg-rose-200 transition-colors flex items-center gap-2 border border-rose-200"
             disabled={isLoading}
           >
             <RefreshCw
@@ -444,10 +535,25 @@ export function ProductManagement() {
         <CardContent>
           {/* ================== FINAL GRID TABLE ================== */}
           <div className="w-full border border-rose-200 rounded-md overflow-hidden">
-            {/* ✅ FIXED HEADER */}
-            <div className="grid grid-cols-[70px_1.4fr_1fr_1.3fr_260px_105px_70px] bg-white sticky top-0 z-30 border-b border-rose-200">
+            {/* ✅ FIXED HEADER - CHANGED: Added Select column after Image */}
+            <div className="grid grid-cols-[70px_50px_1.4fr_1fr_1.3fr_105px_70px] bg-white sticky top-0 z-30 border-b border-rose-200">
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Image
+              </div>
+
+              {/* ✅ NEW: SELECT ALL COLUMN */}
+              <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100 flex items-center justify-center">
+                <button
+                  onClick={handleSelectAll}
+                  className="p-1 hover:bg-rose-50 rounded"
+                  title={isSelectAll ? "Deselect all" : "Select all"}
+                >
+                  {isSelectAll ? (
+                    <CheckSquare className="h-4 w-4 text-rose-700" />
+                  ) : (
+                    <Square className="h-4 w-4 text-rose-400" />
+                  )}
+                </button>
               </div>
 
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
@@ -462,33 +568,16 @@ export function ProductManagement() {
                 Description
               </div>
 
-              {/* ✅ SINGLE HORIZONTAL SCROLL HEADER */}
-              <div
-                ref={variantHeaderRef}
-                className="overflow-x-auto max-w-[260px] border-l border-r border-rose-200"
-              >
-                <div className="flex">
-                  {variantColumns.map((col) => (
-                    <div
-                      key={col}
-                      className="min-w-[90px] text-center font-semibold text-rose-700 px-2 py-2 whitespace-nowrap border-r border-rose-100"
-                    >
-                      {col}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="px-2 py-2 font-semibold text-rose-700  ">
+              <div className="px-2 py-2 font-semibold text-rose-700">
                 Status
               </div>
 
-              <div className="px-1 py-2 font-semibold text-rose-700  ">
+              <div className="px-1 py-2 font-semibold text-rose-700">
                 Actions
               </div>
             </div>
 
-            {/* ✅ BODY SCROLL (HEADER FIXED) */}
+            {/* ✅ BODY SCROLL (HEADER FIXED) - CHANGED: Added Select column */}
             <div className="max-h-[520px] overflow-y-auto">
               {filteredProducts.length === 0 && !isLoading ? (
                 <div className="text-center text-rose-700 py-10">
@@ -498,7 +587,7 @@ export function ProductManagement() {
                 filteredProducts.map((product) => (
                   <div
                     key={product.id}
-                    className={`grid grid-cols-[70px_1.4fr_1fr_1.3fr_260px_90px_70px] items-center 
+                    className={`grid grid-cols-[70px_50px_1.4fr_1fr_1.3fr_90px_70px] items-center 
                     border-b border-rose-200 hover:bg-rose-50/40 transition ${
                       !product.isActivate
                         ? "opacity-60 bg-gray-50"
@@ -518,6 +607,20 @@ export function ProductManagement() {
                           <Package className="h-6 w-6 text-rose-400" />
                         </div>
                       )}
+                    </div>
+
+                    {/* ✅ NEW: SELECT CHECKBOX */}
+                    <div className="px-2 py-2 border-r border-rose-100 flex items-center justify-center">
+                      <button
+                        onClick={() => handleSelectProduct(product.id)}
+                        className="p-1 hover:bg-rose-50 rounded"
+                      >
+                        {selectedProducts.has(product.id) ? (
+                          <CheckSquare className="h-4 w-4 text-rose-700" />
+                        ) : (
+                          <Square className="h-4 w-4 text-rose-400" />
+                        )}
+                      </button>
                     </div>
 
                     {/* ✅ Product (NO EXTRA WORD IN NEXT COLUMN) */}
@@ -554,44 +657,8 @@ export function ProductManagement() {
                       </div>
                     </div>
 
-                    {/* Variants */}
-                    <div className="border-l border-r border-rose-200">
-                      <div
-                        className="overflow-x-auto max-w-[260px]"
-                        onScroll={(e) => {
-                          const el = e.currentTarget;
-                          if (variantHeaderRef.current) {
-                            variantHeaderRef.current.scrollLeft = el.scrollLeft;
-                          }
-                        }}
-                      >
-                        <div className="flex">
-                          {variantColumns.map((col) => {
-                            const found = (product.variants || []).find(
-                              (v) =>
-                                (v.quantity || "").trim().toLowerCase() ===
-                                col.trim().toLowerCase()
-                            );
-
-                            const price = found
-                              ? parseFloat(found.price) || 0
-                              : 0;
-
-                            return (
-                              <div
-                                key={col}
-                                className="min-w-[90px] text-center text-rose-700 px-2 py-2 whitespace-nowrap border-r border-rose-100"
-                              >
-                                ${price > 0 ? price.toFixed(2) : "0.00"}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Status */}
-                    <div className="px-2 py-2  ">
+                    <div className="px-2 py-2">
                       <Badge
                         className={`cursor-pointer ${
                           product.isActivate
@@ -619,28 +686,6 @@ export function ProductManagement() {
                         </DropdownMenuTrigger>
 
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleToggleStatus(
-                                product.id,
-                                product.isActivate || false
-                              )
-                            }
-                            className="cursor-pointer"
-                          >
-                            {product.isActivate ? (
-                              <>
-                                <EyeOff className="mr-2 h-4 w-4" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Activate
-                              </>
-                            )}
-                          </DropdownMenuItem>
-
                           <DropdownMenuSeparator />
 
                           <EditProduct
@@ -674,7 +719,7 @@ export function ProductManagement() {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 hover:bg-rose-200 transition-colors"
+                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 hover:bg-rose-200 transition-colors border border-rose-200"
               >
                 Previous
               </button>
@@ -686,7 +731,7 @@ export function ProductManagement() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 hover:bg-rose-200 transition-colors"
+                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 hover:bg-rose-200 transition-colors border border-rose-200"
               >
                 Next
               </button>
