@@ -431,20 +431,29 @@ const SingleUserOrders = ({
       approvedOrders.forEach((order) => {
         if (order.product?.variants) {
           order.product.variants.forEach((variant) => {
-            const quantityValue = variant.quantity;
+            const quantityStr = variant.quantity; // e.g., "100ml", "12Pcs", "DOZEN", "24DZ CASE"
+            const totalPrice = parseFloat(variant.price); // Total price for this variant
             const description = order.product.name;
-            const rateInclTax = parseFloat(variant.price);
             
-            // ✅ Per column shows ONLY price (not quantity)
-            const perValue = rateInclTax.toFixed(2);
+            // ✅ Extract numeric quantity from string
+            let numericQuantity = 1; // Default to 1 if no number found
+            const quantityMatch = quantityStr.match(/(\d+)/); // Extract first number
             
-            grandTotal += rateInclTax;
+            if (quantityMatch) {
+              numericQuantity = parseInt(quantityMatch[1]);
+            }
             
+            // ✅ Calculate per unit rate = Total Price / Quantity
+            const perUnitRate = totalPrice / numericQuantity;
+            
+            grandTotal += totalPrice;
+            
+            // ✅ Rate column shows per unit price, Total column shows total price
             tableData.push([
-              quantityValue,
-              description,
-              rateInclTax.toFixed(2),
-              perValue
+              quantityStr,              // Quantity: "100ml", "12Pcs", etc.
+              description,              // Description of Goods
+              perUnitRate.toFixed(2),   // Rate (per unit): 500/100 = 5.00
+              totalPrice.toFixed(2)     // Total: 500.00
             ]);
           });
         }
