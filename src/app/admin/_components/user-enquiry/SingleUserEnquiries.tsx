@@ -19,6 +19,7 @@ import {
   Loader2,
   ChevronDown,
   FileDown,
+  Check,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -70,6 +71,10 @@ const SingleUserOrders = ({
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+  
+  // ✅ NEW STATE FOR SELECTION
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   const API_BASE_URL = "https://barber-syndicate.vercel.app/api/v1/order";
 
@@ -185,7 +190,7 @@ const SingleUserOrders = ({
           };
         });
         
-        alert(`Order ${type === "approved" ? "approved" : "cancel"} successfully ✅`);
+        alert(`Order ${type === "approved" ? "approved" : "cancelled"} successfully ✅`);
       } else {
         throw new Error(result?.message || "Failed to update order status");
       }
@@ -197,7 +202,109 @@ const SingleUserOrders = ({
     }
   };
 
-  // ✅ FINAL PDF GENERATION - PER COLUMN SHOWS PRICE
+  // ✅ BULK UPDATE FUNCTION
+  const bulkUpdateOrders = async (type: "approved" | "cancel") => {
+    if (selectedOrders.size === 0) {
+      alert("Please select orders first");
+      return;
+    }
+
+    const confirmMsg = `Are you sure you want to ${type} ${selectedOrders.size} selected order(s)?`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      setBulkUpdating(true);
+      const adminToken = localStorage.getItem("adminToken");
+      if (!adminToken) {
+        alert("No admin token provided. Please log in again.");
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const orderId of selectedOrders) {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/confrim-order?id=${orderId}&type=${type}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${adminToken}`,
+              },
+            }
+          );
+
+          const result = await response.json();
+
+          if (response.ok && (result.status === true || result.success === true)) {
+            successCount++;
+            setUserData(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                orders: prev.orders.map(order => 
+                  order._id === orderId 
+                    ? { 
+                        ...order, 
+                        status: type,
+                        updatedAt: new Date().toISOString()
+                      } 
+                    : order
+                )
+              };
+            });
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+          console.error(`Failed to update order ${orderId}:`, err);
+        }
+      }
+
+      // Clear selection after bulk update
+      setSelectedOrders(new Set());
+
+      if (failCount === 0) {
+        alert(`✅ All ${successCount} orders ${type} successfully!`);
+      } else {
+        alert(`✅ ${successCount} orders ${type} successfully.\n❌ ${failCount} orders failed.`);
+      }
+
+    } catch (error: any) {
+      console.error("Error in bulk update:", error);
+      alert("Bulk update failed: " + error.message);
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  // ✅ SELECT ALL TOGGLE
+  const handleSelectAll = () => {
+    const pendingOrders = filteredOrders.filter(o => o.status === "pending");
+    
+    if (selectedOrders.size === pendingOrders.length) {
+      // Deselect all
+      setSelectedOrders(new Set());
+    } else {
+      // Select all pending orders
+      setSelectedOrders(new Set(pendingOrders.map(o => o._id)));
+    }
+  };
+
+  // ✅ TOGGLE INDIVIDUAL ORDER SELECTION
+  const toggleOrderSelection = (orderId: string) => {
+    const newSelection = new Set(selectedOrders);
+    if (newSelection.has(orderId)) {
+      newSelection.delete(orderId);
+    } else {
+      newSelection.add(orderId);
+    }
+    setSelectedOrders(newSelection);
+  };
+
   const generatePDF = async () => {
     if (!userData || !filteredOrders.length) {
       alert("No orders to download");
@@ -207,7 +314,6 @@ const SingleUserOrders = ({
     try {
       setDownloadingPDF(true);
       
-      // ✅ FILTER ONLY APPROVED ORDERS
       const approvedOrders = userData.orders.filter(order => order.status === "approved");
       
       if (approvedOrders.length === 0) {
@@ -220,7 +326,6 @@ const SingleUserOrders = ({
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       
-      // Load logo
       let logoDataUrl = "";
       try {
         const logoResponse = await fetch("/logo.png");
@@ -234,22 +339,18 @@ const SingleUserOrders = ({
         console.log("Logo not found, continuing without logo");
       }
       
-      // ========== HEADER ==========
       let yPos = 22;
       
-      // Logo position (top right, well above everything)
       if (logoDataUrl) {
         doc.addImage(logoDataUrl, "PNG", pageWidth - 58, 5, 45, 45);
       }
       
-      // Title
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
       doc.text("Order Estimate", 60, yPos);
       
       yPos += 18;
       
-      // ========== LEFT COLUMN - COMPANY INFO ==========
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.text("Barber Syndicate", 20, yPos);
@@ -269,7 +370,6 @@ const SingleUserOrders = ({
       yPos += 4;
       doc.text("E-Mail : farhan3846@gmail.com", 20, yPos);
       
-      // ========== RIGHT COLUMN - DATE INFO ==========
       let rightYPos = yPos - 24;
       
       doc.setFontSize(9);
@@ -284,7 +384,6 @@ const SingleUserOrders = ({
       
       yPos += 8;
       
-      // ========== BUYER DETAILS ==========
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Buyer (Bill to)", 20, yPos);
@@ -296,7 +395,6 @@ const SingleUserOrders = ({
       
       yPos += 5;
       
-      // Client details table
       if (userData) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
@@ -325,41 +423,36 @@ const SingleUserOrders = ({
       
       yPos += 6;
       
-      // ========== TABLE HEADER ==========
       const tableStartY = yPos;
       
-      // ✅ UPDATED TABLE STRUCTURE - PER COLUMN SHOWS QUANTITY + PRICE
       const tableData: any[] = [];
       let grandTotal = 0;
       
       approvedOrders.forEach((order) => {
         if (order.product?.variants) {
           order.product.variants.forEach((variant) => {
-            const quantityValue = variant.quantity; // e.g., "DOZEN", "24DZ CASE", "1", "12Pcs", "Carton"
+            const quantityValue = variant.quantity;
             const description = order.product.name;
             const rateInclTax = parseFloat(variant.price);
             
-            // ✅ PER COLUMN = QUANTITY + PRICE (formatted properly)
-            const perValue = `${quantityValue}\n${rateInclTax.toFixed(2)}`;
+            // ✅ Per column shows ONLY price (not quantity)
+            const perValue = rateInclTax.toFixed(2);
             
-            // Add to grand total
             grandTotal += rateInclTax;
             
-            // ✅ UPDATED TABLE ROW
             tableData.push([
-              quantityValue,           // Quantity column: "DOZEN", "24DZ CASE", "12Pcs", etc.
-              description,             // Description
-              rateInclTax.toFixed(2), // Rate (price)
-              perValue                // Per column: "DOZEN\n225.00"
+              quantityValue,
+              description,
+              rateInclTax.toFixed(2),
+              perValue
             ]);
           });
         }
       });
       
-      // Add table with total row
       autoTable(doc, {
         startY: tableStartY,
-        head: [['Quantity', 'Description of Goods', 'Rate\n(Incl. of Tax)', 'per']],
+        head: [['Quantity', 'Description of Goods', 'Rate\n(Incl. of Tax)', 'Total']],
         body: [
           ...tableData,
           ['', '', 'Total', `${grandTotal.toFixed(2)}`]
@@ -383,15 +476,14 @@ const SingleUserOrders = ({
           cellPadding: 3
         },
         columnStyles: {
-          0: { cellWidth: 30, halign: 'center' },  // Quantity
-          1: { cellWidth: 80, halign: 'left' },    // Description
-          2: { cellWidth: 30, halign: 'right' },   // Rate
-          3: { cellWidth: 25, halign: 'center', valign: 'middle' }   // Per (shows quantity + price)
+          0: { cellWidth: 30, halign: 'center' },
+          1: { cellWidth: 80, halign: 'left' },
+          2: { cellWidth: 30, halign: 'right' },
+          3: { cellWidth: 25, halign: 'center', valign: 'middle' }
         },
         margin: { left: 20, right: 20 },
         tableWidth: 165,
         willDrawCell: function(data) {
-          // Make total row bold
           if (data.row.index === tableData.length && data.section === 'body') {
             doc.setFont("helvetica", "bold");
           }
@@ -403,7 +495,6 @@ const SingleUserOrders = ({
       
       yPos += 10;
       
-      // ========== AMOUNT IN WORDS ==========
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.text("Amount Chargeable (in words)", 20, yPos);
@@ -416,19 +507,14 @@ const SingleUserOrders = ({
       
       yPos += 10;
       
-      // ========== FOOTER ==========
-      // Bottom line
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.5);
       doc.line(20, pageHeight - 30, pageWidth - 20, pageHeight - 30);
       
-      // Jurisdiction text
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      
       doc.setFont("helvetica", "normal");
       
-      // Save PDF
       const fileName = `Order_Estimate_${userData.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
       doc.save(fileName);
       
@@ -442,7 +528,6 @@ const SingleUserOrders = ({
     }
   };
 
-  // Helper function to convert number to words (Indian numbering system)
   const convertNumberToWords = (num: number): string => {
     if (num === 0) return 'Zero';
     
@@ -463,21 +548,18 @@ const SingleUserOrders = ({
     
     const intPart = Math.floor(num);
     
-    // Handle crores
     if (intPart >= 10000000) {
       const crores = Math.floor(intPart / 10000000);
       const remainder = intPart % 10000000;
       return convertBelow1000(crores) + ' Crore' + (remainder ? ' ' + convertNumberToWords(remainder) : '');
     }
     
-    // Handle lakhs
     if (intPart >= 100000) {
       const lakhs = Math.floor(intPart / 100000);
       const remainder = intPart % 100000;
       return convertBelow100(lakhs) + ' Lakh' + (remainder ? ' ' + convertNumberToWords(remainder) : '');
     }
     
-    // Handle thousands
     if (intPart >= 1000) {
       const thousands = Math.floor(intPart / 1000);
       const remainder = intPart % 1000;
@@ -630,6 +712,8 @@ const SingleUserOrders = ({
 
   const orders = filteredOrders;
   const allOrdersCount = userData?.orders?.length || 0;
+  const pendingOrders = filteredOrders.filter(o => o.status === "pending");
+  const allPendingSelected = pendingOrders.length > 0 && selectedOrders.size === pendingOrders.length;
 
   return (
     <div className="flex flex-col h-full">
@@ -657,6 +741,37 @@ const SingleUserOrders = ({
 
             {/* Right Side - All buttons */}
             <div className="flex items-center gap-3">
+              {/* ✅ BULK ACTION BUTTONS - Only show when orders are selected */}
+              {selectedOrders.size > 0 && (
+                <>
+                  <button
+                    onClick={() => bulkUpdateOrders("approved")}
+                    disabled={bulkUpdating}
+                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {bulkUpdating ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Approve ({selectedOrders.size})
+                  </button>
+                  
+                  <button
+                    onClick={() => bulkUpdateOrders("cancel")}
+                    disabled={bulkUpdating}
+                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {bulkUpdating ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Cancel ({selectedOrders.size})
+                  </button>
+                </>
+              )}
+
               {/* Download PDF Button */}
               {orders.length > 0 && (
                 <button
@@ -699,6 +814,7 @@ const SingleUserOrders = ({
                           onClick={() => {
                             setStatusFilter(status);
                             setIsFilterOpen(false);
+                            setSelectedOrders(new Set()); // Clear selection on filter change
                           }}
                           className={`flex items-center justify-between w-full px-4 py-2 text-sm text-left hover:bg-gray-50 ${
                             statusFilter === status ? "bg-gray-100" : ""
@@ -754,10 +870,33 @@ const SingleUserOrders = ({
                 </div>
               </div>
               
-              {/* Current Filter Display */}
+              {/* Current Filter Display with Select All */}
               <div className="mt-4 flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Showing {orders.length} of {allOrdersCount} orders
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-600">
+                    Showing {orders.length} of {allOrdersCount} orders
+                  </div>
+                  
+                  {/* ✅ SELECT ALL CHECKBOX - Only show when there are pending orders */}
+                  {pendingOrders.length > 0 && (
+                    <button
+                      onClick={handleSelectAll}
+                      className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+                    >
+                      <div className={`w-4 h-4 border-2 rounded flex items-center justify-center ${
+                        allPendingSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                      }`}>
+                        {allPendingSelected && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span>Select All Pending ({pendingOrders.length})</span>
+                    </button>
+                  )}
+                  
+                  {selectedOrders.size > 0 && (
+                    <span className="text-sm font-medium text-blue-600">
+                      {selectedOrders.size} selected
+                    </span>
+                  )}
                 </div>
                 
                 {statusFilter !== "all" && (
@@ -766,7 +905,10 @@ const SingleUserOrders = ({
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(statusFilter)} text-white`}>
                       {getStatusLabel(statusFilter)}
                       <button 
-                        onClick={() => setStatusFilter("all")}
+                        onClick={() => {
+                          setStatusFilter("all");
+                          setSelectedOrders(new Set());
+                        }}
                         className="ml-2 hover:opacity-80"
                       >
                         ✕
@@ -787,86 +929,110 @@ const SingleUserOrders = ({
             </div>
           ) : (
             <div className="space-y-6">
-              {orders.map((order, index) => (
-                <div key={order._id} className="border rounded-lg p-5 hover:shadow-sm transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        Order {index + 1}
-                      </h3>
-                      <p className="text-sm text-gray-600"></p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        order.status === "pending" ? "bg-yellow-100 text-yellow-800" :
-                        order.status === "approved" ? "bg-green-100 text-green-800" :
-                        order.status === "cancel" ? "bg-red-100 text-red-800" :
-                        "bg-blue-100 text-blue-800"
-                      }`}>
-                        {displayStatus(order.status)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Product Info */}
-                  {order.product && (
-                    <div className="mt-4">
-                      <h4 className="font-medium mb-2 flex items-center">
-                        <Package className="w-4 h-4 mr-2 text-gray-500" />
-                        Product Information
-                      </h4>
-
-                      <div className="flex gap-4">
-                        {order.product.image && (
-                          <img
-                            src={order.product.image}
-                            alt={order.product.name}
-                            className="w-24 h-24 object-cover rounded-md border"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "https://via.placeholder.com/100x100?text=No+Image";
-                            }}
-                          />
+              {orders.map((order, index) => {
+                const isSelected = selectedOrders.has(order._id);
+                const canSelect = order.status === "pending";
+                
+                return (
+                  <div 
+                    key={order._id} 
+                    className={`border rounded-lg p-5 transition-all ${
+                      isSelected ? 'border-blue-500 bg-blue-50' : 'hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {/* ✅ CHECKBOX - Only for pending orders */}
+                        {canSelect && (
+                          <button
+                            onClick={() => toggleOrderSelection(order._id)}
+                            className="flex-shrink-0"
+                          >
+                            <div className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
+                              isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300 hover:border-blue-400'
+                            }`}>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                            </div>
+                          </button>
                         )}
                         
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold">{order.product.name}</p>
-                          <p className="text-xs text-gray-500 mt-1"></p>
+                        <div>
+                          <h3 className="text-lg font-semibold">
+                            Order {index + 1}
+                          </h3>
+                          <p className="text-sm text-gray-600"></p>
                         </div>
                       </div>
 
-                      {/* Variants */}
-                      {order.product.variants && order.product.variants.length > 0 && (
-                        <div className="mt-4">
-                          <h4 className="font-medium mb-2">Variants</h4>
-                          <ul className="space-y-2 text-sm">
-                            {order.product.variants.map((variant) => (
-                              <li
-                                key={variant._id}
-                                className="border rounded-md px-3 py-2 flex justify-between"
-                              >
-                                <span>Quantity: {variant.quantity}</span>
-                                <span className="font-medium">₹{variant.price}</span>
-                              </li>
-                            ))}
-                          </ul>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          order.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                          order.status === "approved" ? "bg-green-100 text-green-800" :
+                          order.status === "cancel" ? "bg-red-100 text-red-800" :
+                          "bg-blue-100 text-blue-800"
+                        }`}>
+                          {displayStatus(order.status)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Product Info */}
+                    {order.product && (
+                      <div className="mt-4">
+                        <h4 className="font-medium mb-2 flex items-center">
+                          <Package className="w-4 h-4 mr-2 text-gray-500" />
+                          Product Information
+                        </h4>
+
+                        <div className="flex gap-4">
+                          {order.product.image && (
+                            <img
+                              src={order.product.image}
+                              alt={order.product.name}
+                              className="w-24 h-24 object-cover rounded-md border"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://via.placeholder.com/100x100?text=No+Image";
+                              }}
+                            />
+                          )}
+                          
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{order.product.name}</p>
+                            <p className="text-xs text-gray-500 mt-1"></p>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
 
-                  {/* Order Dates */}
-                  <div className="mt-4 space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      {formatDate(order.createdAt)}
-                    </div>
-                  </div>
+                        {/* Variants */}
+                        {order.product.variants && order.product.variants.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="font-medium mb-2">Variants</h4>
+                            <ul className="space-y-2 text-sm">
+                              {order.product.variants.map((variant) => (
+                                <li
+                                  key={variant._id}
+                                  className="border rounded-md px-3 py-2 flex justify-between"
+                                >
+                                  <span>Quantity: {variant.quantity}</span>
+                                  <span className="font-medium">₹{variant.price}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                  {/* Action Buttons */}
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    {order.status === "pending" && (
-                      <>
+                    {/* Order Dates */}
+                    <div className="mt-4 space-y-2 text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {formatDate(order.createdAt)}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons - Only show if NOT selected (individual actions hidden when bulk mode) */}
+                    {!isSelected && order.status === "pending" && (
+                      <div className="mt-6 flex flex-wrap gap-3">
                         <button
                           onClick={() => updateOrderStatus(order._id, "approved")}
                           disabled={updatingStatus === order._id}
@@ -892,29 +1058,11 @@ const SingleUserOrders = ({
                           )}
                           Cancel Order
                         </button>
-                      </>
-                    )}
-                    
-                    {deleteConfirm === order._id ? (
-                      <div className="flex items-center gap-2 ml-auto">
-                        <span className="text-sm text-gray-600 mr-2">Are you sure?</span>
-                        <button
-                          onClick={cancelDelete}
-                          className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-400"
-                        >
-                          Cancel
-                        </button>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => confirmDeleteOrder(order._id)}
-                      >
-                      
-                      </button>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
