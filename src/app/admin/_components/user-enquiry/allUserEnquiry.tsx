@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Search, Eye, AlertCircle, RefreshCw, X } from "lucide-react";
+import { Search, Eye, AlertCircle, RefreshCw, X, Trash2, Check } from "lucide-react";
 
 type UserOrderSummary = {
   _id?: string;
@@ -8,8 +8,8 @@ type UserOrderSummary = {
   email: string;
   userId: string;
   orderCount: number;
-  latestOrder?: string; // Will fetch separately
-  status?: string; // Will fetch separately
+  latestOrder?: string;
+  status?: string;
 };
 
 const AllUserOrders = ({
@@ -24,10 +24,13 @@ const AllUserOrders = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // ✅ Selection state
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // ✅ Modal state
-  const [selectedUser, setSelectedUser] = useState<UserOrderSummary | null>(
-    null
-  );
+  const [selectedUser, setSelectedUser] = useState<UserOrderSummary | null>(null);
   const [userOrders, setUserOrders] = useState<any[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
 
@@ -59,17 +62,18 @@ const AllUserOrders = ({
 
       const result = await response.json();
       if (result.success) {
-        // Transform API response to match our component
         const transformedUsers = result.data.map((user: any) => ({
           _id: user.userId,
           userId: user.userId,
           name: user.name,
           email: user.email,
           orderCount: user.total || 0,
-          latestOrder: "", // We'll fetch this separately if needed
-          status: "Active", // Default status
+          latestOrder: "",
+          status: "Active",
         }));
         setUsers(transformedUsers);
+        setSelectedUsers([]);
+        setSelectAll(false);
       } else {
         throw new Error("Failed to fetch users");
       }
@@ -112,6 +116,135 @@ const AllUserOrders = ({
     }
   };
 
+  // ✅ Handle individual checkbox selection
+  const handleUserSelect = (userId: string) => {
+    setSelectedUsers(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // ✅ Handle select all on current page
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedUsers([]);
+    } else {
+      const currentPageUserIds = paginatedUsers.map(user => user.userId);
+      setSelectedUsers(currentPageUserIds);
+    }
+    setSelectAll(!selectAll);
+  };
+
+  // ✅ Handle select all across all filtered users
+  const handleSelectAllFiltered = () => {
+    const allFilteredUserIds = filteredUsers.map(user => user.userId);
+    
+    if (selectedUsers.length === allFilteredUserIds.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(allFilteredUserIds);
+    }
+  };
+
+  // ✅ Delete selected users function - FIXED ERROR HANDLING
+  const deleteSelectedUsers = async () => {
+    if (selectedUsers.length === 0) {
+      setError("Please select at least one user to delete");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const adminToken = localStorage.getItem("adminToken");
+      if (!adminToken) {
+        throw new Error("No admin token provided. Please log in again.");
+      }
+
+      setDeleteLoading(true);
+      setError(null);
+
+      const response = await fetch(
+        "https://barber-syndicate.vercel.app/api/v1/order/delete-order",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            user_id: selectedUsers
+          }),
+        }
+      );
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Check if the message contains "delete" - this might be a success message
+        const message = result.message || "";
+        
+        // Check if this is actually a success message (like "3 orders delete")
+        if (message.toLowerCase().includes("delete")) {
+          // This is actually a success message, not an error
+          
+          // Remove deleted users from state
+          setUsers(prevUsers => prevUsers.filter(user => !selectedUsers.includes(user.userId)));
+          setSelectedUsers([]);
+          setSelectAll(false);
+          
+          // Show success message
+          setError(`✅ ${message || `Successfully deleted ${selectedUsers.length} user(s)`}`);
+          setTimeout(() => setError(null), 3000);
+        } else {
+          // Some other message
+          setUsers(prevUsers => prevUsers.filter(user => !selectedUsers.includes(user.userId)));
+          setSelectedUsers([]);
+          setSelectAll(false);
+          
+          setError(`✅ ${message || `Successfully deleted ${selectedUsers.length} user(s)`}`);
+          setTimeout(() => setError(null), 3000);
+        }
+      } else {
+        // Handle different types of error responses
+        let errorMessage = "Failed to delete users";
+        
+        if (result.message) {
+          errorMessage = result.message;
+        } else if (result.error) {
+          errorMessage = result.error;
+        } else if (!response.ok) {
+          errorMessage = `HTTP error! status: ${response.status}`;
+        }
+        
+        // Check if this is actually a success message disguised as error
+        if (errorMessage.toLowerCase().includes("delete") && 
+            (errorMessage.includes("orders") || errorMessage.includes("order"))) {
+          // This is actually success - orders were deleted
+          setUsers(prevUsers => prevUsers.filter(user => !selectedUsers.includes(user.userId)));
+          setSelectedUsers([]);
+          setSelectAll(false);
+          
+          setError(`✅ ${errorMessage}`);
+          setTimeout(() => setError(null), 3000);
+        } else {
+          // Real error
+          throw new Error(errorMessage);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error deleting users:", error);
+      setError(error.message || "Failed to delete users");
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAllUserOrders();
   }, []);
@@ -133,6 +266,11 @@ const AllUserOrders = ({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
+  // Reset selectAll state when page changes
+  useEffect(() => {
+    setSelectAll(false);
+  }, [currentPage]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
@@ -153,7 +291,7 @@ const AllUserOrders = ({
 
   const handleViewUser = async (user: UserOrderSummary) => {
     setSelectedUser(user);
-    setUserOrders([]); // Reset previous orders
+    setUserOrders([]);
     await fetchUserOrders(user.userId);
 
     if (onViewUser) {
@@ -161,42 +299,48 @@ const AllUserOrders = ({
     }
   };
 
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-center text-red-600 mb-4">
-          <AlertCircle className="w-5 h-5 mr-2" />
-          <span>Error: {error}</span>
-        </div>
-        <button
-          onClick={fetchAllUserOrders}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center mx-auto"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Retry
-        </button>
-      </div>
-    );
-  }
+  // Update selectAll state based on current page selection
+  useEffect(() => {
+    if (paginatedUsers.length > 0) {
+      const allSelected = paginatedUsers.every(user => 
+        selectedUsers.includes(user.userId)
+      );
+      setSelectAll(allSelected);
+    } else {
+      setSelectAll(false);
+    }
+  }, [selectedUsers, paginatedUsers]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 relative">
-      {/* Header */}
+      {/* Header with Delete Button */}
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-semibold text-gray-900">
             User Orders Management
           </h1>
-          <button
-            onClick={fetchAllUserOrders}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            {selectedUsers.length > 0 && (
+              <button
+                onClick={deleteSelectedUsers}
+                disabled={deleteLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center disabled:opacity-50"
+              >
+                <Trash2 className={`w-4 h-4 mr-2 ${deleteLoading ? "animate-spin" : ""}`} />
+                {deleteLoading ? "Deleting..." : `Delete (${selectedUsers.length})`}
+              </button>
+            )}
+            <button
+              onClick={fetchAllUserOrders}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -212,16 +356,68 @@ const AllUserOrders = ({
           </div>
         </div>
 
-        <div className="mt-3 text-sm text-gray-600">
-          Showing {paginatedUsers.length} of {filteredUsers.length} users
+        <div className="mt-3 flex flex-wrap items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Showing {paginatedUsers.length} of {filteredUsers.length} users
+            {selectedUsers.length > 0 && (
+              <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                {selectedUsers.length} selected
+              </span>
+            )}
+          </div>
+          
+          {filteredUsers.length > 0 && (
+            <div className="flex items-center gap-4 mt-2 sm:mt-0">
+              <button
+                onClick={handleSelectAllFiltered}
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+              >
+                <Check className="w-4 h-4 mr-1" />
+                {selectedUsers.length === filteredUsers.length 
+                  ? "Deselect All" 
+                  : "Select All"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Success/Error Message */}
+      {error && (
+        <div className={`mx-6 mt-4 p-3 rounded-md flex items-center ${
+          error.includes("✅") || error.toLowerCase().includes("success") || error.toLowerCase().includes("delete")
+            ? "bg-green-100 text-green-800 border border-green-200"
+            : "bg-red-100 text-red-800 border border-red-200"
+        }`}>
+          {error.includes("✅") || error.toLowerCase().includes("success") || error.toLowerCase().includes("delete") ? (
+            <Check className="w-4 h-4 mr-2 flex-shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+          )}
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto text-gray-500 hover:text-gray-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                <input
+                  type="checkbox"
+                  checked={selectAll && paginatedUsers.length > 0}
+                  onChange={handleSelectAll}
+                  disabled={paginatedUsers.length === 0}
+                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 User ID
               </th>
@@ -243,7 +439,7 @@ const AllUserOrders = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-8">
+                <td colSpan={7} className="text-center py-8">
                   <div className="flex items-center justify-center">
                     <RefreshCw className="w-5 h-5 animate-spin mr-2" />
                     <span>Loading users...</span>
@@ -252,7 +448,7 @@ const AllUserOrders = ({
               </tr>
             ) : paginatedUsers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-8 text-gray-500">
+                <td colSpan={7} className="text-center py-8 text-gray-500">
                   {searchTerm
                     ? "No users match your search"
                     : "No users found"}
@@ -260,7 +456,21 @@ const AllUserOrders = ({
               </tr>
             ) : (
               paginatedUsers.map((user) => (
-                <tr key={user.userId} className="hover:bg-gray-50 transition-colors">
+                <tr 
+                  key={user.userId} 
+                  className={`hover:bg-gray-50 transition-colors ${
+                    selectedUsers.includes(user.userId) ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.userId)}
+                      onChange={() => handleUserSelect(user.userId)}
+                      className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                  </td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-mono text-gray-900">
                       #{user.userId ? user.userId.slice(-6) : "------"}
@@ -306,6 +516,11 @@ const AllUserOrders = ({
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
           <div className="text-sm text-gray-700">
             Page {currentPage} of {totalPages} ({filteredUsers.length} total users)
+            {selectedUsers.length > 0 && (
+              <span className="ml-3 font-medium">
+                • {selectedUsers.length} selected
+              </span>
+            )}
           </div>
           <div className="flex space-x-2">
             <button
