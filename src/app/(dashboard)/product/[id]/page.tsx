@@ -165,7 +165,7 @@ export default function ProductDetail() {
           });
 
           // Similar products
-          const SIMILAR_PRODUCTS_API = `https://barber-syndicate.vercel.app/api/v1/product?page=${currentPage}`;
+          const SIMILAR_PRODUCTS_API = `https://barber-syndicate.vercel.app/v1/product/user-products?page=${currentPage}`;
           const similarResponse = await fetch(SIMILAR_PRODUCTS_API, {
             method: "GET",
             headers: {

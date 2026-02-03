@@ -75,7 +75,8 @@ export default function ProductCatalogClient({
     searchParams.get("subcategory") || initialSubCategory || null;
   const brandId = searchParams.get("brand") || initialBrand || null;
 
-  const API_URL = "https://barber-syndicate.vercel.app/api/v1/product";
+  // ✅ CORRECTED API URL - `/api` add kiya hai
+  const API_URL = "https://barber-syndicate.vercel.app/api/v1/product/user-products";
 
   // ================= FETCH FILTER NAMES =================
   useEffect(() => {

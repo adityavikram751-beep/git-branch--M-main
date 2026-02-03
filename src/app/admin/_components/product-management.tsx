@@ -38,14 +38,14 @@ interface Product {
   subcategoryId?: string;
   subcategoryName?: string;
   points?: string[];
-  isFeature?: boolean;  // 🔥 FIX: Changed from isFeatured to isFeature
-  isFeatured?: boolean; // Keep both for compatibility
+  isFeature?: boolean;
+  isFeatured?: boolean;
   variants?: { price: string; quantity: string }[];
   images?: string[];
   image?: string;
   isActivate?: boolean;
   status?: string;
-  key_feature?: string;  // 🔥 ADDED: For key_feature field
+  key_feature?: string;
 }
 
 interface ApiProduct {
@@ -67,11 +67,11 @@ interface ApiProduct {
       }
     | null;
   points: string[];
-  isFeature: boolean;  // 🔥 FIX: Correct field name from API
+  isFeature: boolean;
   isActivate: boolean;
   createdAt: string;
   updatedAt: string;
-  key_feature?: string;  // 🔥 ADDED: For key_feature field
+  key_feature?: string;
 }
 
 interface ApiResponse {
@@ -110,9 +110,9 @@ export function ProductManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingAll, setIsLoadingAll] = useState(false); 
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // 🔥 FIX: Changed to number
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -121,6 +121,9 @@ export function ProductManagement() {
     new Set()
   );
   const [isSelectAll, setIsSelectAll] = useState(false);
+
+  // 🔥 NEW: Select all products across all pages
+  const [isSelectAllGlobal, setIsSelectAllGlobal] = useState(false);
 
   const fetchAllProducts = async () => {
     setIsLoadingAll(true);
@@ -162,8 +165,8 @@ export function ProductManagement() {
           subcategoryId: apiProduct.subcategoryId?._id || "",
           subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
           points: apiProduct.points || [],
-          isFeature: apiProduct.isFeature || false,  // 🔥 FIX: Using correct field
-          isFeatured: apiProduct.isFeature || false, // For compatibility
+          isFeature: apiProduct.isFeature || false,
+          isFeatured: apiProduct.isFeature || false,
           variants: (apiProduct.variants || []).map((v) => ({
             price: v.price,
             quantity: v.quantity,
@@ -172,7 +175,7 @@ export function ProductManagement() {
           image: apiProduct.images?.[0] || "",
           isActivate: apiProduct.isActivate,
           status: apiProduct.isActivate ? "active" : "inactive",
-          key_feature: apiProduct.key_feature || "", // 🔥 ADDED: key_feature field
+          key_feature: apiProduct.key_feature || "",
         }));
 
         allFetchedProducts = [...allFetchedProducts, ...mappedProducts];
@@ -239,8 +242,8 @@ export function ProductManagement() {
           subcategoryId: apiProduct.subcategoryId?._id || "",
           subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
           points: apiProduct.points || [],
-          isFeature: apiProduct.isFeature || false,  // 🔥 FIX: Using correct field
-          isFeatured: apiProduct.isFeature || false, // For compatibility
+          isFeature: apiProduct.isFeature || false,
+          isFeatured: apiProduct.isFeature || false,
           variants: (apiProduct.variants || []).map((v) => ({
             price: v.price,
             quantity: v.quantity,
@@ -249,7 +252,7 @@ export function ProductManagement() {
           image: apiProduct.images?.[0] || "",
           isActivate: apiProduct.isActivate,
           status: apiProduct.isActivate ? "active" : "inactive",
-          key_feature: apiProduct.key_feature || "", // 🔥 ADDED: key_feature field
+          key_feature: apiProduct.key_feature || "",
         };
       });
 
@@ -257,8 +260,10 @@ export function ProductManagement() {
       setTotalPages(data.totalPages);
       setTotalResults(data.totalResults);
       
+      // Reset selection states
       setSelectedProducts(new Set());
       setIsSelectAll(false);
+      setIsSelectAllGlobal(false);
     } catch (err: any) {
       const errorMessage =
         err.message || "Failed to load products. Please try again later.";
@@ -279,19 +284,16 @@ export function ProductManagement() {
   }, [refreshTrigger]);
 
   const handleAddProduct = (newProduct: Product) => {
-    // 🔥 FIX: Automatically refresh data after adding
     setRefreshTrigger(prev => prev + 1);
     toast.success("Product added successfully! Refreshing...");
   };
 
   const handleUpdateProduct = (updatedProduct: Product) => {
-    // 🔥 FIX: Automatically refresh data after updating
     setRefreshTrigger(prev => prev + 1);
     toast.success("Product updated successfully! Refreshing...");
   };
 
   const handleDeleteProduct = (productId: string) => {
-    // 🔥 FIX: Automatically refresh data after deleting
     setRefreshTrigger(prev => prev + 1);
     toast.success("Product deleted successfully! Refreshing...");
   };
@@ -333,7 +335,6 @@ export function ProductManagement() {
       const result = await response.json();
 
       if (result.success || result.message) {
-        // 🔥 FIX: Automatically refresh data after status change
         setRefreshTrigger(prev => prev + 1);
         
         toast.success(
@@ -351,6 +352,7 @@ export function ProductManagement() {
     }
   };
 
+  // 🔥 ENHANCED: Bulk toggle for all selected products
   const handleBulkToggleStatus = async (activate: boolean) => {
     if (selectedProducts.size === 0) {
       toast.error("Please select at least one product");
@@ -390,10 +392,10 @@ export function ProductManagement() {
       const result = await response.json();
 
       if (result.success || result.message) {
-        // 🔥 FIX: Automatically refresh data after bulk status change
         setRefreshTrigger(prev => prev + 1);
         setSelectedProducts(new Set());
         setIsSelectAll(false);
+        setIsSelectAllGlobal(false);
 
         toast.success(
           `${productIds.length} product(s) ${
@@ -409,6 +411,23 @@ export function ProductManagement() {
     }
   };
 
+  // 🔥 NEW: Select all products in the database
+  const handleSelectAllGlobal = () => {
+    if (isSelectAllGlobal) {
+      // Deselect all
+      setSelectedProducts(new Set());
+      setIsSelectAllGlobal(false);
+      setIsSelectAll(false);
+    } else {
+      // Select all products from allProducts (fetched from API)
+      const allIds = allProducts.map((p) => p.id);
+      setSelectedProducts(new Set(allIds));
+      setIsSelectAllGlobal(true);
+      setIsSelectAll(true);
+      toast.success(`Selected all ${allIds.length} products`);
+    }
+  };
+
   const handleSelectProduct = (productId: string) => {
     const newSelected = new Set(selectedProducts);
     if (newSelected.has(productId)) {
@@ -417,14 +436,24 @@ export function ProductManagement() {
       newSelected.add(productId);
     }
     setSelectedProducts(newSelected);
+    
+    // Update select all states
+    const currentFilteredIds = filteredProducts.map((p) => p.id);
+    const allSelected = currentFilteredIds.every(id => newSelected.has(id));
+    setIsSelectAll(allSelected);
   };
 
   const handleSelectAll = () => {
     if (isSelectAll) {
-      setSelectedProducts(new Set());
+      // Deselect all in current view
+      const newSelected = new Set(selectedProducts);
+      filteredProducts.forEach(p => newSelected.delete(p.id));
+      setSelectedProducts(newSelected);
     } else {
-      const allIds = filteredProducts.map((p) => p.id);
-      setSelectedProducts(new Set(allIds));
+      // Select all in current view
+      const newSelected = new Set(selectedProducts);
+      filteredProducts.forEach(p => newSelected.add(p.id));
+      setSelectedProducts(newSelected);
     }
     setIsSelectAll(!isSelectAll);
   };
@@ -439,6 +468,7 @@ export function ProductManagement() {
     setCurrentPage(1);
     setSelectedProducts(new Set());
     setIsSelectAll(false);
+    setIsSelectAllGlobal(false);
     setRefreshTrigger(prev => prev + 1);
     toast.success("Refreshing products...");
   };
@@ -463,13 +493,28 @@ export function ProductManagement() {
         const desc = (p.description || "").toLowerCase();
         const sub = (p.subcategoryName || "").toLowerCase();
         const brand = (p.brand || "").toLowerCase();
-        const keyFeature = (p.key_feature || "").toLowerCase(); // 🔥 ADDED: Search in key_feature
+        const keyFeature = (p.key_feature || "").toLowerCase();
         return name.includes(q) || desc.includes(q) || sub.includes(q) || brand.includes(q) || keyFeature.includes(q);
       });
     }
 
     return list;
   }, [products, allProducts, search, statusFilter]);
+
+  // Update select all state when filtered products change
+  useEffect(() => {
+    if (filteredProducts.length > 0) {
+      const allSelected = filteredProducts.every(p => selectedProducts.has(p.id));
+      setIsSelectAll(allSelected);
+      
+      // Check if all products in database are selected
+      if (allProducts.length > 0 && selectedProducts.size === allProducts.length) {
+        setIsSelectAllGlobal(true);
+      } else {
+        setIsSelectAllGlobal(false);
+      }
+    }
+  }, [filteredProducts, selectedProducts, allProducts]);
 
   return (
     <div className="p-6 space-y-6">
@@ -500,6 +545,25 @@ export function ProductManagement() {
               >
                 <EyeOff className="h-4 w-4 mr-2" />
                 Deactivate ({selectedProducts.size})
+              </Button>
+              
+              {/* 🔥 NEW: Select All Global Button */}
+              <Button
+                onClick={handleSelectAllGlobal}
+                className="bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-200"
+                disabled={allProducts.length === 0}
+              >
+                {isSelectAllGlobal ? (
+                  <>
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Deselect All
+                  </>
+                ) : (
+                  <>
+                    <Square className="h-4 w-4 mr-2" />
+                    Select All {allProducts.length} Products
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -535,6 +599,11 @@ export function ProductManagement() {
         <CardHeader className="space-y-4">
           <CardTitle className="text-rose-900 flex items-center gap-2">
             <Package className="h-5 w-5" /> Product Catalog
+            {selectedProducts.size > 0 && (
+              <span className="ml-2 text-sm font-normal text-rose-600">
+                ({selectedProducts.size} products selected)
+              </span>
+            )}
           </CardTitle>
 
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
@@ -693,14 +762,13 @@ export function ProductManagement() {
                         {truncateProductName(product.name)}
                       </div>
 
-                      {/* 🔥 ADDED: Show key_feature badge if exists */}
                       {product.key_feature && product.key_feature.trim() && (
                         <span className="mt-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded inline-block mr-2">
                           {product.key_feature}
                         </span>
                       )}
 
-                      {product.isFeature && (  // 🔥 FIX: Changed from isFeatured to isFeature
+                      {product.isFeature && (
                         <span className="mt-1 px-2 py-0.5 text-xs bg-rose-100 text-rose-700 rounded inline-block">
                           Featured
                         </span>
@@ -824,6 +892,13 @@ export function ProductManagement() {
           {search && allProducts.length > 0 && (
             <div className="text-center text-rose-600 text-sm mt-4">
               Showing {filteredProducts.length} of {allProducts.length} total products
+            </div>
+          )}
+          
+          {selectedProducts.size > 0 && (
+            <div className="text-center text-rose-700 font-medium text-sm mt-4">
+              ⚡ {selectedProducts.size} product(s) selected - 
+              Ready for bulk actions!
             </div>
           )}
         </CardContent>
