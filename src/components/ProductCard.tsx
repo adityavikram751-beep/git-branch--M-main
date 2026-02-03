@@ -9,34 +9,21 @@ import Image from "next/image";
 import Link from "next/link";
 
 export interface Product {
-  // ✅ API may send _id, we will support both
   _id?: string;
   id?: string;
-
   name?: string;
-
-  // price we compute in ProductCatalogClient
   price?: number;
-
   category?: string;
   shortDescription?: string;
   description?: string;
-
-  // ProductCatalogClient sends quantity as string
   quantity?: string;
-
   isFeature?: boolean;
   carter?: number;
-
-  // API might not have images always
   images?: string[];
-
   quantityOptions?: { type: string }[];
-
   originalPrice?: number;
   inStock?: boolean;
-
-  // allow extra backend fields
+  key_feature?: string;
   [key: string]: any;
 }
 
@@ -46,7 +33,6 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
-  // ✅ safe values
   const id = product.id || product._id || "";
   const name = product.name || "No Name";
   const price = product.price ?? 0;
@@ -55,6 +41,7 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
   const images = product.images || [];
   const originalPrice = product.originalPrice;
   const inStock = product.inStock;
+  const keyFeature = product.key_feature;
 
   const imageUrl = images?.[0] || "/placeholder-image.jpg";
 
@@ -62,6 +49,22 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
   const discountPercent = hasDiscount
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
+
+  // FUNCTION TO GET COLOR BASED ON KEY FEATURE
+  const getKeyFeatureColor = (feature: string) => {
+    const colorMap: Record<string, string> = {
+      "Best Seller": "bg-gradient-to-r from-yellow-500 to-orange-500 text-white",
+      "Premium": "bg-gradient-to-r from-purple-600 to-pink-500 text-white",
+      "Trending": "bg-gradient-to-r from-red-500 to-pink-500 text-white",
+      "New Arrival": "bg-gradient-to-r from-blue-500 to-cyan-400 text-white",
+      "Limited Edition": "bg-gradient-to-r from-gray-800 to-gray-600 text-white",
+      "Special Offer": "bg-gradient-to-r from-green-500 to-emerald-400 text-white",
+      "Hot": "bg-gradient-to-r from-red-600 to-orange-500 text-white",
+      "Featured": "bg-gradient-to-r from-blue-600 to-indigo-500 text-white",
+    };
+    
+    return colorMap[feature] || "bg-gradient-to-r from-[#B30000] to-red-600 text-white";
+  };
 
   const ActionButtons = ({ compact = false }: { compact?: boolean }) => (
     <>
@@ -72,7 +75,7 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
           className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
           onClick={(e) => {
             e.stopPropagation();
-            e.preventDefault(); // ✅ stop link navigation
+            e.preventDefault();
             console.log(`Product ${id} added to cart`);
           }}
         >
@@ -83,6 +86,9 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
   );
 
   const productLink = id ? `/product/${id}` : "/product";
+
+  // Get key feature color
+  const keyFeatureColor = keyFeature && keyFeature.trim() ? getKeyFeatureColor(keyFeature) : "";
 
   // ===================== LIST VIEW =====================
   if (viewMode === "list") {
@@ -98,11 +104,18 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
                   fill
                   className="object-cover hover:scale-105 transition-transform duration-300"
                 />
-                {hasDiscount && (
-                  <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground">
-                    {discountPercent}% OFF
-                  </Badge>
-                )}
+                <div className="absolute top-3 left-3 flex flex-col gap-1">
+                  {keyFeature && keyFeature.trim() && (
+                    <Badge className={`${keyFeatureColor} shadow-lg text-xs px-3 py-1`}>
+                      {keyFeature}
+                    </Badge>
+                  )}
+                  {hasDiscount && (
+                    <Badge className="bg-accent text-accent-foreground">
+                      {discountPercent}% OFF
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               <div className="flex-1 p-4 flex flex-col justify-between">
@@ -142,7 +155,6 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
         <CardContent className="p-0">
           <div className="relative overflow-hidden">
             <div className="aspect-[4/3] bg-muted">
-              {/* ✅ keep normal img (as you had) */}
               <img
                 src={imageUrl}
                 alt={name}
@@ -151,6 +163,11 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
             </div>
 
             <div className="absolute top-3 left-3 flex flex-col gap-1">
+              {keyFeature && keyFeature.trim() && (
+                <Badge className={`${keyFeatureColor} shadow-lg text-xs px-3 py-1`}>
+                  {keyFeature}
+                </Badge>
+              )}
               {hasDiscount && (
                 <Badge className="bg-accent text-accent-foreground shadow-lg text-xs">
                   {discountPercent}% OFF

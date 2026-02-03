@@ -32,6 +32,7 @@ interface Product {
   categoryId?: string
   subcategoryId?: string
   points?: string[]
+  key_feature?: string  // ✅ Backend uses underscore
   isFeature?: boolean
   variants?: { price: string; quantity: string }[]
   images?: string[]
@@ -63,6 +64,7 @@ interface FormData {
   categoryId: string
   subcategoryId: string
   points: string
+  key_feature: string  // ✅ Backend uses underscore
   isFeature: boolean
 }
 
@@ -85,12 +87,11 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     categoryId: "",
     subcategoryId: "",
     points: "",
+    key_feature: "",  // ✅ Initialize key_feature
     isFeature: false,
   })
 
-  // ✅ No fixed variants now (start with 1 empty variant)
   const [variants, setVariants] = useState<Variant[]>([{ price: "", quantity: "" }])
-
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -103,12 +104,10 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
   const BASE_URL = "https://barber-syndicate.vercel.app"
 
-  // --- 1. Fetch Initial Data (Brands and Categories) ---
   useEffect(() => {
     if (!isOpen) return
 
     const token = localStorage.getItem("adminToken")
-
     if (!token) {
       setError("Authentication token not found. Please log in again.")
       return
@@ -132,7 +131,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         })
-
         const data = await res.json()
         if (data.success && Array.isArray(data.data)) {
           setBrands(data.data)
@@ -149,7 +147,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     fetchBrands()
   }, [isOpen])
 
-  // --- 2. Fetch Subcategories based on Category ID ---
   useEffect(() => {
     const token = localStorage.getItem("adminToken")
     const categoryId = formData.categoryId
@@ -163,7 +160,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     const fetchSubCategories = async () => {
       setIsSubCatLoading(true)
       const url = `${BASE_URL}/api/v1/subcategory/getSubCat?catId=${categoryId}`
-
       try {
         const res = await fetch(url, {
           method: "GET",
@@ -172,13 +168,11 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             Authorization: `Bearer ${token}`,
           },
         })
-
         const data = await res.json()
 
         if (data.status === "success" && Array.isArray(data.data)) {
           const activeSubCats = data.data.filter((sub: SubCategory) => !sub.isDelete)
           setSubCategories(activeSubCats)
-
           if (!activeSubCats.find((sub: SubCategory) => sub._id === formData.subcategoryId)) {
             setFormData((prev) => ({ ...prev, subcategoryId: "" }))
           }
@@ -215,12 +209,10 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-
     if (images.length + files.length > 7) {
       setError("You can only upload a maximum of 7 images")
       return
     }
-
     setImages((prev) => [...prev, ...files])
     setImagePreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))])
     setError(null)
@@ -242,12 +234,10 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     setVariants(updated)
   }
 
-  // ✅ Add Variant
   const addVariant = () => {
     setVariants((prev) => [...prev, { price: "", quantity: "" }])
   }
 
-  // ✅ Remove Variant (now allowed for all, but keep at least 1)
   const removeVariant = (index: number) => {
     setVariants((prev) => {
       if (prev.length === 1) return prev
@@ -255,15 +245,12 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     })
   }
 
-  // Reset form when dialog is closed
   useEffect(() => {
     if (!isOpen) {
       setImages([])
       imagePreviews.forEach((url) => URL.revokeObjectURL(url))
       setImagePreviews([])
-
       setVariants([{ price: "", quantity: "" }])
-
       setFormData({
         name: "",
         description: "",
@@ -271,32 +258,28 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
         categoryId: "",
         subcategoryId: "",
         points: "",
+        key_feature: "",  // ✅ Reset key_feature
         isFeature: false,
       })
-
       setError(null)
       setSubCategories([])
       setIsSubCatLoading(false)
     }
   }, [isOpen])
 
-  // Submit form
   const handleSubmit = async () => {
     if (!formData.name || !formData.categoryId || !formData.subcategoryId || !formData.brand) {
       setError("Please fill in all required fields (Name, Category, Subcategory, Brand).")
       return
     }
-
     if (images.length === 0) {
       setError("Please add at least one image (max 7).")
       return
     }
-
     if (variants.length === 0) {
       setError("Please add at least 1 variant.")
       return
     }
-
     const invalidVariant = variants.some((v) => !v.quantity || !v.price)
     if (invalidVariant) {
       setError("Please fill price + quantity for all variants (or remove empty ones).")
@@ -314,13 +297,16 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       }
 
       const data = new FormData()
-
       data.append("name", formData.name)
       data.append("description", formData.description)
       data.append("categoryId", formData.categoryId)
       data.append("subcategoryId", formData.subcategoryId)
       data.append("brand", formData.brand)
       data.append("isFeature", formData.isFeature ? "true" : "false")
+      
+      // ✅ CRITICAL: Send key_feature to backend
+      console.log("Sending key_feature:", formData.key_feature)
+      data.append("key_feature", formData.key_feature)
 
       const pointsArray =
         formData.points && formData.points.trim() !== ""
@@ -343,6 +329,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       })
 
       const result = await res.json()
+      console.log("API Response:", result) // ✅ Debug
 
       if (res.ok && result.success) {
         const newProduct: Product = {
@@ -350,6 +337,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
           name: formData.name,
           image: result.image || result.data?.image || imagePreviews[0] || "/placeholder.svg",
           description: formData.description,
+          key_feature: formData.key_feature,  // ✅ Include key_feature
           pricing: {
             single: parseFloat(cleanedVariants[0]?.price) || 0,
             dozen: parseFloat(cleanedVariants[1]?.price) || 0,
@@ -505,12 +493,40 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
               id="description"
               value={formData.description}
               onChange={handleInputChange}
-              className="border-rose-200 focus:border-rose--500 focus:ring-rose-500 min-h-[100px]"
+              className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 min-h-[100px]"
               placeholder="Enter product description..."
             />
           </div>
 
-          {/* Featured */}
+          {/* Key Feature - CRITICAL FIELD */}
+          <div className="space-y-2">
+            <Label htmlFor="key_feature" className="text-sm font-medium text-gray-700">
+              Key Feature (Shows on product card) <span className="text-rose-600">*Test this*</span>
+            </Label>
+            <Input
+              id="key_feature"
+              value={formData.key_feature}
+              onChange={handleInputChange}
+              className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+              placeholder="Enter key feature (e.g., 'Best Seller', 'New Arrival')"
+              required
+            />
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="text-xs text-gray-500">Quick suggestions:</span>
+              {["Best Seller", "New Arrival", "Trending", "Premium", "Limited Stock", "Most Popular"].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, key_feature: tag })}
+                  className="text-xs px-2 py-1 bg-rose-100 text-rose-700 rounded-md hover:bg-rose-200 transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Featured + Points */}
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Featured Product</Label>
@@ -524,24 +540,23 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                   className="border-rose-200 focus:ring-rose-500"
                 />
                 <Label htmlFor="isFeature" className="text-sm text-gray-600">
-                  Mark as featured product
+                  Mark as featured product (Shows "Feature" on card)
                 </Label>
               </div>
             </div>
-          </div>
 
-          {/* Points */}
-          <div className="space-y-2">
-            <Label htmlFor="points" className="text-sm font-medium text-gray-700">
-              Product Points (one per line)
-            </Label>
-            <Textarea
-              id="points"
-              value={formData.points}
-              onChange={handleInputChange}
-              className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 min-h-[80px]"
-              placeholder="Enter product points/benefits, one per line..."
-            />
+            <div className="space-y-2">
+              <Label htmlFor="points" className="text-sm font-medium text-gray-700">
+                Product Points (for details page)
+              </Label>
+              <Textarea
+                id="points"
+                value={formData.points}
+                onChange={handleInputChange}
+                className="border-rose-200 focus:border-rose-500 focus:ring-rose-500 min-h-[80px]"
+                placeholder="Enter product points/benefits, one per line..."
+              />
+            </div>
           </div>
 
           {/* Variants */}
@@ -549,13 +564,9 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             <h3 className="text-lg font-semibold text-rose-900 mb-4 flex items-center">
               Variants <span className="text-sm text-rose-600 ml-2">(Required)</span>
             </h3>
-
             <div className="space-y-3">
               {variants.map((v, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 p-3 bg-white rounded-md shadow-sm border border-rose-100"
-                >
+                <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-md shadow-sm border border-rose-100">
                   <Input
                     type="number"
                     step="0.01"
@@ -564,7 +575,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                     onChange={(e) => updateVariant(i, "price", e.target.value)}
                     className="flex-1 border-rose-200 focus:border-rose-500"
                   />
-
                   <Input
                     type="text"
                     placeholder="Quantity (eg: 1Pc, 12Pcs, Carton)"
@@ -572,7 +582,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                     onChange={(e) => updateVariant(i, "quantity", e.target.value)}
                     className="flex-1 border-rose-200 focus:border-rose-500"
                   />
-
                   {variants.length > 1 && (
                     <Button
                       type="button"
@@ -586,7 +595,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                   )}
                 </div>
               ))}
-
               <Button
                 type="button"
                 variant="outline"
@@ -611,7 +619,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
               onChange={handleImageChange}
               className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
             />
-
             {imagePreviews.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3">
                 {imagePreviews.map((preview, index) => (

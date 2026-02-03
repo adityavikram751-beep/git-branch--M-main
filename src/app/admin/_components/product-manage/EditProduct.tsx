@@ -22,24 +22,19 @@ interface Product {
   name: string
   image?: string
   description: string
-
-  // ✅ pricing optional (error fix)
   pricing?: {
     single?: number
     dozen?: number
     carton?: number
   }
-
   brand?: string
   categoryId?: string
-
   subcategoryId?: string
   subcategoryName?: string
-
   points?: string[]
+  key_feature?: string
   isFeature?: boolean
   isFeatured?: boolean
-
   variants?: { price: string; quantity: string }[]
   images?: string[]
 }
@@ -69,6 +64,7 @@ interface FormDataType {
   categoryId: string
   subcategoryId: string
   points: string
+  key_feature: string
   isFeature: boolean
 }
 
@@ -91,7 +87,6 @@ export function EditProduct({
   refreshProducts,
 }: EditProductProps) {
   const [isOpen, setIsOpen] = useState(false)
-
   const MAX_IMAGES = 7
   const [loadingProduct, setLoadingProduct] = useState(false)
 
@@ -102,13 +97,11 @@ export function EditProduct({
     categoryId: product.categoryId || "",
     subcategoryId: product.subcategoryId || "",
     points: product.points ? product.points.join("\n") : "",
+    key_feature: product.key_feature || "",
     isFeature: product.isFeature || false,
   })
 
-  // ✅ dynamic variants
   const [variants, setVariants] = useState<Variant[]>(product.variants || [])
-
-  // ✅ current images state (SOURCE OF TRUTH)
   const [imagePreviews, setImagePreviews] = useState<string[]>(
     product.images && product.images.length > 0
       ? product.images.slice(0, MAX_IMAGES)
@@ -117,19 +110,12 @@ export function EditProduct({
       : []
   )
 
-  // ✅ replaced files map (index => File)
   const [replacedFiles, setReplacedFiles] = useState<Record<number, File>>({})
-
-  // hidden input ref for replace
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-
-  // hidden input ref for add
   const addImageInputRef = useRef<HTMLInputElement | null>(null)
-
   const [uploading, setUploading] = useState(false)
   const [addingImage, setAddingImage] = useState(false)
-
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -137,7 +123,6 @@ export function EditProduct({
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
-
   const [loading, setLoading] = useState({
     categories: false,
     subcategories: false,
@@ -151,15 +136,12 @@ export function EditProduct({
     }
   }, [])
 
-  // ✅ Dialog open => fetch categories/brands + fetch latest product (GET API)
   useEffect(() => {
     if (!isOpen) return
     fetchAllData()
     fetchSingleProduct()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
-  // ✅ GET single product API call (latest data show without refresh)
   const fetchSingleProduct = async () => {
     try {
       setLoadingProduct(true)
@@ -172,23 +154,25 @@ export function EditProduct({
 
       if (res.ok && (data.success || data.status === "success")) {
         const p = data.data || data.product || data
+        
+        console.log("API Response:", p)
+        console.log("isFeature from API:", p.isFeature, "Type:", typeof p.isFeature)
 
         setFormData({
           name: p.name || "",
           description: p.description || "",
           brand: p.brand || "",
           categoryId: p.categoryId || "",
-          // ✅ subcategoryId may be object OR string
           subcategoryId:
             typeof p.subcategoryId === "object" && p.subcategoryId?._id
               ? p.subcategoryId._id
               : p.subcategoryId || "",
           points: p.points ? p.points.join("\n") : "",
-          isFeature: p.isFeature || false,
+          key_feature: p.key_feature || "",
+          isFeature: p.isFeature === true || p.isFeature === "true",
         })
 
         setVariants(p.variants || [])
-
         const imgs =
           p.images && Array.isArray(p.images) && p.images.length > 0
             ? p.images
@@ -298,7 +282,6 @@ export function EditProduct({
     }
   }, [formData.categoryId, subcategories])
 
-  // ✅ variants
   const addVariant = () => setVariants((prev) => [...prev, { price: "", quantity: "" }])
 
   const updateVariant = (index: number, field: keyof Variant, value: string) => {
@@ -314,7 +297,6 @@ export function EditProduct({
     setVariants((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // ✅ replace image
   const handleReplaceClick = (index: number) => {
     setReplaceIndex(index)
     fileInputRef.current?.click()
@@ -326,7 +308,6 @@ export function EditProduct({
     if (replaceIndex === null) return
 
     const newBlobUrl = URL.createObjectURL(file)
-
     setImagePreviews((prev) => {
       const updated = [...prev]
       updated[replaceIndex] = newBlobUrl
@@ -342,7 +323,6 @@ export function EditProduct({
     e.target.value = ""
   }
 
-  // ✅ ADD IMAGE
   const handleAddImageClick = () => {
     setError(null)
     setSuccess(null)
@@ -355,14 +335,11 @@ export function EditProduct({
     addImageInputRef.current?.click()
   }
 
-  // ✅ Add Image (instant UI update without refresh)
   const handleAddImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     const localPreview = URL.createObjectURL(file)
-
-    // ✅ UI me turant show
     setImagePreviews((prev) => [...prev, localPreview].slice(0, MAX_IMAGES))
 
     try {
@@ -425,7 +402,6 @@ export function EditProduct({
     }
   }
 
-  // ✅ SUBMIT UPDATE PRODUCT
   const handleSubmit = async () => {
     if (!formData.name || !formData.categoryId || !formData.subcategoryId || !formData.brand) {
       setError("Please fill in all required fields (Name, Category, Subcategory, Brand).")
@@ -484,13 +460,11 @@ export function EditProduct({
       fd.append("variants", JSON.stringify(cleanedVariants))
       fd.append("brand", formData.brand)
       fd.append("points", JSON.stringify(pointsArray))
+      fd.append("key_feature", formData.key_feature)
       fd.append("isFeature", String(formData.isFeature))
       fd.append("positions", JSON.stringify(["0"]))
-
-      // ✅ existingImages = current imagePreviews
       fd.append("existingImages", JSON.stringify(imagePreviews.slice(0, MAX_IMAGES)))
 
-      // ✅ send replaced files + index
       const replaceEntries = Object.entries(replacedFiles)
       replaceEntries.forEach(([idx, file]) => {
         fd.append("replaceIndex", idx)
@@ -509,32 +483,42 @@ export function EditProduct({
       )
 
       const result = await res.json()
+      console.log("Update API Response:", result)
 
       if (res.ok && result.success) {
         setSuccess("✅ Product updated successfully!")
+        
+        // 🔥 AUTOMATIC UPDATE: Success के बाद तुरंत fresh data fetch करो
+        setTimeout(async () => {
+          // 1. First fetch fresh product data
+          await fetchSingleProduct()
+          
+          // 2. Then notify parent components
+          const updatedProduct: Product = {
+            ...product,
+            name: formData.name,
+            description: formData.description,
+            brand: formData.brand,
+            categoryId: formData.categoryId,
+            subcategoryId: formData.subcategoryId,
+            key_feature: formData.key_feature,
+            points: pointsArray,
+            isFeature: formData.isFeature,
+            variants: cleanedVariants,
+            images: imagePreviews.slice(0, MAX_IMAGES),
+            image: imagePreviews[0] || product.image || "",
+          }
 
-        const updatedProduct: Product = {
-          ...product,
-          name: formData.name,
-          description: formData.description,
-          brand: formData.brand,
-          categoryId: formData.categoryId,
-          subcategoryId: formData.subcategoryId,
-          points: pointsArray,
-          isFeature: formData.isFeature,
-          variants: cleanedVariants,
-          images: imagePreviews.slice(0, MAX_IMAGES),
-          image: imagePreviews[0] || product.image || "",
-        }
+          if (onUpdateProduct) onUpdateProduct(updatedProduct)
+          else if (onEditProduct) onEditProduct(updatedProduct)
+          else if (refreshProducts) refreshProducts()
 
-        if (onUpdateProduct) onUpdateProduct(updatedProduct)
-        else if (onEditProduct) onEditProduct(updatedProduct)
-        else if (refreshProducts) refreshProducts()
-
-        setTimeout(() => {
-          setIsOpen(false)
-          setSuccess(null)
-        }, 1200)
+          // 3. Close dialog after 1.5 seconds
+          setTimeout(() => {
+            setIsOpen(false)
+            setSuccess(null)
+          }, 1500)
+        }, 500)
       } else {
         setError(result.message || `Failed to update product (${res.status})`)
       }
@@ -663,6 +647,33 @@ export function EditProduct({
               />
             </div>
 
+            {/* Key Feature Field */}
+            <div className="space-y-2">
+              <Label htmlFor="key_feature" className="text-sm font-medium text-gray-700">
+                Key Feature (Shows on product card)
+              </Label>
+              <Input
+                id="key_feature"
+                value={formData.key_feature}
+                onChange={(e) => setFormData({ ...formData, key_feature: e.target.value })}
+                className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+                placeholder="Enter key feature (e.g., 'Best Seller', 'New Arrival', 'Trending')"
+              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="text-xs text-gray-500">Suggestions:</span>
+                {["Best Seller", "New Arrival", "Trending", "Premium", "Limited Stock", "Most Popular"].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, key_feature: tag })}
+                    className="text-xs px-2 py-1 bg-rose-100 text-rose-700 rounded-md hover:bg-rose-200 transition-colors"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Category and Subcategory */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -730,7 +741,7 @@ export function EditProduct({
               </div>
             </div>
 
-            {/* Featured */}
+            {/* Featured - यहाँ कोई problem नहीं है */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Featured Product</Label>
@@ -738,15 +749,18 @@ export function EditProduct({
                   <Checkbox
                     id="isFeature"
                     checked={formData.isFeature}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked) => {
                       setFormData({ ...formData, isFeature: !!checked })
-                    }
+                    }}
                     className="border-rose-200 focus:ring-rose-500 data-[state=checked]:bg-rose-600 data-[state=checked]:border-rose-600"
                   />
                   <Label htmlFor="isFeature" className="text-sm text-gray-600 cursor-pointer">
                     Mark as featured product
                   </Label>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Current status: {formData.isFeature ? "✅ Featured" : "❌ Not Featured"}
+                </p>
               </div>
             </div>
 
@@ -829,7 +843,6 @@ export function EditProduct({
                 Product Images <span className="text-rose-600">(Max {MAX_IMAGES})</span>
               </Label>
 
-              {/* hidden input for replace */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -838,7 +851,6 @@ export function EditProduct({
                 onChange={handleReplaceFileChange}
               />
 
-              {/* hidden input for add */}
               <input
                 ref={addImageInputRef}
                 type="file"

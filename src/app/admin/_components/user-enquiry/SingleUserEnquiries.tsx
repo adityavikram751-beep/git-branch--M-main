@@ -72,7 +72,6 @@ const SingleUserOrders = ({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   
-  // ✅ NEW STATE FOR SELECTION
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
 
@@ -206,7 +205,6 @@ const SingleUserOrders = ({
     }
   };
 
-  // ✅ UPDATED BULK UPDATE FUNCTION USING NEW POST API
   const bulkUpdateOrders = async (type: "approved" | "cancel") => {
     if (selectedOrders.size === 0) {
       alert("Please select orders first");
@@ -224,10 +222,8 @@ const SingleUserOrders = ({
         return;
       }
 
-      // Convert Set to Array
       const orderIds = Array.from(selectedOrders);
       
-      // Prepare request body
       const requestBody = {
         id: orderIds,
         type: type
@@ -235,7 +231,6 @@ const SingleUserOrders = ({
 
       console.log("Bulk update request:", requestBody);
 
-      // Call the new POST API
       const response = await fetch(CONFIRM_API_URL, {
         method: "POST",
         headers: {
@@ -262,7 +257,6 @@ const SingleUserOrders = ({
       }
 
       if (result.status === true || result.success === true) {
-        // Update UI state for all selected orders
         setUserData(prev => {
           if (!prev) return null;
           return {
@@ -279,7 +273,6 @@ const SingleUserOrders = ({
           };
         });
 
-        // Clear selection after successful update
         setSelectedOrders(new Set());
         
         alert(`✅ ${orderIds.length} orders ${type} successfully!`);
@@ -295,20 +288,16 @@ const SingleUserOrders = ({
     }
   };
 
-  // ✅ SELECT ALL TOGGLE
   const handleSelectAll = () => {
     const pendingOrders = filteredOrders.filter(o => o.status === "pending");
     
     if (selectedOrders.size === pendingOrders.length) {
-      // Deselect all
       setSelectedOrders(new Set());
     } else {
-      // Select all pending orders
       setSelectedOrders(new Set(pendingOrders.map(o => o._id)));
     }
   };
 
-  // ✅ TOGGLE INDIVIDUAL ORDER SELECTION
   const toggleOrderSelection = (orderId: string) => {
     const newSelection = new Set(selectedOrders);
     if (newSelection.has(orderId)) {

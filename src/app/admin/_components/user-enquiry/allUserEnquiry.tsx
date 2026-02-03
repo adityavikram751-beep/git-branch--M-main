@@ -24,12 +24,10 @@ const AllUserOrders = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // ✅ Selection state
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // ✅ Modal state
   const [selectedUser, setSelectedUser] = useState<UserOrderSummary | null>(null);
   const [userOrders, setUserOrders] = useState<any[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
@@ -85,7 +83,6 @@ const AllUserOrders = ({
     }
   };
 
-  // Function to fetch individual user's orders
   const fetchUserOrders = async (userId: string) => {
     try {
       const adminToken = localStorage.getItem("adminToken");
@@ -116,7 +113,6 @@ const AllUserOrders = ({
     }
   };
 
-  // ✅ Handle individual checkbox selection
   const handleUserSelect = (userId: string) => {
     setSelectedUsers(prev =>
       prev.includes(userId)
@@ -125,7 +121,6 @@ const AllUserOrders = ({
     );
   };
 
-  // ✅ Handle select all on current page
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedUsers([]);
@@ -136,7 +131,6 @@ const AllUserOrders = ({
     setSelectAll(!selectAll);
   };
 
-  // ✅ Handle select all across all filtered users
   const handleSelectAllFiltered = () => {
     const allFilteredUserIds = filteredUsers.map(user => user.userId);
     
@@ -147,7 +141,6 @@ const AllUserOrders = ({
     }
   };
 
-  // ✅ Delete selected users function - FIXED ERROR HANDLING
   const deleteSelectedUsers = async () => {
     if (selectedUsers.length === 0) {
       setError("Please select at least one user to delete");
@@ -185,23 +178,17 @@ const AllUserOrders = ({
       const result = await response.json();
       
       if (response.ok && result.success) {
-        // Check if the message contains "delete" - this might be a success message
         const message = result.message || "";
         
-        // Check if this is actually a success message (like "3 orders delete")
         if (message.toLowerCase().includes("delete")) {
-          // This is actually a success message, not an error
           
-          // Remove deleted users from state
           setUsers(prevUsers => prevUsers.filter(user => !selectedUsers.includes(user.userId)));
           setSelectedUsers([]);
           setSelectAll(false);
           
-          // Show success message
           setError(`✅ ${message || `Successfully deleted ${selectedUsers.length} user(s)`}`);
           setTimeout(() => setError(null), 3000);
         } else {
-          // Some other message
           setUsers(prevUsers => prevUsers.filter(user => !selectedUsers.includes(user.userId)));
           setSelectedUsers([]);
           setSelectAll(false);
@@ -210,7 +197,6 @@ const AllUserOrders = ({
           setTimeout(() => setError(null), 3000);
         }
       } else {
-        // Handle different types of error responses
         let errorMessage = "Failed to delete users";
         
         if (result.message) {
@@ -221,10 +207,8 @@ const AllUserOrders = ({
           errorMessage = `HTTP error! status: ${response.status}`;
         }
         
-        // Check if this is actually a success message disguised as error
         if (errorMessage.toLowerCase().includes("delete") && 
             (errorMessage.includes("orders") || errorMessage.includes("order"))) {
-          // This is actually success - orders were deleted
           setUsers(prevUsers => prevUsers.filter(user => !selectedUsers.includes(user.userId)));
           setSelectedUsers([]);
           setSelectAll(false);
@@ -249,7 +233,6 @@ const AllUserOrders = ({
     fetchAllUserOrders();
   }, []);
 
-  // Apply filters
   let filteredUsers = users;
 
   if (searchTerm) {
@@ -261,12 +244,10 @@ const AllUserOrders = ({
     );
   }
 
-  // Pagination
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
-  // Reset selectAll state when page changes
   useEffect(() => {
     setSelectAll(false);
   }, [currentPage]);
@@ -299,7 +280,6 @@ const AllUserOrders = ({
     }
   };
 
-  // Update selectAll state based on current page selection
   useEffect(() => {
     if (paginatedUsers.length > 0) {
       const allSelected = paginatedUsers.every(user => 
@@ -313,7 +293,6 @@ const AllUserOrders = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 relative">
-      {/* Header with Delete Button */}
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-semibold text-gray-900">

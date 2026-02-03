@@ -12,6 +12,8 @@ import {
   Search,
   CheckSquare,
   Square,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { AddProduct } from "./product-manage/AddProduct";
 import { EditProduct } from "./product-manage/EditProduct";
@@ -36,12 +38,14 @@ interface Product {
   subcategoryId?: string;
   subcategoryName?: string;
   points?: string[];
-  isFeatured?: boolean;
+  isFeature?: boolean;  // 🔥 FIX: Changed from isFeatured to isFeature
+  isFeatured?: boolean; // Keep both for compatibility
   variants?: { price: string; quantity: string }[];
   images?: string[];
   image?: string;
   isActivate?: boolean;
   status?: string;
+  key_feature?: string;  // 🔥 ADDED: For key_feature field
 }
 
 interface ApiProduct {
@@ -63,10 +67,11 @@ interface ApiProduct {
       }
     | null;
   points: string[];
-  isFeature: boolean;
+  isFeature: boolean;  // 🔥 FIX: Correct field name from API
   isActivate: boolean;
   createdAt: string;
   updatedAt: string;
+  key_feature?: string;  // 🔥 ADDED: For key_feature field
 }
 
 interface ApiResponse {
@@ -100,21 +105,93 @@ const truncateDescription = (text: string): string => {
 
 export function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingAll, setIsLoadingAll] = useState(false); 
   const [error, setError] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // 🔥 FIX: Changed to number
 
-  // ✅ Search + Filter state
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  // ✅ New state for bulk selection
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     new Set()
   );
   const [isSelectAll, setIsSelectAll] = useState(false);
+
+  const fetchAllProducts = async () => {
+    setIsLoadingAll(true);
+    try {
+      const adminToken = localStorage.getItem("adminToken");
+      if (!adminToken) {
+        console.error("No admin token found");
+        return;
+      }
+
+      let allFetchedProducts: Product[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await fetch(
+          `https://barber-syndicate.vercel.app/api/v1/product?page=${page}&limit=100`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${adminToken}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          console.error("Failed to fetch all products");
+          break;
+        }
+
+        const data: ApiResponse = await response.json();
+
+        const mappedProducts: Product[] = data.products.map((apiProduct) => ({
+          id: apiProduct._id,
+          name: apiProduct.name,
+          description: apiProduct.description,
+          brand: apiProduct.brand,
+          categoryId: apiProduct.categoryId,
+          subcategoryId: apiProduct.subcategoryId?._id || "",
+          subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
+          points: apiProduct.points || [],
+          isFeature: apiProduct.isFeature || false,  // 🔥 FIX: Using correct field
+          isFeatured: apiProduct.isFeature || false, // For compatibility
+          variants: (apiProduct.variants || []).map((v) => ({
+            price: v.price,
+            quantity: v.quantity,
+          })),
+          images: apiProduct.images || [],
+          image: apiProduct.images?.[0] || "",
+          isActivate: apiProduct.isActivate,
+          status: apiProduct.isActivate ? "active" : "inactive",
+          key_feature: apiProduct.key_feature || "", // 🔥 ADDED: key_feature field
+        }));
+
+        allFetchedProducts = [...allFetchedProducts, ...mappedProducts];
+
+        if (page >= data.totalPages) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+
+      console.log("✅ Total products fetched:", allFetchedProducts.length);
+      setAllProducts(allFetchedProducts);
+    } catch (err) {
+      console.error("Error fetching all products:", err);
+    } finally {
+      setIsLoadingAll(false);
+    }
+  };
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -162,7 +239,8 @@ export function ProductManagement() {
           subcategoryId: apiProduct.subcategoryId?._id || "",
           subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
           points: apiProduct.points || [],
-          isFeatured: apiProduct.isFeature || false,
+          isFeature: apiProduct.isFeature || false,  // 🔥 FIX: Using correct field
+          isFeatured: apiProduct.isFeature || false, // For compatibility
           variants: (apiProduct.variants || []).map((v) => ({
             price: v.price,
             quantity: v.quantity,
@@ -171,13 +249,14 @@ export function ProductManagement() {
           image: apiProduct.images?.[0] || "",
           isActivate: apiProduct.isActivate,
           status: apiProduct.isActivate ? "active" : "inactive",
+          key_feature: apiProduct.key_feature || "", // 🔥 ADDED: key_feature field
         };
       });
 
       setProducts(mappedProducts);
       setTotalPages(data.totalPages);
+      setTotalResults(data.totalResults);
       
-      // Reset selection when products change
       setSelectedProducts(new Set());
       setIsSelectAll(false);
     } catch (err: any) {
@@ -193,33 +272,28 @@ export function ProductManagement() {
 
   useEffect(() => {
     fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, refreshTrigger]);
 
+  useEffect(() => {
+    fetchAllProducts();
+  }, [refreshTrigger]);
+
   const handleAddProduct = (newProduct: Product) => {
-    setProducts((prev) => [newProduct, ...prev]);
-    toast.success("Product added successfully!");
-    setTimeout(() => fetchProducts(), 600);
+    // 🔥 FIX: Automatically refresh data after adding
+    setRefreshTrigger(prev => prev + 1);
+    toast.success("Product added successfully! Refreshing...");
   };
 
   const handleUpdateProduct = (updatedProduct: Product) => {
-    const productWithFix: Product = {
-      ...updatedProduct,
-      image: updatedProduct.image || updatedProduct.images?.[0] || "",
-      subcategoryName: updatedProduct.subcategoryName || "—",
-      variants: updatedProduct.variants || [],
-    };
-
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productWithFix.id ? productWithFix : p))
-    );
-
-    toast.success("Product updated successfully!");
+    // 🔥 FIX: Automatically refresh data after updating
+    setRefreshTrigger(prev => prev + 1);
+    toast.success("Product updated successfully! Refreshing...");
   };
 
   const handleDeleteProduct = (productId: string) => {
-    setProducts((prev) => prev.filter((product) => product.id !== productId));
-    toast.success("Product deleted successfully!");
+    // 🔥 FIX: Automatically refresh data after deleting
+    setRefreshTrigger(prev => prev + 1);
+    toast.success("Product deleted successfully! Refreshing...");
   };
 
   const handleToggleStatus = async (
@@ -232,8 +306,6 @@ export function ProductManagement() {
         toast.error("Authentication required");
         return;
       }
-
-      const newStatus = currentIsActivate ? "deactivate" : "activate";
 
       const response = await fetch(
         `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
@@ -261,25 +333,14 @@ export function ProductManagement() {
       const result = await response.json();
 
       if (result.success || result.message) {
-        const newIsActivate = !currentIsActivate;
-
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === productId
-              ? {
-                  ...p,
-                  isActivate: newIsActivate,
-                  status: newIsActivate ? "active" : "inactive",
-                }
-              : p
-          )
-        );
-
+        // 🔥 FIX: Automatically refresh data after status change
+        setRefreshTrigger(prev => prev + 1);
+        
         toast.success(
           result.message ||
             `Product ${
-              newIsActivate ? "activated" : "deactivated"
-            } successfully!`
+              !currentIsActivate ? "activated" : "deactivated"
+            } successfully! Refreshing...`
         );
       } else {
         throw new Error(result.message || "Failed to update status");
@@ -290,7 +351,6 @@ export function ProductManagement() {
     }
   };
 
-  // ✅ BULK STATUS TOGGLE FUNCTION - UPDATED
   const handleBulkToggleStatus = async (activate: boolean) => {
     if (selectedProducts.size === 0) {
       toast.error("Please select at least one product");
@@ -304,7 +364,6 @@ export function ProductManagement() {
         return;
       }
 
-      // Create array of product IDs
       const productIds = Array.from(selectedProducts);
 
       const response = await fetch(
@@ -317,7 +376,7 @@ export function ProductManagement() {
           },
           body: JSON.stringify({
             id: productIds,
-            status: activate // true for active, false for inactive
+            status: activate
           }),
         }
       );
@@ -331,26 +390,15 @@ export function ProductManagement() {
       const result = await response.json();
 
       if (result.success || result.message) {
-        // Update local state
-        setProducts((prev) =>
-          prev.map((p) =>
-            selectedProducts.has(p.id)
-              ? {
-                  ...p,
-                  isActivate: activate,
-                  status: activate ? "active" : "inactive",
-                }
-              : p
-          )
-        );
-
+        // 🔥 FIX: Automatically refresh data after bulk status change
+        setRefreshTrigger(prev => prev + 1);
         setSelectedProducts(new Set());
         setIsSelectAll(false);
 
         toast.success(
           `${productIds.length} product(s) ${
             activate ? "activated" : "deactivated"
-          } successfully!`
+          } successfully! Refreshing...`
         );
       } else {
         throw new Error(result.message || "Failed to update product statuses");
@@ -361,7 +409,6 @@ export function ProductManagement() {
     }
   };
 
-  // ✅ SELECT/DESELECT FUNCTIONS
   const handleSelectProduct = (productId: string) => {
     const newSelected = new Set(selectedProducts);
     if (newSelected.has(productId)) {
@@ -392,12 +439,16 @@ export function ProductManagement() {
     setCurrentPage(1);
     setSelectedProducts(new Set());
     setIsSelectAll(false);
-    setRefreshTrigger((prev) => !prev);
+    setRefreshTrigger(prev => prev + 1);
+    toast.success("Refreshing products...");
   };
 
-  // ✅ FILTERED PRODUCTS (Search + Status)
   const filteredProducts = useMemo(() => {
-    let list = [...products];
+    const q = search.trim().toLowerCase();
+    
+    let list = q.length > 0 && allProducts.length > 0 
+      ? [...allProducts] 
+      : [...products];
 
     if (statusFilter === "active") {
       list = list.filter((p) => p.isActivate === true);
@@ -406,18 +457,19 @@ export function ProductManagement() {
       list = list.filter((p) => p.isActivate === false);
     }
 
-    const q = search.trim().toLowerCase();
     if (q.length > 0) {
       list = list.filter((p) => {
         const name = (p.name || "").toLowerCase();
         const desc = (p.description || "").toLowerCase();
         const sub = (p.subcategoryName || "").toLowerCase();
-        return name.includes(q) || desc.includes(q) || sub.includes(q);
+        const brand = (p.brand || "").toLowerCase();
+        const keyFeature = (p.key_feature || "").toLowerCase(); // 🔥 ADDED: Search in key_feature
+        return name.includes(q) || desc.includes(q) || sub.includes(q) || brand.includes(q) || keyFeature.includes(q);
       });
     }
 
     return list;
-  }, [products, search, statusFilter]);
+  }, [products, allProducts, search, statusFilter]);
 
   return (
     <div className="p-6 space-y-6">
@@ -426,11 +478,13 @@ export function ProductManagement() {
           <h1 className="text-3xl font-bold text-rose-900">
             Product Management
           </h1>
-          <p className="text-rose-600">Manage your cosmetic product catalog</p>
+          <p className="text-rose-600">
+            Manage your cosmetic product catalog
+            {isLoadingAll && <span className="ml-2 text-xs">(Loading all products...)</span>}
+          </p>
         </div>
 
         <div className="flex gap-2">
-          {/* ✅ BULK ACTION BUTTONS */}
           {selectedProducts.size > 0 && (
             <div className="flex gap-2 mr-4">
               <Button
@@ -483,16 +537,25 @@ export function ProductManagement() {
             <Package className="h-5 w-5" /> Product Catalog
           </CardTitle>
 
-          {/* ✅ SEARCH + FILTER BAR */}
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-rose-500" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search product name / description / subcategory..."
+                placeholder={
+                  allProducts.length > 0 
+                    ? `Search across ${allProducts.length} products...` 
+                    : "Search products..."
+                }
                 className="pl-9 border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+                disabled={isLoadingAll}
               />
+              {search && (
+                <span className="absolute right-3 top-2.5 text-xs text-rose-600 font-medium">
+                  {filteredProducts.length} found
+                </span>
+              )}
             </div>
 
             <DropdownMenu>
@@ -533,15 +596,12 @@ export function ProductManagement() {
         </CardHeader>
 
         <CardContent>
-          {/* ================== FINAL GRID TABLE ================== */}
           <div className="w-full border border-rose-200 rounded-md overflow-hidden">
-            {/* ✅ FIXED HEADER - CHANGED: Added Select column after Image */}
             <div className="grid grid-cols-[70px_50px_1.4fr_1fr_1.3fr_105px_70px] bg-white sticky top-0 z-30 border-b border-rose-200">
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Image
               </div>
 
-              {/* ✅ NEW: SELECT ALL COLUMN */}
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100 flex items-center justify-center">
                 <button
                   onClick={handleSelectAll}
@@ -577,11 +637,15 @@ export function ProductManagement() {
               </div>
             </div>
 
-            {/* ✅ BODY SCROLL (HEADER FIXED) - CHANGED: Added Select column */}
             <div className="max-h-[520px] overflow-y-auto">
-              {filteredProducts.length === 0 && !isLoading ? (
+              {isLoadingAll && search ? (
                 <div className="text-center text-rose-700 py-10">
-                  No products found.
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-700 mx-auto mb-2"></div>
+                  Loading all products for search...
+                </div>
+              ) : filteredProducts.length === 0 && !isLoading ? (
+                <div className="text-center text-rose-700 py-10">
+                  {search ? "No products found matching your search." : "No products found."}
                 </div>
               ) : (
                 filteredProducts.map((product) => (
@@ -594,7 +658,6 @@ export function ProductManagement() {
                         : "bg-white"
                     }`}
                   >
-                    {/* Image */}
                     <div className="px-2 py-2 border-r border-rose-100">
                       {product.images && product.images.length > 0 ? (
                         <img
@@ -609,7 +672,6 @@ export function ProductManagement() {
                       )}
                     </div>
 
-                    {/* ✅ NEW: SELECT CHECKBOX */}
                     <div className="px-2 py-2 border-r border-rose-100 flex items-center justify-center">
                       <button
                         onClick={() => handleSelectProduct(product.id)}
@@ -623,7 +685,6 @@ export function ProductManagement() {
                       </button>
                     </div>
 
-                    {/* ✅ Product (NO EXTRA WORD IN NEXT COLUMN) */}
                     <div className="px-4 py-4 border-r border-rose-100 min-w-0">
                       <div
                         className="font-medium text-rose-900 cursor-help truncate"
@@ -632,14 +693,20 @@ export function ProductManagement() {
                         {truncateProductName(product.name)}
                       </div>
 
-                      {product.isFeatured && (
+                      {/* 🔥 ADDED: Show key_feature badge if exists */}
+                      {product.key_feature && product.key_feature.trim() && (
+                        <span className="mt-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded inline-block mr-2">
+                          {product.key_feature}
+                        </span>
+                      )}
+
+                      {product.isFeature && (  // 🔥 FIX: Changed from isFeatured to isFeature
                         <span className="mt-1 px-2 py-0.5 text-xs bg-rose-100 text-rose-700 rounded inline-block">
                           Featured
                         </span>
                       )}
                     </div>
 
-                    {/* ✅ Subcategory (ELLIPSIS) */}
                     <div
                       className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 min-w-0"
                       title={product.subcategoryName || "—"}
@@ -647,7 +714,6 @@ export function ProductManagement() {
                       <div className="truncate">{product.subcategoryName || "—"}</div>
                     </div>
 
-                    {/* ✅ Description (ELLIPSIS) */}
                     <div
                       className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 min-w-0"
                       title={product.description}
@@ -657,7 +723,6 @@ export function ProductManagement() {
                       </div>
                     </div>
 
-                    {/* Status */}
                     <div className="px-2 py-2">
                       <Badge
                         className={`cursor-pointer ${
@@ -676,7 +741,6 @@ export function ProductManagement() {
                       </Badge>
                     </div>
 
-                    {/* Actions */}
                     <div className="px-2 py-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -713,29 +777,54 @@ export function ProductManagement() {
             </div>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <nav className="flex justify-center gap-2 mt-4">
+          {!search && totalPages > 1 && (
+            <nav className="flex justify-center items-center gap-2 mt-4">
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
+                title="First Page"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+                First
+              </button>
+
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 hover:bg-rose-200 transition-colors border border-rose-200"
+                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200"
               >
                 Previous
               </button>
 
-              <span className="px-4 py-2 text-rose-700">
+              <span className="px-4 py-2 text-rose-700 font-medium">
                 Page {currentPage} of {totalPages}
               </span>
 
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 hover:bg-rose-200 transition-colors border border-rose-200"
+                className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200"
               >
                 Next
               </button>
+
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
+                title="Last Page"
+              >
+                Last
+                <ChevronsRight className="h-4 w-4" />
+              </button>
             </nav>
+          )}
+
+          {search && allProducts.length > 0 && (
+            <div className="text-center text-rose-600 text-sm mt-4">
+              Showing {filteredProducts.length} of {allProducts.length} total products
+            </div>
           )}
         </CardContent>
       </Card>
