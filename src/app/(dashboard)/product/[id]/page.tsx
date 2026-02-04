@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -71,7 +72,7 @@ interface SimilarProduct {
   __v?: number;
 }
 
-// ✅ Enquiry structure (for merging quantity)
+// ✅ Enquiry structure
 interface EnquiryVariantItem {
   variantId: string;
   selectedQuantity: number;
@@ -131,8 +132,8 @@ export default function ProductDetail() {
         setLoading(true);
         setError(null);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        // ✅ Fix: API URL check
+        console.log("Fetching product from:", API_URL);
 
         const response = await fetch(API_URL, {
           method: "GET",
@@ -140,17 +141,20 @@ export default function ProductDetail() {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          mode: "cors",
-          cache: "no-cache",
-          signal: controller.signal,
         });
 
-        clearTimeout(timeoutId);
+        console.log("Response status:", response.status);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
         const data = await response.json();
+        console.log("API Response:", data);
 
         if (data.success && data.product) {
           const apiProduct: ApiProduct = data.product;
+          console.log("Product data received:", apiProduct);
 
           setProduct({
             id: apiProduct._id,
@@ -159,52 +163,64 @@ export default function ProductDetail() {
             category: apiProduct.categoryId,
             description: apiProduct.description,
             isFeature: apiProduct.isFeature,
-            images: apiProduct.images || ["/placeholder-image.jpg"],
+            images: apiProduct.images?.length > 0 
+              ? apiProduct.images 
+              : ["https://via.placeholder.com/600x600?text=No+Image"],
             variants: apiProduct.variants || [],
             points: apiProduct.points || [],
           });
 
-          // Similar products
-          const SIMILAR_PRODUCTS_API = `https://barber-syndicate.vercel.app/v1/product/user-products?page=${currentPage}`;
-          const similarResponse = await fetch(SIMILAR_PRODUCTS_API, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            mode: "cors",
-            cache: "no-cache",
-            signal: controller.signal,
-          });
+          // ✅ Similar products fetch
+          try {
+            const SIMILAR_PRODUCTS_API = `https://barber-syndicate.vercel.app/api/v1/product/user-products?page=${currentPage}&limit=8`;
+            console.log("Fetching similar from:", SIMILAR_PRODUCTS_API);
+            
+            const similarResponse = await fetch(SIMILAR_PRODUCTS_API, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+            });
 
-          const similarData = await similarResponse.json();
+            if (similarResponse.ok) {
+              const similarData = await similarResponse.json();
+              console.log("Similar products response:", similarData);
 
-          if (similarData.success && similarData.products) {
-            const filteredProducts = similarData.products.filter(
-              (p: SimilarProduct) => p._id !== apiProduct._id
-            );
-            setSimilarProducts(filteredProducts);
-            setTotalPages(similarData.totalPages || 1);
+              if (similarData.success && similarData.products) {
+                const filteredProducts = similarData.products.filter(
+                  (p: SimilarProduct) => p._id !== apiProduct._id
+                ).slice(0, 4); // Limit to 4 similar products
+                setSimilarProducts(filteredProducts);
+                setTotalPages(similarData.totalPages || 1);
+              }
+            }
+          } catch (similarErr) {
+            console.warn("Could not fetch similar products:", similarErr);
           }
+
         } else {
-          throw new Error(data.message || "Product not found");
+          throw new Error(data.message || "Product data not found in response");
         }
       } catch (err) {
-        let errorMessage =
-          err instanceof Error ? err.message : "An unknown error occurred";
-        if (err instanceof Error && err.name === "AbortError") {
-          errorMessage =
-            "Request timed out. Please check your network or try again.";
+        console.error("Error in fetchProduct:", err);
+        let errorMessage = "Failed to load product. Please try again.";
+        if (err instanceof Error) {
+          errorMessage = err.message;
         }
         setError(errorMessage);
-        router.push("/product");
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) fetchProduct();
-  }, [id, router, currentPage]);
+    if (id) {
+      fetchProduct();
+    } else {
+      setError("No product ID provided");
+      setLoading(false);
+    }
+  }, [id, currentPage]);
 
   // Quantity functions
   const handleIncrement = () => setQuantity((prev) => prev + 1);
@@ -215,7 +231,6 @@ export default function ProductDetail() {
   // ✅ helper: user enquiry fetch
   const fetchUserEnquiries = async (token: string, userId: string) => {
     try {
-      // ⚠️ if your backend has different GET route, change here
       const res = await fetch(`${ENQUIRY_API_URL}/${userId}`, {
         method: "POST",
         headers: {
@@ -285,7 +300,7 @@ export default function ProductDetail() {
 
         const newTotal = unitPrice * newQty;
 
-        // ⚠️ Update API route (change if your backend is different)
+        // Update API route
         const UPDATE_URL = `${ENQUIRY_API_URL}/update`;
 
         const updatePayload = {
@@ -309,10 +324,9 @@ export default function ProductDetail() {
         const updateData = await updateRes.json();
 
         if (!updateRes.ok || !updateData.success) {
-          // agar backend me update route nahi hai, fallback to create new
+          // fallback to create new
           throw new Error(
-            updateData.message ||
-              "Update API not working. Please check enquiry update route."
+            updateData.message || "Failed to update enquiry"
           );
         }
 
@@ -342,6 +356,8 @@ export default function ProductDetail() {
         ],
       };
 
+      console.log("Creating new enquiry:", enquiryData);
+
       const response = await fetch(ENQUIRY_API_URL, {
         method: "POST",
         headers: {
@@ -353,6 +369,7 @@ export default function ProductDetail() {
       });
 
       const data = await response.json();
+      console.log("Enquiry response:", data);
 
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Failed to create enquiry");
@@ -361,6 +378,7 @@ export default function ProductDetail() {
       setShowEnquiryPopup(true);
       setTimeout(() => setShowEnquiryPopup(false), 2500);
     } catch (error) {
+      console.error("Enquiry error:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to create enquiry";
       setEnquiryError(errorMessage);
@@ -416,7 +434,8 @@ export default function ProductDetail() {
     variants: { price: string; quantity: string; _id: string }[]
   ) => {
     if (!variants || variants.length === 0) return 0;
-    return Math.min(...variants.map((v) => parseFloat(v.price)));
+    const prices = variants.map(v => parseFloat(v.price)).filter(p => !isNaN(p));
+    return prices.length > 0 ? Math.min(...prices) : 0;
   };
 
   // Popup
@@ -450,7 +469,7 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center">
         <div className="text-center">
           <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-600" />
           <p className="text-gray-600">Loading product...</p>
@@ -461,15 +480,21 @@ export default function ProductDetail() {
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center">
+        <div className="text-center max-w-md p-6 bg-white rounded-xl shadow-sm">
+          <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
             <span className="text-red-400 text-2xl">!</span>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Error loading product
           </h3>
           <p className="text-gray-600 mb-4">{error || "Product not found"}</p>
+          <Link
+            href="/product"
+            className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+          >
+            Back to Products
+          </Link>
         </div>
       </div>
     );
@@ -496,16 +521,19 @@ export default function ProductDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Images */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-xl overflow-hidden bg-white shadow-sm border border-gray-200">
+            <div className="aspect-square rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-200">
               <img
-                src={product.images[selectedImage] || "/placeholder-image.jpg"}
+                src={product.images[selectedImage] || "https://via.placeholder.com/600x600?text=No+Image"}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "https://via.placeholder.com/600x600?text=No+Image";
+                }}
               />
             </div>
 
             {product.images.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-3">
                 {product.images.map((image, index) => (
                   <button
                     key={index}
@@ -520,6 +548,9 @@ export default function ProductDetail() {
                       src={image}
                       alt={`${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://via.placeholder.com/150x150?text=Image";
+                      }}
                     />
                   </button>
                 ))}
@@ -531,7 +562,7 @@ export default function ProductDetail() {
           <div className="space-y-6">
             <div>
               {product.isFeature && (
-                <span className="inline-block bg-amber-100 text-amber-800 text-xs font-medium px-2 py-1 rounded-full w-fit mb-2">
+                <span className="inline-block bg-amber-100 text-amber-800 text-xs font-medium px-3 py-1 rounded-full w-fit mb-2">
                   Featured
                 </span>
               )}
@@ -549,9 +580,26 @@ export default function ProductDetail() {
                 </button>
               </div>
 
+            
+
               <p className="text-lg text-gray-600 leading-relaxed mb-4">
                 {product.description}
               </p>
+
+              {/* Points */}
+              {product.points && product.points.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Key Points:</h4>
+                  <ul className="space-y-1">
+                    {product.points.map((point, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-green-500 mr-2">•</span>
+                        <span className="text-gray-600">{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Variants */}
@@ -567,7 +615,7 @@ export default function ProductDetail() {
                       <button
                         key={variant._id}
                         onClick={() => setSelectedVariant(index)}
-                        className={`p-4 border-2 rounded-lg text-left transition-all ${
+                        className={`p-4 border-2 rounded-xl text-left transition-all ${
                           selectedVariant === index
                             ? "border-purple-600 bg-purple-50"
                             : "border-gray-200 hover:border-gray-300"
@@ -580,6 +628,16 @@ export default function ProductDetail() {
                                 variant.quantity ||
                                 `Variant ${index + 1}`}
                             </h4>
+                            {variant.variantColor && (
+                              <p className="text-sm text-gray-500 mt-1">
+                                Color: {variant.variantColor}
+                              </p>
+                            )}
+                            {variant.variantSize && (
+                              <p className="text-sm text-gray-500">
+                                Size: {variant.variantSize}
+                              </p>
+                            )}
                           </div>
 
                           {selectedVariant === index && (
@@ -593,7 +651,7 @@ export default function ProductDetail() {
                           }`}
                         >
                           {isAuthenticated
-                            ? `₹${parseFloat(variant.price).toFixed(2)}`
+                            ? `₹${parseFloat(variant.price || "0").toFixed(2)}`
                             : "Login to view price"}
                         </p>
                       </button>
@@ -635,7 +693,7 @@ export default function ProductDetail() {
                           ₹{totalPrice.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          ₹{Number(selectedVariantData.price).toFixed(2)} ×{" "}
+                          ₹{Number(selectedVariantData.price || 0).toFixed(2)} ×{" "}
                           {quantity} units
                         </p>
                       </div>
@@ -656,7 +714,7 @@ export default function ProductDetail() {
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleWhatsAppClick}
-                disabled={!isAuthenticated || !product.variants.length}
+                disabled={!product.variants.length}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <MessageCircle className="h-5 w-5" />
@@ -719,8 +777,8 @@ export default function ProductDetail() {
 
         {/* Similar Products */}
         {similarProducts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">
               Similar Products
             </h2>
 
@@ -733,9 +791,12 @@ export default function ProductDetail() {
                 >
                   <div className="aspect-square relative overflow-hidden">
                     <img
-                      src={similarProduct.images[0] || "/placeholder-image.jpg"}
+                      src={similarProduct.images[0] || "https://via.placeholder.com/400x400?text=Product"}
                       alt={similarProduct.name}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://via.placeholder.com/400x400?text=Product";
+                      }}
                     />
                   </div>
 
@@ -754,9 +815,7 @@ export default function ProductDetail() {
                       }`}
                     >
                       {isAuthenticated && similarProduct.variants.length > 0
-                        ? `From ₹${getLowestPrice(similarProduct.variants).toFixed(
-                            2
-                          )}`
+                        ? `From ₹${getLowestPrice(similarProduct.variants).toFixed(2)}`
                         : "Login to view price"}
                     </div>
                   </div>
@@ -765,7 +824,7 @@ export default function ProductDetail() {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-center space-x-4">
+              <div className="mt-8 flex items-center justify-center space-x-4">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
@@ -774,7 +833,7 @@ export default function ProductDetail() {
                   <ChevronLeft className="h-6 w-6" />
                 </button>
 
-                <span className="text-gray-900">
+                <span className="text-gray-900 font-medium">
                   Page {currentPage} of {totalPages}
                 </span>
 
