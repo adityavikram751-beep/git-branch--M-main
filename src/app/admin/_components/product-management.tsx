@@ -121,8 +121,6 @@ export function ProductManagement() {
     new Set()
   );
   const [isSelectAll, setIsSelectAll] = useState(false);
-
-  // 🔥 NEW: Select all products across all pages
   const [isSelectAllGlobal, setIsSelectAllGlobal] = useState(false);
 
   const fetchAllProducts = async () => {
@@ -473,19 +471,41 @@ export function ProductManagement() {
     toast.success("Refreshing products...");
   };
 
+  // 🔥 MAIN FIX: Filter function updated
   const filteredProducts = useMemo(() => {
+    // Jab bhi filter lag raha hai (statusFilter != "all"), toh pure allProducts se filter karo
+    if (statusFilter !== "all") {
+      // Status filter ke liye allProducts use karo
+      let list = [...allProducts];
+      
+      if (statusFilter === "active") {
+        list = list.filter((p) => p.isActivate === true);
+      } else if (statusFilter === "inactive") {
+        list = list.filter((p) => p.isActivate === false);
+      }
+      
+      // Search bhi apply karo
+      const q = search.trim().toLowerCase();
+      if (q.length > 0) {
+        list = list.filter((p) => {
+          const name = (p.name || "").toLowerCase();
+          const desc = (p.description || "").toLowerCase();
+          const sub = (p.subcategoryName || "").toLowerCase();
+          const brand = (p.brand || "").toLowerCase();
+          const keyFeature = (p.key_feature || "").toLowerCase();
+          return name.includes(q) || desc.includes(q) || sub.includes(q) || brand.includes(q) || keyFeature.includes(q);
+        });
+      }
+      
+      return list;
+    }
+    
+    // Agar "all" filter hai toh
     const q = search.trim().toLowerCase();
     
     let list = q.length > 0 && allProducts.length > 0 
       ? [...allProducts] 
       : [...products];
-
-    if (statusFilter === "active") {
-      list = list.filter((p) => p.isActivate === true);
-    }
-    if (statusFilter === "inactive") {
-      list = list.filter((p) => p.isActivate === false);
-    }
 
     if (q.length > 0) {
       list = list.filter((p) => {
@@ -500,6 +520,9 @@ export function ProductManagement() {
 
     return list;
   }, [products, allProducts, search, statusFilter]);
+
+  // 🔥 NEW: Pagination hide karna jab filter active ho
+  const shouldShowPagination = !search && statusFilter === "all";
 
   // Update select all state when filtered products change
   useEffect(() => {
@@ -643,19 +666,28 @@ export function ProductManagement() {
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => setStatusFilter("all")}
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setCurrentPage(1);
+                  }}
                 >
                   All
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => setStatusFilter("active")}
+                  onClick={() => {
+                    setStatusFilter("active");
+                    setCurrentPage(1);
+                  }}
                 >
                   Active
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => setStatusFilter("inactive")}
+                  onClick={() => {
+                    setStatusFilter("inactive");
+                    setCurrentPage(1);
+                  }}
                 >
                   Inactive
                 </DropdownMenuItem>
@@ -707,14 +739,16 @@ export function ProductManagement() {
             </div>
 
             <div className="max-h-[520px] overflow-y-auto">
-              {isLoadingAll && search ? (
+              {isLoadingAll && (search || statusFilter !== "all") ? (
                 <div className="text-center text-rose-700 py-10">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-700 mx-auto mb-2"></div>
-                  Loading all products for search...
+                  Loading products for search/filter...
                 </div>
               ) : filteredProducts.length === 0 && !isLoading ? (
                 <div className="text-center text-rose-700 py-10">
-                  {search ? "No products found matching your search." : "No products found."}
+                  {search || statusFilter !== "all" 
+                    ? "No products found matching your criteria." 
+                    : "No products found."}
                 </div>
               ) : (
                 filteredProducts.map((product) => (
@@ -845,7 +879,8 @@ export function ProductManagement() {
             </div>
           </div>
 
-          {!search && totalPages > 1 && (
+          {/* 🔥 FIXED: Pagination sirf tab dikhe jab no filter ho */}
+          {shouldShowPagination && totalPages > 1 && (
             <nav className="flex justify-center items-center gap-2 mt-4">
               <button
                 onClick={() => handlePageChange(1)}
@@ -889,9 +924,13 @@ export function ProductManagement() {
             </nav>
           )}
 
-          {search && allProducts.length > 0 && (
+          {/* 🔥 NEW: Show filter status */}
+          {(search || statusFilter !== "all") && filteredProducts.length > 0 && (
             <div className="text-center text-rose-600 text-sm mt-4">
-              Showing {filteredProducts.length} of {allProducts.length} total products
+              Showing {filteredProducts.length} product(s) 
+              {search && ` matching "${search}"`}
+              {statusFilter !== "all" && ` (${statusFilter} only)`}
+              {search && statusFilter !== "all" && ` from all products`}
             </div>
           )}
           
