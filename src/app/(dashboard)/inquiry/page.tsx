@@ -1112,27 +1112,7 @@ export default function InquiryPage() {
                                   </div>
                                 ))}
 
-                                {/* EXPAND/COLLAPSE BUTTON */}
-                                {p.variants.length > 2 && (
-                                  <div className="flex justify-center">
-                                    <button
-                                      onClick={() => toggleExpandProduct(p.productId)}
-                                      className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-                                    >
-                                      {isExpanded ? (
-                                        <>
-                                          <ChevronUp className="w-4 h-4" />
-                                          Show Less
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ChevronDown className="w-4 h-4" />
-                                          Show More ({p.variants.length - 2} more)
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                )}
+                              
 
                                 {/* ADD VARIANT SECTION */}
                                 {showAddVariantSection && (
