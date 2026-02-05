@@ -43,6 +43,7 @@ type BannerItem = {
 export default function HomePage() {
   const BASE_URL = "https://barber-syndicate.vercel.app"
   const NEW_ARRIVAL_API = `${BASE_URL}/api/v1/product/new-arrival`
+  const PRODUCT_API = `${BASE_URL}/api/v1/product/user-products?page=1`
 
   const HERO_API =
     "https://barber-syndicate.vercel.app/api/v1/banner/banner-for-ui"
@@ -172,8 +173,8 @@ export default function HomePage() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        // products
-        const allProductsRes = await fetch(`${BASE_URL}/api/v1/product?page=1`)
+        // ✅ PRODUCT API YAHA HAI BHAI
+        const allProductsRes = await fetch(PRODUCT_API)
         const allProductsData = await allProductsRes.json()
         setAllProducts(allProductsData?.products || [])
 
@@ -214,7 +215,7 @@ export default function HomePage() {
     }
 
     fetchData()
-  }, [])
+  }, [PRODUCT_API, NEW_ARRIVAL_API, BASE_URL])
 
   /* ================= INFINITE DATA (CLONED) ================= */
   const infiniteCategories = useMemo(
@@ -230,6 +231,36 @@ export default function HomePage() {
     () => makeInfiniteSlides(newArrivalProducts),
     [newArrivalProducts]
   )
+
+  /* ================= HELPER: GET KEY FEATURE FOR PRODUCTS ONLY ================= */
+  const getKeyFeatureForProduct = (product: any) => {
+    if (!product) return null
+    
+    // Sirf key_feature check karo (API response ke hisab se)
+    if (product.key_feature && product.key_feature.trim() !== "") {
+      return product.key_feature
+    }
+    
+    // Agar nahi hai to null
+    return null
+  }
+
+  /* ================= HELPER: GET FEATURE COLOR ================= */
+  const getFeatureColor = (feature: string) => {
+    const lowerFeature = feature.toLowerCase()
+    
+    if (lowerFeature.includes('new') || lowerFeature.includes('arrival')) {
+      return "bg-green-500"
+    } else if (lowerFeature.includes('best') || lowerFeature.includes('seller')) {
+      return "bg-yellow-500"
+    } else if (lowerFeature.includes('popular')) {
+      return "bg-purple-500"
+    } else if (lowerFeature.includes('premium') || lowerFeature.includes('featured')) {
+      return "bg-pink-500"
+    } else {
+      return "bg-blue-500"
+    }
+  }
 
   /* ================= CATEGORY INFINITE SLIDER ================= */
   const [categoryPos, setCategoryPos] = useState(1)
@@ -863,7 +894,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= PRODUCTS ================= */}
+      {/* ================= PRODUCTS (SIRF YAHI SECTION CHANGE KIYA HAI) ================= */}
       <section className="py-20 bg-[#f6dcc7]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
@@ -925,50 +956,62 @@ export default function HomePage() {
                     transform: `translateX(-${productPos * productSlideWidth}%)`,
                   }}
                 >
-                  {infiniteProducts.map((p: any, i: number) => (
-                    <div
-                      key={`${p._id}-${i}`}
-                      style={{ minWidth: `${productSlideWidth}%` }}
-                      className="px-3"
-                    >
-                      <Link href={`/product/${p._id}`} className="block h-full">
-                        <div
-                          className="bg-white rounded-xl shadow-md overflow-hidden
-                          transition-all duration-300
-                          hover:-translate-y-2 hover:shadow-xl
-                          h-[420px] flex flex-col
-                          cursor-pointer"
-                        >
-                          <div className="relative h-[220px] bg-gray-100 overflow-hidden">
-                            <img
-                              src={p.images?.[0] || "/placeholder.jpg"}
-                              alt={p.name}
-                              className="w-full h-full object-cover"
-                            />
+                  {infiniteProducts.map((p: any, i: number) => {
+                    // ✅ SIRF PRODUCTS SECTION KE LIYE KEY FEATURE CHECK KARO
+                    const keyFeature = getKeyFeatureForProduct(p)
+                    
+                    return (
+                      <div
+                        key={`${p._id}-${i}`}
+                        style={{ minWidth: `${productSlideWidth}%` }}
+                        className="px-3"
+                      >
+                        <Link href={`/product/${p._id}`} className="block h-full">
+                          <div
+                            className="bg-white rounded-xl shadow-md overflow-hidden
+                            transition-all duration-300
+                            hover:-translate-y-2 hover:shadow-xl
+                            h-[420px] flex flex-col
+                            cursor-pointer"
+                          >
+                            <div className="relative h-[220px] bg-gray-100 overflow-hidden">
+                              <img
+                                src={p.images?.[0] || "/placeholder.jpg"}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                              />
 
-                            <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
-                              Featured
-                            </span>
+                              {/* ✅ SIRF YAHI PAR KEY FEATURE BADGE ADD KIYA HAI */}
+                              {keyFeature ? (
+                                <span className={`absolute top-3 right-3 ${getFeatureColor(keyFeature)} text-white text-xs px-3 py-1 rounded`}>
+                                  {keyFeature}
+                                </span>
+                              ) : (
+                                <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
+                                  Featured
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="p-5 flex flex-col flex-1">
+                              <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
+                                {p.name}
+                              </h3>
+
+                              <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
+                                {p.description}
+                              </p>
+
+                              <span className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium w-fit">
+                                View Details
+                                <ArrowRight size={14} />
+                              </span>
+                            </div>
                           </div>
-
-                          <div className="p-5 flex flex-col flex-1">
-                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
-                              {p.name}
-                            </h3>
-
-                            <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
-                              {p.description}
-                            </p>
-
-                            <span className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium w-fit">
-                              View Details
-                              <ArrowRight size={14} />
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    </div>
-                  ))}
+                        </Link>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </div>
