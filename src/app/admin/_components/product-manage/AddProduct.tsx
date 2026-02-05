@@ -32,7 +32,8 @@ interface Product {
   categoryId?: string
   subcategoryId?: string
   points?: string[]
-  key_feature?: string  // ✅ Backend uses underscore
+  key_feature?: string
+  keywords?: string[]    // ✅ Changed to array
   isFeature?: boolean
   variants?: { price: string; quantity: string }[]
   images?: string[]
@@ -64,7 +65,8 @@ interface FormData {
   categoryId: string
   subcategoryId: string
   points: string
-  key_feature: string  // ✅ Backend uses underscore
+  key_feature: string
+  keywords: string       // ✅ Frontend me string hi rahega
   isFeature: boolean
 }
 
@@ -87,7 +89,8 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     categoryId: "",
     subcategoryId: "",
     points: "",
-    key_feature: "",  // ✅ Initialize key_feature
+    key_feature: "",
+    keywords: "",        // ✅ String rahega frontend me
     isFeature: false,
   })
 
@@ -258,7 +261,8 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
         categoryId: "",
         subcategoryId: "",
         points: "",
-        key_feature: "",  // ✅ Reset key_feature
+        key_feature: "",
+        keywords: "",     // ✅ Reset keywords
         isFeature: false,
       })
       setError(null)
@@ -307,6 +311,15 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       // ✅ CRITICAL: Send key_feature to backend
       console.log("Sending key_feature:", formData.key_feature)
       data.append("key_feature", formData.key_feature)
+      
+      // ✅ CRITICAL: Convert keywords string to array and send to backend
+      const keywordsArray = formData.keywords
+        .split(",")
+        .map((keyword) => keyword.trim())
+        .filter((keyword) => keyword.length > 0)
+      
+      console.log("Sending keywords as array:", keywordsArray)
+      data.append("keywords", JSON.stringify(keywordsArray))
 
       const pointsArray =
         formData.points && formData.points.trim() !== ""
@@ -322,7 +335,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
       images.forEach((img) => data.append("image", img))
 
-      const res = await fetch(`${BASE_URL}/api/v1/product`, {
+      const res = await fetch(`https://barber-syndicate.vercel.app/api/v1/product`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: data,
@@ -337,7 +350,8 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
           name: formData.name,
           image: result.image || result.data?.image || imagePreviews[0] || "/placeholder.svg",
           description: formData.description,
-          key_feature: formData.key_feature,  // ✅ Include key_feature
+          key_feature: formData.key_feature,
+          keywords: keywordsArray,        // ✅ Store as array
           pricing: {
             single: parseFloat(cleanedVariants[0]?.price) || 0,
             dozen: parseFloat(cleanedVariants[1]?.price) || 0,
@@ -498,10 +512,10 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
             />
           </div>
 
-          {/* Key Feature - CRITICAL FIELD */}
+          {/* Key Feature */}
           <div className="space-y-2">
             <Label htmlFor="key_feature" className="text-sm font-medium text-gray-700">
-              Key Feature (Shows on product card) <span className="text-rose-600">*Test this*</span>
+              Key Feature (Shows on product card)
             </Label>
             <Input
               id="key_feature"
@@ -509,7 +523,6 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
               onChange={handleInputChange}
               className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
               placeholder="Enter key feature (e.g., 'Best Seller', 'New Arrival')"
-              required
             />
             <div className="flex flex-wrap gap-2 mt-2">
               <span className="text-xs text-gray-500">Quick suggestions:</span>
@@ -524,6 +537,41 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Keywords - MULTIPLE KEYWORDS SUPPORT */}
+          <div className="space-y-2">
+            <Label htmlFor="keywords" className="text-sm font-medium text-gray-700">
+              Keywords (Comma separated for multiple keywords)
+            </Label>
+            <Input
+              id="keywords"
+              value={formData.keywords}
+              onChange={handleInputChange}
+              className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+              placeholder="Enter keywords separated by commas (e.g., Hair Gel, Styling, Strong Hold)"
+            />
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="text-xs text-gray-500">Quick suggestions:</span>
+              {["Hair Gel", "Styling", "Strong Hold", "Matte Finish", "Shampoo", "Conditioner", "Hair Oil", "Beard Care", "Hair Wax", "Hair Spray"].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    const current = formData.keywords
+                    // ✅ Multiple keywords support with comma
+                    const newKeywords = current ? `${current}, ${tag}` : tag
+                    setFormData({ ...formData, keywords: newKeywords })
+                  }}
+                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Enter multiple keywords separated by commas. Example: "Hair Gel, Styling, Strong Hold"
+            </p>
           </div>
 
           {/* Featured + Points */}

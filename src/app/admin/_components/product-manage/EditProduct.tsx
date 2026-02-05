@@ -33,6 +33,7 @@ interface Product {
   subcategoryName?: string
   points?: string[]
   key_feature?: string
+  keywords?: string[]     // ✅ Changed to array
   isFeature?: boolean
   isFeatured?: boolean
   variants?: { price: string; quantity: string }[]
@@ -65,6 +66,7 @@ interface FormDataType {
   subcategoryId: string
   points: string
   key_feature: string
+  keywords: string     // ✅ Frontend me string hi rahega
   isFeature: boolean
 }
 
@@ -98,6 +100,9 @@ export function EditProduct({
     subcategoryId: product.subcategoryId || "",
     points: product.points ? product.points.join("\n") : "",
     key_feature: product.key_feature || "",
+    keywords: Array.isArray(product.keywords) 
+      ? product.keywords.join(", ")  // ✅ Convert array to string for display
+      : product.keywords || "",  
     isFeature: product.isFeature || false,
   })
 
@@ -129,6 +134,8 @@ export function EditProduct({
     brands: false,
   })
 
+  const BASE_URL = "https://barber-syndicate.vercel.app" // ✅ Local dev tunnel URL
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("adminToken")
@@ -148,7 +155,7 @@ export function EditProduct({
       setError(null)
 
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/single/${product.id}`
+        `${BASE_URL}/api/v1/product/single/${product.id}`
       )
       const data = await res.json()
 
@@ -157,6 +164,7 @@ export function EditProduct({
         
         console.log("API Response:", p)
         console.log("isFeature from API:", p.isFeature, "Type:", typeof p.isFeature)
+        console.log("Keywords from API:", p.keywords, "Type:", typeof p.keywords)
 
         setFormData({
           name: p.name || "",
@@ -169,6 +177,9 @@ export function EditProduct({
               : p.subcategoryId || "",
           points: p.points ? p.points.join("\n") : "",
           key_feature: p.key_feature || "",
+          keywords: Array.isArray(p.keywords) 
+            ? p.keywords.join(", ")  // ✅ Convert array to string for display
+            : p.keywords || "",
           isFeature: p.isFeature === true || p.isFeature === "true",
         })
 
@@ -200,7 +211,7 @@ export function EditProduct({
   const fetchCategories = async () => {
     try {
       setLoading((prev) => ({ ...prev, categories: true }))
-      const res = await fetch("https://barber-syndicate.vercel.app/api/v1/category")
+      const res = await fetch(`${BASE_URL}/api/v1/category`)
       const data = await res.json()
       if (data.success) setCategories(data.data)
     } catch (err) {
@@ -214,7 +225,7 @@ export function EditProduct({
     try {
       setLoading((prev) => ({ ...prev, subcategories: true }))
       const res = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/subcategory/getSubCat"
+        `${BASE_URL}/api/v1/subcategory/getSubCat`
       )
       const data = await res.json()
 
@@ -244,7 +255,7 @@ export function EditProduct({
       const token = localStorage.getItem("adminToken")
 
       const res = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/brands/getall",
+        `${BASE_URL}/api/v1/brands/getall`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }
@@ -364,7 +375,7 @@ export function EditProduct({
       fd.append("image", file)
 
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/add-image/${product.id}`,
+        `${BASE_URL}/api/v1/product/add-image/${product.id}`,
         {
           method: "POST",
           headers: {
@@ -452,6 +463,14 @@ export function EditProduct({
               .filter(Boolean)
           : []
 
+      // ✅ Convert keywords string to array for backend
+      const keywordsArray = formData.keywords
+        .split(",")
+        .map((keyword) => keyword.trim())
+        .filter((keyword) => keyword.length > 0)
+      
+      console.log("Keywords array:", keywordsArray)
+
       const fd = new FormData()
       fd.append("name", formData.name.trim())
       fd.append("categoryId", formData.categoryId)
@@ -461,6 +480,7 @@ export function EditProduct({
       fd.append("brand", formData.brand)
       fd.append("points", JSON.stringify(pointsArray))
       fd.append("key_feature", formData.key_feature)
+      fd.append("keywords", JSON.stringify(keywordsArray))  // ✅ Send as JSON array
       fd.append("isFeature", String(formData.isFeature))
       fd.append("positions", JSON.stringify(["0"]))
       fd.append("existingImages", JSON.stringify(imagePreviews.slice(0, MAX_IMAGES)))
@@ -472,7 +492,7 @@ export function EditProduct({
       })
 
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/${product.id}`,
+        `${BASE_URL}/api/v1/product/${product.id}`,
         {
           method: "PUT",
           headers: {
@@ -502,6 +522,7 @@ export function EditProduct({
             categoryId: formData.categoryId,
             subcategoryId: formData.subcategoryId,
             key_feature: formData.key_feature,
+            keywords: keywordsArray,  // ✅ Store as array
             points: pointsArray,
             isFeature: formData.isFeature,
             variants: cleanedVariants,
@@ -674,6 +695,39 @@ export function EditProduct({
               </div>
             </div>
 
+            {/* Keywords Field - MULTIPLE KEYWORDS SUPPORT */}
+            <div className="space-y-2">
+              <Label htmlFor="keywords" className="text-sm font-medium text-gray-700">
+              </Label>
+              <Input
+                id="keywords"
+                value={formData.keywords}
+                onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
+                className="border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+                placeholder="Enter keywords separated by commas (e.g., Hair Gel, Styling, Strong Hold)"
+              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="text-xs text-gray-500">Quick suggestions:</span>
+                {["Hair Gel", "Styling", "Strong Hold", "Matte Finish", "Shampoo", "Conditioner", "Hair Oil", "Beard Care", "Hair Wax", "Hair Spray"].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      const current = formData.keywords
+                      // ✅ Multiple keywords support with comma
+                      const newKeywords = current ? `${current}, ${tag}` : tag
+                      setFormData({ ...formData, keywords: newKeywords })
+                    }}
+                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+              </p>
+            </div>
+
             {/* Category and Subcategory */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -741,7 +795,7 @@ export function EditProduct({
               </div>
             </div>
 
-            {/* Featured - यहाँ कोई problem नहीं है */}
+            {/* Featured */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Featured Product</Label>
