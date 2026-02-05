@@ -223,7 +223,7 @@ export default function Header() {
           // Filter only products with images and name
           const filteredProducts = products
             .filter((p: any) => p?.name && p?.images?.[0])
-            .slice(0, 15) // ✅ INCREASED TO 15 RESULTS (previously 8)
+            .slice(0, 15)
           
           setSearchResults(filteredProducts)
         } else {
@@ -332,7 +332,7 @@ export default function Header() {
               <Search size={22} className="text-gray-800" />
             </button>
 
-            {/* ✅ Desktop Search - WIDER SEARCH BAR */}
+            {/* ✅ Desktop Search */}
             <div
               className="hidden md:flex items-center search-container"
               onClick={(e) => e.stopPropagation()}
@@ -351,7 +351,7 @@ export default function Header() {
                   />
                 </form>
 
-                {/* ✅ BADA DROPDOWN - EXPANDED SIZE */}
+                {/* ✅ Desktop Dropdown */}
                 {showDropdown && (
                   <div className="absolute top-14 left-0 w-[600px] bg-white border-2 border-gray-200 rounded-2xl shadow-2xl z-50 overflow-hidden search-dropdown">
                     {searchLoading ? (
@@ -361,7 +361,7 @@ export default function Header() {
                       </div>
                     ) : searchResults.length > 0 ? (
                       <div className="max-h-[500px] overflow-y-auto">
-                        {/* ✅ BADA HEADER */}
+                        {/* ✅ Header */}
                         <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
                           <p className="text-lg font-bold text-gray-800">
                             {searchResults.length} products found
@@ -371,15 +371,15 @@ export default function Header() {
                           </p>
                         </div>
                         
-                        {/* ✅ GRID LAYOUT FOR MORE ITEMS */}
-                        <div className="grid grid-cols-1 divide-y divide-gray-100">
+                        {/* ✅ Product List */}
+                        <div className="divide-y divide-gray-100">
                           {searchResults.map((p: any, index: number) => (
                             <button
-                              key={p?._id || p?.id || index}
+                              key={index}
                               onClick={() => handleSelectProduct(p)}
                               className="w-full text-left p-5 hover:bg-blue-50/50 flex items-center gap-5 transition-all duration-200 hover:scale-[1.01] group"
                             >
-                              {/* ✅ BADA IMAGE */}
+                              {/* ✅ Image */}
                               <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center border-2 border-gray-300 group-hover:border-[#3f3cff] group-hover:shadow-lg transition-all duration-300">
                                 {p?.images?.[0] ? (
                                   <Image
@@ -410,41 +410,24 @@ export default function Header() {
                                 )}
                               </div>
                               
-                              {/* ✅ BADA TEXT AREA */}
+                              {/* ✅ Text Area */}
                               <div className="flex-1 min-w-0">
                                 <p className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-[#3f3cff] transition-colors">
                                   {p?.name || "Product"}
                                 </p>
-                             
                                 
-                                {/* ✅ DESCRIPTION IF AVAILABLE */}
-                              
-                              </div>
-                              
-                              {/* ✅ ARROW INDICATOR */}
-                              <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[#3f3cff]/10">
-                                  <svg className="w-4 h-4 text-[#3f3cff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                  </svg>
-                                </div>
+                                {/* ✅ Brand if available */}
+                               
+                                
+                                {/* ✅ Price if available */}
+                                {p?.price && (
+                                  <p className="text-lg font-bold text-green-600 mt-1">
+                                    ₹{p.price}
+                                  </p>
+                                )}
                               </div>
                             </button>
                           ))}
-                        </div>
-                        
-                        {/* ✅ BADA VIEW ALL BUTTON */}
-                        <div className="p-4 border-t bg-gradient-to-r from-gray-50 to-gray-100">
-                          <button
-                            onClick={handleSearchSubmit}
-                            className="w-full py-3 px-4 bg-[#3f3cff] text-white font-bold rounded-xl hover:bg-[#2a27cc] transition-colors flex items-center justify-center gap-2"
-                          >
-                            <Search className="w-5 h-5" />
-                            View all {searchResults.length} results
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     ) : (
@@ -454,14 +437,6 @@ export default function Header() {
                         </div>
                         <p className="text-xl font-bold text-gray-800">No products found</p>
                         <p className="text-gray-600 mt-2">Try searching with different keywords</p>
-                        <div className="mt-6">
-                          <button
-                            onClick={() => router.push("/product")}
-                            className="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                          >
-                            Browse All Products
-                          </button>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -561,7 +536,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* ✅ BADA MOBILE SEARCH BAR */}
+        {/* ✅ SIMPLE MOBILE SEARCH BAR */}
         {mobileSearchOpen && (
           <div
             className="md:hidden pb-3 search-container"
@@ -577,132 +552,88 @@ export default function Header() {
                     if (searchQuery.trim()) setShowDropdown(true)
                   }}
                   placeholder="Search products..."
-                  className="w-full h-12 pl-10 pr-3 rounded-xl border-2 border-gray-300 bg-white text-base outline-none focus:ring-2 focus:ring-[#3f3cff]/30"
+                  className="w-full h-11 pl-10 pr-3 rounded-lg border border-gray-300 bg-white text-sm outline-none focus:ring-2 focus:ring-[#3f3cff]/30"
                 />
               </div>
             </form>
 
-            {/* ✅ BADA MOBILE DROPDOWN */}
+            {/* ✅ SIMPLE MOBILE DROPDOWN - ONLY IMAGE + NAME */}
             {showDropdown && (
-              <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-white z-50 overflow-y-auto search-dropdown">
-                {/* ✅ MOBILE DROPDOWN HEADER */}
-                <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm">
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">
-                      Search Results
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {searchResults.length} products for "{searchQuery}"
-                    </p>
+              <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-[400px] overflow-y-auto z-50 search-dropdown">
+                {searchLoading ? (
+                  <div className="px-4 py-6 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#3f3cff] mr-2"></div>
+                    <p className="text-sm text-gray-600">Searching...</p>
                   </div>
-                  <button
-                    onClick={() => setShowDropdown(false)}
-                    className="p-2 rounded-lg hover:bg-gray-100"
-                  >
-                    <X size={20} className="text-gray-700" />
-                  </button>
-                </div>
-
-                <div className="p-4">
-                  {searchLoading ? (
-                    <div className="py-20 flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-[#3f3cff] mb-4"></div>
-                      <p className="text-lg font-medium text-gray-700">Searching...</p>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    {/* ✅ SIMPLE HEADER */}
+                    <div className="px-4 py-3 border-b bg-gray-50">
+                      <p className="text-sm font-semibold text-gray-700">
+                        {searchResults.length} products found
+                      </p>
                     </div>
-                  ) : searchResults.length > 0 ? (
-                    <>
-                      {/* ✅ MOBILE GRID - 2 COLUMNS */}
-                      <div className="grid grid-cols-2 gap-4">
-                        {searchResults.map((p: any, index: number) => (
-                          <button
-                            key={p?._id || p?.id || index}
-                            onClick={() => handleSelectProduct(p)}
-                            className="bg-white border-2 border-gray-200 rounded-2xl p-4 hover:border-[#3f3cff] hover:shadow-lg transition-all duration-200 group"
-                          >
-                            {/* ✅ BADA MOBILE IMAGE */}
-                            <div className="w-full h-48 rounded-xl bg-gray-100 overflow-hidden mb-3">
-                              {p?.images?.[0] ? (
-                                <Image
-                                  src={p.images[0]}
-                                  alt={p?.name || "Product"}
-                                  width={200}
-                                  height={200}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "https://via.placeholder.com/200x200?text=No+Image"
-                                  }}
-                                />
-                              ) : p?.image ? (
-                                <Image
-                                  src={p.image}
-                                  alt={p?.name || "Product"}
-                                  width={200}
-                                  height={200}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "https://via.placeholder.com/200x200?text=No+Image"
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                                  <ShoppingBag className="w-12 h-12 text-gray-400" />
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* ✅ MOBILE PRODUCT INFO */}
-                            <div>
-                              <p className="text-sm font-bold text-gray-900 line-clamp-2 group-hover:text-[#3f3cff] transition-colors">
-                                {p?.name || "Product"}
-                              </p>
-                              
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {p?.brand && (
-                                  <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">
-                                    {p.brand}
-                                  </span>
-                                )}
-                                {p?.price && (
-                                  <span className="px-2 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full">
-                                    ₹{p.price}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                      
-                      {/* ✅ MOBILE VIEW ALL BUTTON */}
-                      <div className="mt-8 mb-4">
+                    
+                    {/* ✅ SIMPLE PRODUCT LIST */}
+                    <div className="divide-y divide-gray-100">
+                      {searchResults.map((p: any, index: number) => (
                         <button
-                          onClick={handleSearchSubmit}
-                          className="w-full py-4 px-4 bg-[#3f3cff] text-white font-bold rounded-2xl hover:bg-[#2a27cc] transition-colors flex items-center justify-center gap-3"
+                          key={index}
+                          onClick={() => handleSelectProduct(p)}
+                          className="w-full text-left p-3 hover:bg-gray-50 flex items-center gap-3 transition-colors"
                         >
-                          <Search className="w-6 h-6" />
-                          View All {searchResults.length} Products
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                          </svg>
+                          {/* ✅ SIMPLE IMAGE */}
+                          <div className="w-14 h-14 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                            {p?.images?.[0] ? (
+                              <Image
+                                src={p.images[0]}
+                                alt={p?.name || "Product"}
+                                width={56}
+                                height={56}
+                                className="w-14 h-14 object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/56x56?text=No+Image"
+                                }}
+                              />
+                            ) : p?.image ? (
+                              <Image
+                                src={p.image}
+                                alt={p?.name || "Product"}
+                                width={56}
+                                height={56}
+                                className="w-14 h-14 object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/56x56?text=No+Image"
+                                }}
+                              />
+                            ) : (
+                              <div className="w-14 h-14 flex items-center justify-center bg-gray-200">
+                                <ShoppingBag className="w-5 h-5 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* ✅ SIMPLE NAME ONLY */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 line-clamp-2">
+                              {p?.name || "Product"}
+                            </p>
+                          </div>
                         </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="py-20 text-center">
-                      <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center rounded-full bg-gray-100">
-                        <Search className="w-12 h-12 text-gray-400" />
-                      </div>
-                      <p className="text-xl font-bold text-gray-800 mb-2">No results found</p>
-                      <p className="text-gray-600 mb-6">Try different search terms</p>
-                      <button
-                        onClick={() => router.push("/product")}
-                        className="px-8 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                      >
-                        Browse Products
-                      </button>
+                      ))}
                     </div>
-                  )}
-                </div>
+                    
+                    {/* ✅ SIMPLE VIEW ALL */}
+                    <div className="px-4 py-3 border-t bg-gray-50">
+                     
+                    </div>
+                  </>
+                ) : (
+                  <div className="px-4 py-8 text-center">
+                    <Search className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-600 font-medium">No products found</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
