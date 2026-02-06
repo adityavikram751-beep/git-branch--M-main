@@ -403,7 +403,7 @@ export default function ProductDetail() {
         : ""
     }\n\nCan you please provide more details?`;
 
-    const phoneNumber = "919876543210";
+    const phoneNumber = "9818396703";
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
       message
     )}`;
