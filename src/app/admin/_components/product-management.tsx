@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +16,7 @@ import {
   ChevronsRight,
   ChevronLeft,
   ChevronRight,
+  ArrowRight,
 } from "lucide-react";
 import { AddProduct } from "./product-manage/AddProduct";
 import { EditProduct } from "./product-manage/EditProduct";
@@ -124,9 +125,12 @@ export function ProductManagement() {
   );
   const [isSelectAll, setIsSelectAll] = useState(false);
   const [isSelectAllGlobal, setIsSelectAllGlobal] = useState(false);
-  
-  // New state for manual page input
-  const [pageInput, setPageInput] = useState("");
+
+  // ✅ NEW: Page Jump Input State
+  const [pageJumpInput, setPageJumpInput] = useState("");
+
+  // ✅ NEW: Page Jump Input Ref
+  const pageJumpRef = useRef<HTMLInputElement>(null);
 
   const fetchAllProducts = async () => {
     setIsLoadingAll(true);
@@ -467,27 +471,25 @@ export function ProductManagement() {
     }
   };
 
-  // NEW: Handle manual page input with Enter key
-  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      const pageNum = parseInt(pageInput);
-      if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-        handlePageChange(pageNum);
-        setPageInput("");
-      } else {
-        toast.error(`Please enter a valid page number between 1 and ${totalPages}`);
-      }
+  // ✅ NEW: Handle Page Jump with GO button
+  const handlePageJump = () => {
+    const pageNum = parseInt(pageJumpInput);
+    if (isNaN(pageNum) || pageNum < 1 || pageNum > totalPages) {
+      toast.error(`Please enter a valid page number between 1 and ${totalPages}`);
+      setPageJumpInput("");
+      pageJumpRef.current?.focus();
+      return;
     }
+    
+    setCurrentPage(pageNum);
+    setPageJumpInput("");
+    toast.success(`Jumped to page ${pageNum}`);
   };
 
-  // NEW: Handle manual page input with Go button
-  const handleGoToPage = () => {
-    const pageNum = parseInt(pageInput);
-    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-      handlePageChange(pageNum);
-      setPageInput("");
-    } else {
-      toast.error(`Please enter a valid page number between 1 and ${totalPages}`);
+  // ✅ NEW: Handle Enter key press in page jump input
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handlePageJump();
     }
   };
 
@@ -910,68 +912,76 @@ export function ProductManagement() {
 
           {/* 🔥 FIXED: Pagination sirf tab dikhe jab no filter ho */}
           {shouldShowPagination && totalPages > 1 && (
-            <nav className="flex justify-center items-center gap-2 mt-4 flex-wrap">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage === 1}
-                className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
-                title="First Page"
-              >
-                <ChevronsLeft className="h-4 w-4" />
-                First
-              </button>
-
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200"
-                title="Previous Page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <span className="px-3 py-2 text-rose-700 font-medium">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              {/* NEW: Manual Page Input */}
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  value={pageInput}
-                  onChange={(e) => setPageInput(e.target.value)}
-                  onKeyDown={handlePageInputKeyDown}
-                  placeholder="Page"
-                  className="w-20 border-rose-200 focus:border-rose-500 focus:ring-rose-500 text-center"
-                  min="1"
-                  max={totalPages}
-                />
-                <Button
-                  onClick={handleGoToPage}
-                  className="bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-200 px-3 py-2"
+            <nav className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
+              {/* ✅ UPPER SECTION: Pagination Controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
+                  title="First Page"
                 >
-                  Go
-                </Button>
+                  <ChevronsLeft className="h-4 w-4" />
+                  First
+                </button>
+
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <span className="px-4 py-2 text-rose-700 font-medium bg-rose-50 rounded border border-rose-200">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
+                  title="Last Page"
+                >
+                  Last
+                  <ChevronsRight className="h-4 w-4" />
+                </button>
               </div>
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200"
-                title="Next Page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
-                title="Last Page"
-              >
-                Last
-                <ChevronsRight className="h-4 w-4" />
-              </button>
+              {/* ✅ NEW: Page Jump Section with GO button */}
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-rose-700 font-medium">
+                  Jump to page:
+                </div>
+                <div className="flex items-center gap-1">
+                  <Input
+                    ref={pageJumpRef}
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={pageJumpInput}
+                    onChange={(e) => setPageJumpInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Page "
+                    className="w-20 h-9 border-rose-300 focus:border-rose-500 focus:ring-rose-500 text-center"
+                  />
+                  <Button
+                    onClick={handlePageJump}
+                    className="h-9 px-4 bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                    GO
+                  </Button>
+                </div>
+              </div>
             </nav>
           )}
 
