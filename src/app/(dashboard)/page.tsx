@@ -473,7 +473,7 @@ export default function HomePage() {
   return (
     <div className="bg-white">
       {/* ================= HERO SECTION ================= */}
-      <section className="relative h-[80vh] md:h-screen w-full overflow-hidden">
+      <section className="relative h-[75vh] md:h-screen w-full overflow-hidden">
         <div className="relative h-full w-full">
           {heroSlides.map((slide, index) => (
             <div
@@ -484,18 +484,23 @@ export default function HomePage() {
                   : "opacity-0 z-0 pointer-events-none"
               }`}
             >
-              <div className="absolute inset-0">
+              {/* DESKTOP IMAGE */}
+              <div className="absolute inset-0 hidden md:block">
                 <img
                   src={slide.websiteImg}
                   alt={`Slide ${index + 1}`}
-                  className="hidden md:block w-full h-full object-cover"
+                  className="w-full h-full object-cover"
                 />
+              </div>
+
+              {/* ✅ MOBILE IMAGE - FULL PRODUCT VISIBLE BINA CUT HUE */}
+              <div className="absolute inset-0 md:hidden">
                 <img
                   src={slide.mobileImg}
                   alt={`Mobile Slide ${index + 1}`}
-                  className="md:hidden w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
-                <div className="absolute inset-0 md:bg-black/0 bg-black/40"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/20"></div>
               </div>
 
               <Link
@@ -503,7 +508,7 @@ export default function HomePage() {
                 className={`absolute z-10 hidden md:flex items-center gap-2 ${slide.buttonBg} ${slide.textColor}
                 px-6 py-3.5 rounded-lg font-bold text-lg
                 transition-all duration-300 hover:scale-105 hover:shadow-2xl`}
-                style={{ top: "48%", left: "7%" }}
+                style={{ top: "50%", left: "7%" }}
               >
                 <ShoppingBag size={20} />
                 {slide.buttonText}
@@ -572,7 +577,7 @@ export default function HomePage() {
       </section>
 
       {/* ================= BRANDS ================= */}
-      <section className="py-20 bg-yellow-50">
+      <section className="bg-yellow-50 py-20 md:py-20 -mt-16 md:mt-0 relative z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
             <div>
