@@ -731,7 +731,7 @@ const Brands = () => {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  placeholder="e.g., Nike, Adidas"
+                  placeholder="Cosmetic Brand Name"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
                   disabled={isMutating}
                 />
