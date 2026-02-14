@@ -60,10 +60,11 @@ export default function ProductCatalogClient({
   initialBrand,
 }: ProductCatalogClientProps) {
   const [products, setProducts] = useState<ProductItem[]>(initialProducts || []);
-  const [allProducts, setAllProducts] = useState<ProductItem[]>([]); // 🔥 NEW: All products for search
+  const [searchResults, setSearchResults] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingAll, setLoadingAll] = useState(false); // 🔥 NEW: Loading for all products
+  const [searchLoading, setSearchLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
   const [currentPage, setCurrentPage] = useState(initialPage || 1);
   const [totalPages, setTotalPages] = useState(initialTotalPages || 1);
@@ -83,57 +84,20 @@ export default function ProductCatalogClient({
 
   // ✅ CORRECTED API URL
   const API_URL = "https://barber-syndicate.vercel.app/api/v1/product/user-products";
+  const SEARCH_API_URL = "https://barber-syndicate.vercel.app/api/v1/product/search-product";
 
-  // 🔥 NEW: Fetch ALL products for search
-  const fetchAllProducts = useCallback(async () => {
-    if (loadingAll) return;
-    
-    setLoadingAll(true);
-    try {
-      let allFetchedProducts: ProductItem[] = [];
-      let page = 1;
-      let hasMore = true;
+  // ================= DEBOUNCE SEARCH TERM =================
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
 
-      while (hasMore) {
-        const params = new URLSearchParams();
-        params.append("page", page.toString());
-        params.append("limit", "100"); // Maximum limit
-
-        if (subcategoryId) params.append("subcategory", subcategoryId);
-        else if (categoryId) params.append("category", categoryId);
-        if (brandId) params.append("brand", brandId);
-
-        const res = await fetch(`${API_URL}?${params.toString()}`);
-        const data = await res.json();
-
-        if (data?.success) {
-          const pageProducts = (data?.products || []) as ProductItem[];
-          allFetchedProducts = [...allFetchedProducts, ...pageProducts];
-
-          if (page >= data?.totalPages || pageProducts.length === 0) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        } else {
-          hasMore = false;
-        }
-      }
-
-      console.log("✅ Total products fetched for search:", allFetchedProducts.length);
-      setAllProducts(allFetchedProducts);
-    } catch (err) {
-      console.error("Error fetching all products:", err);
-      setAllProducts([]);
-    } finally {
-      setLoadingAll(false);
-    }
-  }, [categoryId, subcategoryId, brandId]);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // ================= FETCH FILTER NAMES =================
   useEffect(() => {
     const fetchNames = async () => {
-      // Category
       if (categoryId) {
         try {
           const res = await fetch(
@@ -148,7 +112,6 @@ export default function ProductCatalogClient({
         setCategoryName("");
       }
 
-      // Subcategory
       if (subcategoryId) {
         try {
           const res = await fetch(
@@ -163,7 +126,6 @@ export default function ProductCatalogClient({
         setSubCategoryName("");
       }
 
-      // Brand
       if (brandId) {
         try {
           const res = await fetch(
@@ -218,44 +180,95 @@ export default function ProductCatalogClient({
     }
   };
 
-  // When filters change, fetch both paginated and all products
+  // ================= SEARCH PRODUCTS API =================
+  const searchProducts = useCallback(async (search: string) => {
+    if (!search.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      
+      const params = new URLSearchParams();
+      params.append("search", search);
+      
+      if (subcategoryId) params.append("subcategory", subcategoryId);
+      else if (categoryId) params.append("category", categoryId);
+      if (brandId) params.append("brand", brandId);
+
+      const res = await fetch(`${SEARCH_API_URL}?${params.toString()}`);
+      const data = await res.json();
+
+      if (data?.success) {
+        setSearchResults(data?.data || []);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (err) {
+      console.error("Search error:", err);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [categoryId, subcategoryId, brandId]);
+
+  // ================= Trigger search =================
+  useEffect(() => {
+    if (debouncedSearchTerm) {
+      searchProducts(debouncedSearchTerm);
+    } else {
+      setSearchResults([]);
+    }
+  }, [debouncedSearchTerm, searchProducts]);
+
+  // When filters change, fetch products
   useEffect(() => {
     fetchProducts(1);
-    fetchAllProducts();
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setSearchResults([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, subcategoryId, brandId]);
 
-  // 🔥 UPDATED: FRONTEND SEARCH (ALL FIELDS - PURE DATABASE)
-  const filteredProducts = useMemo(() => {
-    // If search is active, search in allProducts
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      return allProducts.filter((p) => {
-        const name = (p.name || "").toLowerCase();
-        const desc = (p.description || "").toLowerCase();
-        const brand = (p.brand || "").toLowerCase();
-        const keyFeature = (p.key_feature || "").toLowerCase();
-        
-        return (
-          name.includes(term) ||
-          desc.includes(term) ||
-          brand.includes(term) ||
-          keyFeature.includes(term)
-        );
-      });
+  // Show either search results or paginated products
+  const displayedProducts = useMemo(() => {
+    if (debouncedSearchTerm) {
+      return searchResults;
+    }
+    return products;
+  }, [debouncedSearchTerm, searchResults, products]);
+
+  const showLoading = loading || (debouncedSearchTerm && searchLoading);
+
+  // ================= SIMPLE PAGINATION =================
+  // Sirf 4 numbers dikhenge, jo current page ke around honge
+  const getPageNumbers = useCallback(() => {
+    if (totalPages <= 4) {
+      // Agar total pages 4 ya usse kam hai to saare dikhao
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    // Agar current page 1 ya 2 hai to [1,2,3,4] dikhao
+    if (currentPage <= 2) {
+      return [1, 2, 3, 4];
     }
     
-    // If no search, show paginated products
-    return products;
-  }, [searchTerm, products, allProducts]);
-
-  // 🔥 NEW: Show loading when fetching all products for search
-  const showLoading = loading || (searchTerm && loadingAll);
+    // Agar current page last page ya usse pehle hai to [last-3, last-2, last-1, last] dikhao
+    if (currentPage >= totalPages - 1) {
+      return [totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    
+    // Otherwise current page ke around 4 numbers dikhao
+    return [currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
+  }, [currentPage, totalPages]);
 
   // ================= ACTIONS =================
   const clearFilters = () => {
     router.push("/product");
     setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setSearchResults([]);
   };
 
   const removeFilter = (type: FilterType) => {
@@ -290,14 +303,14 @@ export default function ProductCatalogClient({
       return (
         <div className="flex items-center gap-1">
           <span className="text-sm text-gray-400">›</span>
-          <div className="flex items-center gap-1 bg-purple-50 px-3 py-1 rounded-md border border-purple-200">
-            <Tag className="h-3 w-3 text-purple-600" />
-            <span className="text-sm font-medium text-purple-600 capitalize">
+          <div className="flex items-center gap-1 bg-purple-50 px-2 sm:px-3 py-1 rounded-md border border-purple-200">
+            <Tag className="h-3 w-3 text-purple-600 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-purple-600 capitalize truncate max-w-[100px] sm:max-w-[150px]">
               {brandName}
             </span>
             <button
               onClick={() => removeFilter("brand")}
-              className="text-gray-400 hover:text-gray-600 ml-1"
+              className="text-gray-400 hover:text-gray-600 ml-1 flex-shrink-0"
             >
               <X className="h-3 w-3" />
             </button>
@@ -373,27 +386,31 @@ export default function ProductCatalogClient({
         </div>
       )}
 
-      {/* Search */}
-      <div className="sticky top-14 z-20 bg-[#FAF0E0]/90 backdrop-blur-sm py-6 flex justify-center px-4">
+      {/* Search - Hidden on mobile */}
+      <div className="hidden sm:flex sticky top-14 z-20 bg-[#FAF0E0]/90 backdrop-blur-sm py-6 justify-center px-4">
         <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
               type="text"
-              placeholder="Search Product by name, description, brand, features..."
+              placeholder="Search by keywords..."
               className="w-full py-2 pl-10 pr-10 rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-[#B30000] bg-white transition-all text-gray-700 text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
               <button
-                onClick={() => setSearchTerm("")}
+                onClick={() => {
+                  setSearchTerm("");
+                  setDebouncedSearchTerm("");
+                  setSearchResults([]);
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
-            {searchTerm && loadingAll && (
+            {searchTerm && searchLoading && (
               <div className="absolute right-10 top-1/2 -translate-y-1/2">
                 <Loader className="h-4 w-4 animate-spin text-[#B30000]" />
               </div>
@@ -411,20 +428,41 @@ export default function ProductCatalogClient({
         </div>
       </div>
 
-      {/* 🔥 NEW: Search Info */}
+      {/* Mobile search indicator */}
+      {searchTerm && (
+        <div className="sm:hidden bg-[#FAF0E0] py-2 px-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-[#B30000]" />
+              <span className="text-sm text-gray-600">
+                Searching: "<span className="font-semibold">{searchTerm}</span>"
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setDebouncedSearchTerm("");
+                setSearchResults([]);
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search Info */}
       {searchTerm && (
         <div className="container mx-auto px-4 mt-2">
           <div className="bg-white rounded-lg p-3 shadow-sm border">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                {loadingAll ? (
-                  "Loading all products for search..."
+                {searchLoading ? (
+                  "Searching products..."
                 ) : (
                   <>
-                    Searching across <span className="font-semibold">{allProducts.length}</span> products
-                    {filteredProducts.length > 0 && (
-                      <> • Found <span className="font-semibold text-[#B30000]">{filteredProducts.length}</span> matches</>
-                    )}
+                    Found <span className="font-semibold text-[#B30000]">{searchResults.length}</span> matches
                   </>
                 )}
               </div>
@@ -433,19 +471,20 @@ export default function ProductCatalogClient({
         </div>
       )}
 
-      {/* Products */}
+      {/* Products Grid */}
       <main className="container mx-auto px-4 py-8 flex-grow">
         {showLoading ? (
           <div className="flex justify-center py-20">
             <Loader className="animate-spin h-10 w-10 text-[#B30000]" />
             <span className="ml-3 text-gray-600">
-              {searchTerm ? "Searching all products..." : "Loading products..."}
+              {searchTerm ? "Searching..." : "Loading..."}
             </span>
           </div>
         ) : (
           <>
+            {/* Grid - 1,2,3,4,5 columns */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {filteredProducts.map((p) => (
+              {displayedProducts.map((p) => (
                 <ProductCard
                   key={p._id}
                   product={{
@@ -458,32 +497,30 @@ export default function ProductCatalogClient({
               ))}
             </div>
 
-            {/* 🔥 UPDATED: Pagination - Only show when NOT searching */}
+            {/* 🔥 SIMPLE PAGINATION - Sirf 4 Numbers */}
             {!searchTerm && totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-16 mb-12">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (num) => (
-                    <button
-                      key={num}
-                      onClick={() => {
-                        fetchProducts(num);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      className={`w-10 h-10 rounded-lg font-bold transition-all ${
-                        currentPage === num
-                          ? "bg-[#B30000] text-white shadow-md"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50"
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  )
-                )}
+                {getPageNumbers().map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => {
+                      fetchProducts(pageNum);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className={`w-10 h-10 rounded-lg font-bold transition-all ${
+                      currentPage === pageNum
+                        ? "bg-[#B30000] text-white shadow-md"
+                        : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
               </div>
             )}
 
-            {/* 🔥 UPDATED: Search Results Info */}
-            {searchTerm && filteredProducts.length === 0 && !loadingAll && (
+            {/* Empty States */}
+            {searchTerm && searchResults.length === 0 && !searchLoading && (
               <div className="text-center py-16">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                   <Search className="h-8 w-8 text-gray-400" />
@@ -495,7 +532,11 @@ export default function ProductCatalogClient({
                   No products found for "<span className="font-semibold">{searchTerm}</span>"
                 </p>
                 <button
-                  onClick={() => setSearchTerm("")}
+                  onClick={() => {
+                    setSearchTerm("");
+                    setDebouncedSearchTerm("");
+                    setSearchResults([]);
+                  }}
                   className="px-6 py-3 bg-[#B30000] text-white rounded-lg font-medium hover:bg-red-700"
                 >
                   Clear Search
@@ -503,8 +544,7 @@ export default function ProductCatalogClient({
               </div>
             )}
 
-            {/* No products without search */}
-            {!searchTerm && filteredProducts.length === 0 && (
+            {!searchTerm && displayedProducts.length === 0 && (
               <div className="text-center py-16">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                   <Search className="h-8 w-8 text-gray-400" />
