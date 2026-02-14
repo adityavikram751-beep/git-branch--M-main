@@ -1064,6 +1064,21 @@ const makeInfiniteSlides = (items: any[]) => {
   return [items[items.length - 1], ...items, items[0]]
 }
 
+/* ================= COLORFUL BADGE STYLES ================= */
+const getBadgeStyle = (index: number) => {
+  const styles = [
+    "bg-gradient-to-r from-red-500 to-pink-500",
+    "bg-gradient-to-r from-purple-500 to-indigo-500",
+    "bg-gradient-to-r from-blue-500 to-cyan-500",
+    "bg-gradient-to-r from-green-500 to-emerald-500",
+    "bg-gradient-to-r from-yellow-500 to-orange-500",
+    "bg-gradient-to-r from-pink-500 to-rose-500",
+    "bg-gradient-to-r from-indigo-500 to-purple-500",
+    "bg-gradient-to-r from-teal-500 to-green-500",
+  ]
+  return styles[index % styles.length]
+}
+
 /* ================= TYPES ================= */
 type BannerItem = {
   _id: string
@@ -1101,22 +1116,18 @@ export default function HomePage() {
 
   useEffect(() => {
     const handleResize = () => {
-      // categories
       if (window.innerWidth >= 1024) setCategorySlidesPerView(3)
       else if (window.innerWidth >= 640) setCategorySlidesPerView(2)
       else setCategorySlidesPerView(1)
 
-      // products
       if (window.innerWidth >= 1024) setProductSlidesPerView(3)
       else if (window.innerWidth >= 640) setProductSlidesPerView(2)
       else setProductSlidesPerView(1)
 
-      // brands
       if (window.innerWidth >= 1024) setBrandSlidesPerView(3)
       else if (window.innerWidth >= 640) setBrandSlidesPerView(2)
       else setBrandSlidesPerView(1)
 
-      // new arrival
       if (window.innerWidth >= 1024) setNewArrivalSlidesPerView(3)
       else if (window.innerWidth >= 640) setNewArrivalSlidesPerView(2)
       else setNewArrivalSlidesPerView(1)
@@ -1127,7 +1138,7 @@ export default function HomePage() {
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  /* ================= FETCH HERO BANNERS (GET + QUERY) ================= */
+  /* ================= FETCH HERO BANNERS ================= */
   useEffect(() => {
     const fetchHeroBanners = async () => {
       try {
@@ -1153,11 +1164,10 @@ export default function HomePage() {
     fetchHeroBanners()
   }, [])
 
-  /* ================= HERO SLIDES (MERGE WEBSITE + MOBILE) ================= */
+  /* ================= HERO SLIDES ================= */
   const heroLen = Math.max(heroWebsiteBanners.length, heroMobileBanners.length)
 
   const heroSlides = useMemo(() => {
-    // If API empty => fallback default
     if (!heroLen) return DEFAULT_HERO
 
     return Array.from({ length: heroLen }).map((_, i) => {
@@ -1205,12 +1215,10 @@ export default function HomePage() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        // ✅ PRODUCT API YAHA HAI BHAI
         const allProductsRes = await fetch(PRODUCT_API)
         const allProductsData = await allProductsRes.json()
         setAllProducts(allProductsData?.products || [])
 
-        // categories
         const categoriesRes = await fetch(`${BASE_URL}/api/v1/category`)
         const categoriesData = await categoriesRes.json()
         if (categoriesData.success && categoriesData.data) {
@@ -1223,12 +1231,10 @@ export default function HomePage() {
           setCategories(categoriesWithTrending)
         }
 
-        // brands
         const brandsRes = await fetch(`${BASE_URL}/api/v1/brands/getall`)
         const brandsData = await brandsRes.json()
         setBrands(brandsData?.data || [])
 
-        // new arrival products
         const newArrivalRes = await fetch(NEW_ARRIVAL_API)
         const newArrivalData = await newArrivalRes.json()
 
@@ -1249,7 +1255,7 @@ export default function HomePage() {
     fetchData()
   }, [PRODUCT_API, NEW_ARRIVAL_API, BASE_URL])
 
-  /* ================= INFINITE DATA (CLONED) ================= */
+  /* ================= INFINITE DATA ================= */
   const infiniteCategories = useMemo(
     () => makeInfiniteSlides(categories),
     [categories]
@@ -1264,37 +1270,7 @@ export default function HomePage() {
     [newArrivalProducts]
   )
 
-  /* ================= HELPER: GET KEY FEATURE FOR PRODUCTS ONLY ================= */
-  const getKeyFeatureForProduct = (product: any) => {
-    if (!product) return null
-    
-    // Sirf key_feature check karo (API response ke hisab se)
-    if (product.key_feature && product.key_feature.trim() !== "") {
-      return product.key_feature
-    }
-    
-    // Agar nahi hai to null
-    return null
-  }
-
-  /* ================= HELPER: GET FEATURE COLOR ================= */
-  const getFeatureColor = (feature: string) => {
-    const lowerFeature = feature.toLowerCase()
-    
-    if (lowerFeature.includes('new') || lowerFeature.includes('arrival')) {
-      return "bg-green-500"
-    } else if (lowerFeature.includes('best') || lowerFeature.includes('seller')) {
-      return "bg-yellow-500"
-    } else if (lowerFeature.includes('popular')) {
-      return "bg-purple-500"
-    } else if (lowerFeature.includes('premium') || lowerFeature.includes('featured')) {
-      return "bg-pink-500"
-    } else {
-      return "bg-blue-500"
-    }
-  }
-
-  /* ================= CATEGORY INFINITE SLIDER ================= */
+  /* ================= CATEGORY SLIDER ================= */
   const [categoryPos, setCategoryPos] = useState(1)
   const [catTransition, setCatTransition] = useState(true)
   const categorySlideWidth = 100 / categorySlidesPerView
@@ -1346,7 +1322,7 @@ export default function HomePage() {
   const handleCatNext = () => setCategoryPos((p) => p + 1)
   const handleCatPrev = () => setCategoryPos((p) => p - 1)
 
-  /* ================= BRAND INFINITE SLIDER ================= */
+  /* ================= BRAND SLIDER ================= */
   const [brandPos, setBrandPos] = useState(1)
   const [brandTransition, setBrandTransition] = useState(true)
   const brandSlideWidth = 100 / brandSlidesPerView
@@ -1398,7 +1374,7 @@ export default function HomePage() {
   const handleBrandNext = () => setBrandPos((p) => p + 1)
   const handleBrandPrev = () => setBrandPos((p) => p - 1)
 
-  /* ================= PRODUCT INFINITE SLIDER ================= */
+  /* ================= PRODUCT SLIDER ================= */
   const [productPos, setProductPos] = useState(1)
   const [prodTransition, setProdTransition] = useState(true)
   const productSlideWidth = 100 / productSlidesPerView
@@ -1450,7 +1426,7 @@ export default function HomePage() {
   const handleProdNext = () => setProductPos((p) => p + 1)
   const handleProdPrev = () => setProductPos((p) => p - 1)
 
-  /* ================= NEW ARRIVAL INFINITE SLIDER ================= */
+  /* ================= NEW ARRIVAL SLIDER ================= */
   const [newArrivalPos, setNewArrivalPos] = useState(1)
   const [newArrivalTransition, setNewArrivalTransition] = useState(true)
   const newArrivalSlideWidth = 100 / newArrivalSlidesPerView
@@ -1542,7 +1518,6 @@ export default function HomePage() {
                 <ArrowRight size={20} />
               </Link>
 
-              {/* MOBILE HERO TEXT */}
               <div className="absolute inset-0 flex md:hidden items-center justify-center px-4">
                 <div className="w-full max-w-md mx-auto">
                   <div className="text-center mb-8">
@@ -1814,7 +1789,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= NEW ARRIVAL PRODUCTS ================= */}
+      {/* ================= NEW ARRIVAL PRODUCTS - 🎯 SIRF API KEY_FEATURE ================= */}
       <section className="py-20 bg-yellow-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
@@ -1874,47 +1849,53 @@ export default function HomePage() {
                     }%)`,
                   }}
                 >
-                  {infiniteNewArrivals.map((p: any, i: number) => (
-                    <div
-                      key={`${p._id}-${i}`}
-                      style={{ minWidth: `${newArrivalSlideWidth}%` }}
-                      className="px-3"
-                    >
-                      <Link href={`/product/${p._id}`} className="block h-full">
-                        <div
-                          className="bg-white rounded-xl shadow-md overflow-hidden
-                          transition-all duration-300 hover:-translate-y-2 hover:shadow-xl
-                          h-[420px] flex flex-col cursor-pointer"
-                        >
-                          <div className="relative h-[220px] bg-gray-100 overflow-hidden">
-                            <img
-                              src={p.images?.[0] || "/placeholder.jpg"}
-                              alt={p.name}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
-                              New
-                            </span>
+                  {infiniteNewArrivals.map((p: any, i: number) => {
+                    // 🎯 SIRF API SE JO AAYE USI PE BADGE - agar empty hai toh kuch nahi
+                    const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
+                    
+                    return (
+                      <div
+                        key={`${p._id}-${i}`}
+                        style={{ minWidth: `${newArrivalSlideWidth}%` }}
+                        className="px-3"
+                      >
+                        <Link href={`/product/${p._id}`} className="block h-full">
+                          <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-[480px] flex flex-col cursor-pointer">
+                            <div className="relative h-[360px] bg-white overflow-hidden">
+                              <img
+                                src={p.images?.[0] || "/placeholder.jpg"}
+                                alt={p.name}
+                                className="w-full h-full object-contain"
+                                style={{ objectFit: 'contain' }}
+                              />
+                              
+                              {/* 🎯 BADGE SIRF TAB DIKHEGA JAB API SE key_feature AAYE */}
+                              {hasKeyFeature && (
+                                <div className="absolute top-4 left-4">
+                                  <span 
+                                    className={`${getBadgeStyle(i)} text-white text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-lg`}
+                                  >
+                                    {p.key_feature}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="p-6 flex flex-col flex-1">
+                              <h3 className="text-lg font-bold text-gray-900 mb-4 line-clamp-2 flex-grow">
+                                {p.name}
+                              </h3>
+
+                              <button className="w-full bg-black text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors">
+                                View Details
+                                <ArrowRight size={18} />
+                              </button>
+                            </div>
                           </div>
-
-                          <div className="p-5 flex flex-col flex-1">
-                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
-                              {p.name}
-                            </h3>
-
-                            <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
-                              {p.description}
-                            </p>
-
-                            <span className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium w-fit">
-                              View Details
-                              <ArrowRight size={14} />
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    </div>
-                  ))}
+                        </Link>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </div>
@@ -1926,7 +1907,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= PRODUCTS (SIRF YAHI SECTION CHANGE KIYA HAI) ================= */}
+      {/* ================= PRODUCTS - 🎯 SIRF API KEY_FEATURE ================= */}
       <section className="py-20 bg-[#f6dcc7]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
@@ -1989,8 +1970,8 @@ export default function HomePage() {
                   }}
                 >
                   {infiniteProducts.map((p: any, i: number) => {
-                    // ✅ SIRF PRODUCTS SECTION KE LIYE KEY FEATURE CHECK KARO
-                    const keyFeature = getKeyFeatureForProduct(p)
+                    // 🎯 SIRF API SE JO AAYE USI PE BADGE - agar empty hai toh kuch nahi
+                    const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
                     
                     return (
                       <div
@@ -1999,45 +1980,36 @@ export default function HomePage() {
                         className="px-3"
                       >
                         <Link href={`/product/${p._id}`} className="block h-full">
-                          <div
-                            className="bg-white rounded-xl shadow-md overflow-hidden
-                            transition-all duration-300
-                            hover:-translate-y-2 hover:shadow-xl
-                            h-[420px] flex flex-col
-                            cursor-pointer"
-                          >
-                            <div className="relative h-[220px] bg-gray-100 overflow-hidden">
+                          <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-[480px] flex flex-col cursor-pointer">
+                            <div className="relative h-[360px] bg-white overflow-hidden">
                               <img
                                 src={p.images?.[0] || "/placeholder.jpg"}
                                 alt={p.name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
+                                style={{ objectFit: 'contain' }}
                               />
-
-                              {/* ✅ SIRF YAHI PAR KEY FEATURE BADGE ADD KIYA HAI */}
-                              {keyFeature ? (
-                                <span className={`absolute top-3 right-3 ${getFeatureColor(keyFeature)} text-white text-xs px-3 py-1 rounded`}>
-                                  {keyFeature}
-                                </span>
-                              ) : (
-                                <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
-                                  Featured
-                                </span>
+                              
+                              {/* 🎯 BADGE SIRF TAB DIKHEGA JAB API SE key_feature AAYE */}
+                              {hasKeyFeature && (
+                                <div className="absolute top-4 left-4">
+                                  <span 
+                                    className={`${getBadgeStyle(i)} text-white text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-lg`}
+                                  >
+                                    {p.key_feature}
+                                  </span>
+                                </div>
                               )}
                             </div>
 
-                            <div className="p-5 flex flex-col flex-1">
-                              <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
+                            <div className="p-6 flex flex-col flex-1">
+                              <h3 className="text-lg font-bold text-gray-900 mb-4 line-clamp-2 flex-grow">
                                 {p.name}
                               </h3>
 
-                              <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
-                                {p.description}
-                              </p>
-
-                              <span className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium w-fit">
+                              <button className="w-full bg-black text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors">
                                 View Details
-                                <ArrowRight size={14} />
-                              </span>
+                                <ArrowRight size={18} />
+                              </button>
                             </div>
                           </div>
                         </Link>
