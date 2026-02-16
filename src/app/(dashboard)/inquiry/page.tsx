@@ -77,18 +77,17 @@ type ProductVariant = {
   variantSize?: string;
   variantColor?: string;
   price: number;
-  quantity: string; // Add quantity from API
+  quantity: string;
   stock?: number;
   images?: string[];
 };
 
-// New type for selected variant with quantity
 type SelectedVariantWithQty = {
   variantId: string;
   variantName: string;
   price: number;
-  quantity: string; // Keep as string from API
-  displayQuantity: string; // Display format
+  quantity: string;
+  displayQuantity: string;
 };
 
 export default function InquiryPage() {
@@ -102,7 +101,6 @@ export default function InquiryPage() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   
-  // New states for variant management
   const [productVariants, setProductVariants] = useState<Record<string, ProductVariant[]>>({});
   const [loadingVariants, setLoadingVariants] = useState<Record<string, boolean>>({});
   const [showAddVariant, setShowAddVariant] = useState<Record<string, boolean>>({});
@@ -475,7 +473,6 @@ export default function InquiryPage() {
         return;
       }
 
-      // Find the enquiry item
       const enquiryIndex = items.findIndex(item => item._id === enquiryId);
       if (enquiryIndex === -1) return;
 
@@ -484,11 +481,9 @@ export default function InquiryPage() {
       
       if (!variant) return;
 
-      // Calculate new quantity
       const currentQty = variant.qty;
       const newQty = currentQty - 1;
 
-      // Make API call first
       const res = await fetch(
         `https://barber-syndicate.vercel.app/api/v1/enquiry/remove?e_id=${enquiryId}&pos=${variantIndex}`,
         {
@@ -507,18 +502,14 @@ export default function InquiryPage() {
         throw new Error(data?.message || "Failed to decrease quantity");
       }
 
-      // If API call successful, update local state
       if (newQty <= 0) {
-        // Remove variant if quantity becomes 0 or less
         setItems(prev => {
           const newItems = [...prev];
           const itemToUpdate = { ...newItems[enquiryIndex] };
           
           if (itemToUpdate.variants.length === 1) {
-            // If this is the only variant, remove the entire enquiry
             newItems.splice(enquiryIndex, 1);
           } else {
-            // Remove just this variant
             itemToUpdate.variants = itemToUpdate.variants.filter((_, idx) => idx !== variantIndex);
             newItems[enquiryIndex] = itemToUpdate;
           }
@@ -526,7 +517,6 @@ export default function InquiryPage() {
           return newItems;
         });
       } else {
-        // Just update the quantity
         setItems(prev => {
           const newItems = [...prev];
           const itemToUpdate = { ...newItems[enquiryIndex] };
@@ -544,7 +534,6 @@ export default function InquiryPage() {
 
     } catch (err: any) {
       alert(err?.message || "Failed to decrease quantity");
-      // If API fails, refresh data from server
       fetchEnquiry();
     }
   };
@@ -552,7 +541,7 @@ export default function InquiryPage() {
   // ================== FETCH PRODUCT VARIANTS ==================
   const fetchProductVariants = async (productId: string) => {
     try {
-      if (productVariants[productId]) return; // Already fetched
+      if (productVariants[productId]) return;
       
       setLoadingVariants(prev => ({ ...prev, [productId]: true }));
       
@@ -569,7 +558,6 @@ export default function InquiryPage() {
 
       const data = await res.json();
       
-      // SUCCESS: Both res.ok and data.status === true
       if (res.ok && data?.status === true) {
         const variantsData = data.data || [];
         
@@ -580,7 +568,7 @@ export default function InquiryPage() {
             variantSize: v.variantSize,
             variantColor: v.variantColor,
             price: Number(v.price || 0),
-            quantity: v.quantity || "1", // Get quantity from API
+            quantity: v.quantity || "1",
             stock: v.stock || 0,
             images: v.images || [],
           }));
@@ -615,20 +603,12 @@ export default function InquiryPage() {
         return;
       }
 
-      // Use the selected quantity from the dropdown
       const quantity = selectedVariant.quantity;
       if (!quantity) {
         alert("Please select a valid quantity");
         return;
       }
 
-      console.log("=== ADD VARIANT DEBUG ===");
-      console.log("Product ID:", productId);
-      console.log("Enquiry ID:", enquiryId);
-      console.log("Selected variant:", selectedVariant);
-      console.log("Quantity:", quantity);
-
-      // Create payload as required by API
       const payload = {
         e_id: enquiryId,
         variants: [{
@@ -638,9 +618,6 @@ export default function InquiryPage() {
         }]
       };
 
-      console.log("Sending payload:", payload);
-
-      // Make API call
       const res = await fetch(
         `https://barber-syndicate.vercel.app/api/v1/enquiry/add-variants`,
         {
@@ -654,32 +631,22 @@ export default function InquiryPage() {
         }
       );
 
-      console.log("Response status:", res.status);
-
       try {
         const data = await res.json();
-        console.log("Response data:", data);
         
         if (res.ok && (data?.success || data?.status === true)) {
-          // Refresh enquiry data
           await fetchEnquiry();
-          
-          // Close add variant section
           setShowAddVariant(prev => ({ ...prev, [productId]: false }));
           setSelectedNewVariant(prev => ({ ...prev, [productId]: undefined as any }));
-          
           alert("✅ Variant added successfully!");
           return;
         } else {
           throw new Error(data?.message || "Failed to add variant");
         }
       } catch (jsonError) {
-        console.log("JSON parse error, trying text...");
         const text = await res.text();
-        console.log("Response text:", text);
         
         if (res.ok) {
-          // If response is OK but not JSON, assume success
           await fetchEnquiry();
           setShowAddVariant(prev => ({ ...prev, [productId]: false }));
           setSelectedNewVariant(prev => ({ ...prev, [productId]: undefined as any }));
@@ -747,7 +714,6 @@ export default function InquiryPage() {
         await fetchOrders();
       }
       
-      // Refresh cart after placing order
       fetchEnquiry();
       
     } catch (err: any) {
@@ -838,7 +804,6 @@ export default function InquiryPage() {
       [productId]: !prev[productId]
     }));
     
-    // Fetch variants if not already loaded
     if (!productVariants[productId]) {
       fetchProductVariants(productId);
     }
@@ -849,7 +814,6 @@ export default function InquiryPage() {
     const currentVariants = productCart.find(p => p.productId === productId)?.variants || [];
     const allVariants = productVariants[productId] || [];
     
-    // Filter out variants that are already in cart
     return allVariants.filter(variant => 
       !currentVariants.some(current => current._id === variant._id)
     );
@@ -857,10 +821,7 @@ export default function InquiryPage() {
 
   // ================== HANDLE VARIANT SELECTION ==================
   const handleVariantSelect = (productId: string, variant: ProductVariant) => {
-    // Parse the quantity from API response (e.g., "12pcs" or "carter")
     const quantity = variant.quantity || "1";
-    
-    // For display, show it as is (e.g., "12pcs")
     const displayQuantity = quantity;
     
     setSelectedNewVariant(prev => ({
@@ -979,7 +940,6 @@ export default function InquiryPage() {
                     0
                   );
 
-                  // Find the original enquiry for this product to get the enquiry ID
                   const originalEnquiry = items.find(
                     (item) => item.product._id === p.productId
                   );
@@ -1034,12 +994,16 @@ export default function InquiryPage() {
                       <CardContent className="pt-0">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                           <div className="space-y-3 sm:space-y-4">
-                            <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
-                              <img
-                                src={p.product.image || "/placeholder-image.jpg"}
-                                alt={p.product.name}
-                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                              />
+                            {/* ========== FIXED IMAGE SECTION - SIRF YAHAN CHANGE KIYA ========== */}
+                            {/* ZOOM WAISA HE RAHEGA, SIRF CUT NAHI HOGA */}
+                            <div className="relative w-full pt-[100%] bg-gray-50 rounded-lg overflow-hidden">
+                              <div className="absolute inset-0 p-3">
+                                <img
+                                  src={p.product.image || "/placeholder-image.jpg"}
+                                  alt={p.product.name}
+                                  className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+                                />
+                              </div>
                             </div>
                           </div>
 
@@ -1111,8 +1075,6 @@ export default function InquiryPage() {
                                     </div>
                                   </div>
                                 ))}
-
-                              
 
                                 {/* ADD VARIANT SECTION */}
                                 {showAddVariantSection && (

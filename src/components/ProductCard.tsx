@@ -5,7 +5,6 @@ import { ShoppingCart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
 import Link from "next/link";
 
 export interface Product {
@@ -97,14 +96,16 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
         <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-border bg-card">
           <CardContent className="p-0">
             <div className="flex flex-col sm:flex-row">
-              <div className="relative sm:w-48 h-48 sm:h-32 overflow-hidden">
-                <Image
-                  src={imageUrl}
-                  alt={name}
-                  fill
-                  className="object-cover hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-3 left-3 flex flex-col gap-1">
+              {/* FIXED: Similar to similar products card */}
+              <div className="relative sm:w-48 h-48 bg-gray-50 flex-shrink-0">
+                <div className="absolute inset-0 p-2">
+                  <img
+                    src={imageUrl}
+                    alt={name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
                   {keyFeature && keyFeature.trim() && (
                     <Badge className={`${keyFeatureColor} shadow-lg text-xs px-3 py-1`}>
                       {keyFeature}
@@ -151,18 +152,19 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
   // ===================== GRID VIEW =====================
   return (
     <Link href={productLink} className="group block">
-      <Card className="overflow-hidden hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border-border bg-card">
-        <CardContent className="p-0">
-          <div className="relative overflow-hidden">
-            <div className="aspect-[4/3] bg-muted">
+      <Card className="overflow-hidden hover:shadow-2xl transition-all duration-500 border-border bg-card h-full">
+        <CardContent className="p-0 h-full flex flex-col">
+          {/* FIXED: Exactly like similar products card */}
+          <div className="relative w-full pt-[100%] bg-gray-50 flex-shrink-0">
+            <div className="absolute inset-0 p-3">
               <img
                 src={imageUrl}
                 alt={name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
               />
             </div>
 
-            <div className="absolute top-3 left-3 flex flex-col gap-1">
+            <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
               {keyFeature && keyFeature.trim() && (
                 <Badge className={`${keyFeatureColor} shadow-lg text-xs px-3 py-1`}>
                   {keyFeature}
@@ -181,7 +183,7 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
             </div>
           </div>
 
-          <div className="p-3 space-y-2">
+          <div className="p-3 space-y-2 flex-1 flex flex-col">
             <div className="flex items-center justify-between">
               <Badge variant="outline" className="text-xs border-primary/20 text-primary">
                 {category}
@@ -192,11 +194,11 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
               {name}
             </h3>
 
-            <p className="text-muted-foreground line-clamp-2 min-h-[2rem] text-xs leading-relaxed">
+            <p className="text-muted-foreground line-clamp-2 min-h-[2rem] text-xs leading-relaxed flex-1">
               {shortDescription}
             </p>
 
-            <div className="pt-1">
+            <div className="pt-1 mt-auto">
               <Button
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300"
                 size="sm"

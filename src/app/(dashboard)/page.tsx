@@ -1648,7 +1648,7 @@ export default function HomePage() {
                       >
                         <div
                           className="bg-white rounded-xl shadow-md overflow-hidden
-                          transition-all duration-300 hover:-translate-y-2 hover:shadow-xl
+                          transition-all duration-300 hover:shadow-xl
                           h-[290px] flex flex-col cursor-pointer"
                         >
                           <div className="relative h-[240px] bg-gray-100 overflow-hidden">
@@ -1755,7 +1755,7 @@ export default function HomePage() {
                       >
                         <div
                           className="bg-white rounded-xl shadow-md overflow-hidden
-                          transition-all duration-300 hover:-translate-y-2 hover:shadow-xl
+                          transition-all duration-300 hover:shadow-xl
                           h-[290px] flex flex-col cursor-pointer"
                         >
                           <div className="relative h-[240px] bg-gray-100 overflow-hidden">
@@ -1789,7 +1789,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= NEW ARRIVAL PRODUCTS - 🎯 SIRF API KEY_FEATURE ================= */}
+      {/* ================= NEW ARRIVAL PRODUCTS - FIXED CARDS ================= */}
       <section className="py-20 bg-yellow-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
@@ -1850,7 +1850,6 @@ export default function HomePage() {
                   }}
                 >
                   {infiniteNewArrivals.map((p: any, i: number) => {
-                    // 🎯 SIRF API SE JO AAYE USI PE BADGE - agar empty hai toh kuch nahi
                     const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
                     
                     return (
@@ -1859,21 +1858,22 @@ export default function HomePage() {
                         style={{ minWidth: `${newArrivalSlideWidth}%` }}
                         className="px-3"
                       >
-                        <Link href={`/product/${p._id}`} className="block h-full">
-                          <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-[480px] flex flex-col cursor-pointer">
-                            <div className="relative h-[360px] bg-white overflow-hidden">
-                              <img
-                                src={p.images?.[0] || "/placeholder.jpg"}
-                                alt={p.name}
-                                className="w-full h-full object-contain"
-                                style={{ objectFit: 'contain' }}
-                              />
+                        <Link href={`/product/${p._id}`} className="block h-full group">
+                          <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-full flex flex-col">
+                            {/* FIXED: Image container - exactly like similar products card */}
+                            <div className="relative w-full pt-[100%] bg-gray-50">
+                              <div className="absolute inset-0 p-3">
+                                <img
+                                  src={p.images?.[0] || "/placeholder.jpg"}
+                                  alt={p.name}
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                />
+                              </div>
                               
-                              {/* 🎯 BADGE SIRF TAB DIKHEGA JAB API SE key_feature AAYE */}
                               {hasKeyFeature && (
-                                <div className="absolute top-4 left-4">
+                                <div className="absolute top-2 left-2">
                                   <span 
-                                    className={`${getBadgeStyle(i)} text-white text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-lg`}
+                                    className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}
                                   >
                                     {p.key_feature}
                                   </span>
@@ -1881,15 +1881,17 @@ export default function HomePage() {
                               )}
                             </div>
 
-                            <div className="p-6 flex flex-col flex-1">
-                              <h3 className="text-lg font-bold text-gray-900 mb-4 line-clamp-2 flex-grow">
+                            <div className="p-4 flex flex-col flex-1">
+                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
                                 {p.name}
                               </h3>
 
-                              <button className="w-full bg-black text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors">
-                                View Details
-                                <ArrowRight size={18} />
-                              </button>
+                              <div className="mt-auto">
+                                <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
+                                  View Details
+                                  <ArrowRight size={14} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </Link>
@@ -1907,7 +1909,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= PRODUCTS - 🎯 SIRF API KEY_FEATURE ================= */}
+      {/* ================= PRODUCTS - FIXED CARDS ================= */}
       <section className="py-20 bg-[#f6dcc7]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
@@ -1970,7 +1972,6 @@ export default function HomePage() {
                   }}
                 >
                   {infiniteProducts.map((p: any, i: number) => {
-                    // 🎯 SIRF API SE JO AAYE USI PE BADGE - agar empty hai toh kuch nahi
                     const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
                     
                     return (
@@ -1979,21 +1980,22 @@ export default function HomePage() {
                         style={{ minWidth: `${productSlideWidth}%` }}
                         className="px-3"
                       >
-                        <Link href={`/product/${p._id}`} className="block h-full">
-                          <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-[480px] flex flex-col cursor-pointer">
-                            <div className="relative h-[360px] bg-white overflow-hidden">
-                              <img
-                                src={p.images?.[0] || "/placeholder.jpg"}
-                                alt={p.name}
-                                className="w-full h-full object-contain"
-                                style={{ objectFit: 'contain' }}
-                              />
+                        <Link href={`/product/${p._id}`} className="block h-full group">
+                          <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-full flex flex-col">
+                            {/* FIXED: Image container - exactly like similar products card */}
+                            <div className="relative w-full pt-[100%] bg-gray-50">
+                              <div className="absolute inset-0 p-3">
+                                <img
+                                  src={p.images?.[0] || "/placeholder.jpg"}
+                                  alt={p.name}
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                />
+                              </div>
                               
-                              {/* 🎯 BADGE SIRF TAB DIKHEGA JAB API SE key_feature AAYE */}
                               {hasKeyFeature && (
-                                <div className="absolute top-4 left-4">
+                                <div className="absolute top-2 left-2">
                                   <span 
-                                    className={`${getBadgeStyle(i)} text-white text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-lg`}
+                                    className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}
                                   >
                                     {p.key_feature}
                                   </span>
@@ -2001,15 +2003,17 @@ export default function HomePage() {
                               )}
                             </div>
 
-                            <div className="p-6 flex flex-col flex-1">
-                              <h3 className="text-lg font-bold text-gray-900 mb-4 line-clamp-2 flex-grow">
+                            <div className="p-4 flex flex-col flex-1">
+                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
                                 {p.name}
                               </h3>
 
-                              <button className="w-full bg-black text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors">
-                                View Details
-                                <ArrowRight size={18} />
-                              </button>
+                              <div className="mt-auto">
+                                <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
+                                  View Details
+                                  <ArrowRight size={14} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </Link>

@@ -72,7 +72,7 @@ interface SimilarProduct {
   __v?: number;
 }
 
-// ✅ Enquiry structure
+// Enquiry structure
 interface EnquiryVariantItem {
   variantId: string;
   selectedQuantity: number;
@@ -115,7 +115,7 @@ export default function ProductDetail() {
   const API_URL = `https://barber-syndicate.vercel.app/api/v1/product/single/${id}`;
   const ENQUIRY_API_URL = "https://barber-syndicate.vercel.app/api/v1/enquiry";
 
-  // ✅ Variant change pe quantity reset
+  // Variant change pe quantity reset
   useEffect(() => {
     setQuantity(1);
   }, [selectedVariant]);
@@ -132,9 +132,6 @@ export default function ProductDetail() {
         setLoading(true);
         setError(null);
 
-        // ✅ Fix: API URL check
-        console.log("Fetching product from:", API_URL);
-
         const response = await fetch(API_URL, {
           method: "GET",
           headers: {
@@ -143,18 +140,14 @@ export default function ProductDetail() {
           },
         });
 
-        console.log("Response status:", response.status);
-
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log("API Response:", data);
 
         if (data.success && data.product) {
           const apiProduct: ApiProduct = data.product;
-          console.log("Product data received:", apiProduct);
 
           setProduct({
             id: apiProduct._id,
@@ -170,10 +163,9 @@ export default function ProductDetail() {
             points: apiProduct.points || [],
           });
 
-          // ✅ Similar products fetch
+          // Similar products fetch
           try {
             const SIMILAR_PRODUCTS_API = `https://barber-syndicate.vercel.app/api/v1/product/user-products?page=${currentPage}&limit=8`;
-            console.log("Fetching similar from:", SIMILAR_PRODUCTS_API);
             
             const similarResponse = await fetch(SIMILAR_PRODUCTS_API, {
               method: "GET",
@@ -185,12 +177,11 @@ export default function ProductDetail() {
 
             if (similarResponse.ok) {
               const similarData = await similarResponse.json();
-              console.log("Similar products response:", similarData);
 
               if (similarData.success && similarData.products) {
                 const filteredProducts = similarData.products.filter(
                   (p: SimilarProduct) => p._id !== apiProduct._id
-                ).slice(0, 4); // Limit to 4 similar products
+                ).slice(0, 4);
                 setSimilarProducts(filteredProducts);
                 setTotalPages(similarData.totalPages || 1);
               }
@@ -228,7 +219,7 @@ export default function ProductDetail() {
     if (quantity > 1) setQuantity((prev) => prev - 1);
   };
 
-  // ✅ helper: user enquiry fetch
+  // helper: user enquiry fetch
   const fetchUserEnquiries = async (token: string, userId: string) => {
     try {
       const res = await fetch(`${ENQUIRY_API_URL}/${userId}`, {
@@ -249,7 +240,7 @@ export default function ProductDetail() {
     }
   };
 
-  // ✅ FINAL ADD TO CART (MERGE QUANTITY)
+  // FINAL ADD TO CART (MERGE QUANTITY)
   const handleEnquiry = async () => {
     if (!product || !userId || !isAuthenticated) {
       setEnquiryError("Please login to create an enquiry");
@@ -289,7 +280,7 @@ export default function ProductDetail() {
         return enq.variants?.some((v) => v.variantId === selectedVariantData._id);
       });
 
-      // 🔥 IF FOUND => UPDATE QUANTITY (merge)
+      // IF FOUND => UPDATE QUANTITY (merge)
       if (foundSame) {
         const existingVariant = foundSame.variants.find(
           (v) => v.variantId === selectedVariantData._id
@@ -335,7 +326,7 @@ export default function ProductDetail() {
         return;
       }
 
-      // ✅ IF NOT FOUND => CREATE NEW ENTRY
+      // IF NOT FOUND => CREATE NEW ENTRY
       const totalPrice = unitPrice * qtySelected;
 
       const enquiryData = {
@@ -356,8 +347,6 @@ export default function ProductDetail() {
         ],
       };
 
-      console.log("Creating new enquiry:", enquiryData);
-
       const response = await fetch(ENQUIRY_API_URL, {
         method: "POST",
         headers: {
@@ -369,7 +358,6 @@ export default function ProductDetail() {
       });
 
       const data = await response.json();
-      console.log("Enquiry response:", data);
 
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Failed to create enquiry");
@@ -519,19 +507,21 @@ export default function ProductDetail() {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Images */}
+          {/* ==================== IMAGES SECTION - FIXED ==================== */}
           <div className="space-y-4">
+            {/* Main Image - Round round cut nahi hoga */}
             <div className="aspect-square rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-200">
               <img
                 src={product.images[selectedImage] || "https://via.placeholder.com/600x600?text=No+Image"}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain p-4"
                 onError={(e) => {
                   e.currentTarget.src = "https://via.placeholder.com/600x600?text=No+Image";
                 }}
               />
             </div>
 
+            {/* Thumbnails - Fixed */}
             {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-3">
                 {product.images.map((image, index) => (
@@ -547,7 +537,7 @@ export default function ProductDetail() {
                     <img
                       src={image}
                       alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain p-1"
                       onError={(e) => {
                         e.currentTarget.src = "https://via.placeholder.com/150x150?text=Image";
                       }}
@@ -558,7 +548,7 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Info */}
+          {/* Info Section */}
           <div className="space-y-6">
             <div>
               {product.isFeature && (
@@ -579,8 +569,6 @@ export default function ProductDetail() {
                   <Share2 className="h-5 w-5" />
                 </button>
               </div>
-
-            
 
               <p className="text-lg text-gray-600 leading-relaxed mb-4">
                 {product.description}
@@ -775,7 +763,7 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Similar Products */}
+        {/* ==================== SIMILAR PRODUCTS - FIXED ==================== */}
         {similarProducts.length > 0 && (
           <div className="mt-16">
             <h2 className="text-2xl font-bold text-gray-900 mb-8">
@@ -787,17 +775,20 @@ export default function ProductDetail() {
                 <Link
                   key={similarProduct._id}
                   href={`/product/${similarProduct._id}`}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden"
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden group"
                 >
-                  <div className="aspect-square relative overflow-hidden">
-                    <img
-                      src={similarProduct.images[0] || "https://via.placeholder.com/400x400?text=Product"}
-                      alt={similarProduct.name}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/400x400?text=Product";
-                      }}
-                    />
+                  {/* Fixed Image Container - Round round cut nahi hoga */}
+                  <div className="relative w-full pt-[100%] bg-gray-50">
+                    <div className="absolute inset-0 p-3">
+                      <img
+                        src={similarProduct.images[0] || "https://via.placeholder.com/400x400?text=Product"}
+                        alt={similarProduct.name}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.currentTarget.src = "https://via.placeholder.com/400x400?text=Product";
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div className="p-4">
