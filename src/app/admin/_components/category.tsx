@@ -586,6 +586,9 @@ export default function CategoryManagement() {
           catId: selectedCatId
         }
 
+        console.log("Updating subcategory with ID:", editingSubCategory)
+        console.log("Request body:", requestBody)
+
         const response = await fetch(`${API_URL}/subcategory/updatesubcat/${editingSubCategory}`, {
           method: "PUT",
           headers: {
@@ -596,19 +599,40 @@ export default function CategoryManagement() {
           body: JSON.stringify(requestBody),
         })
 
-        const contentType = response.headers.get("content-type")
-        if (!contentType || !contentType.includes("application/json")) {
-          const text = await response.text()
-          console.error("Non-JSON response:", text)
-          throw new Error("Server returned non-JSON response")
+        // Log the response status
+        console.log("Response status:", response.status)
+
+        // Try to get the response text first
+        const responseText = await response.text()
+        console.log("Response text:", responseText)
+
+        // Try to parse as JSON if possible
+        let data: any = {}
+        try {
+          data = JSON.parse(responseText)
+        } catch {
+          // If not JSON, use the text as message
+          console.log("Response is not JSON, using text")
         }
 
-        const data: ApiResponse<SubCategory> = await response.json()
-        if (!data.status || data.status !== "success") {
-          throw new Error(data.message || "Failed to update subcategory")
+        // Check if update was successful
+        if (response.ok || (data && (data.status === "success" || data.success))) {
+          setSuccess("Subcategory updated successfully!")
+          
+          // Reset form
+          setSubCatName("")
+          setSubCatTitle("")
+          setSelectedCatId("")
+          setSelectedSubCatImages([])
+          setEditingSubCategory(null)
+          
+          // Refresh subcategories
+          await fetchSubCategories()
+        } else {
+          // Handle error
+          const errorMessage = data.message || responseText || "Failed to update subcategory"
+          throw new Error(errorMessage)
         }
-
-        setSuccess("Subcategory updated successfully!")
       } else {
         // ADD mode - require image
         if (selectedSubCatImages.length === 0) {
@@ -660,11 +684,14 @@ export default function CategoryManagement() {
         }
       }
 
-      setSubCatName("")
-      setSubCatTitle("")
-      setSelectedCatId("")
-      setSelectedSubCatImages([])
-      setEditingSubCategory(null)
+      // Reset form for both add and edit success cases
+      if (!editingSubCategory) {
+        setSubCatName("")
+        setSubCatTitle("")
+        setSelectedCatId("")
+        setSelectedSubCatImages([])
+      }
+      
       await fetchSubCategories()
     } catch (err: unknown) {
       const errorMessage =
