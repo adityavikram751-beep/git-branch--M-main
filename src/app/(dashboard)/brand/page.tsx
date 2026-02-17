@@ -805,7 +805,7 @@ export default function CategoryPage() {
               <span className="font-semibold text-gray-800">Filters</span>
             </div>
             <span className="text-xs text-gray-500">
-              {selectedBrand ? "Selected" : ""}
+              {selectedBrand ? "Selected" : "All"}
             </span>
           </button>
         </div>
