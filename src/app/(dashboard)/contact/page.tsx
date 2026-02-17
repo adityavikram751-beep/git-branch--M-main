@@ -84,16 +84,41 @@ export default function ContactPage() {
               </div>
 
               <div className="space-y-10">
-                {/* Address */}
-                <div className="flex items-start gap-6 group">
-                  <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl">
-                    <MapPin size={28} />
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase font-black text-[#FFD700] tracking-[0.2em] mb-1">Visit Us</p>
-                    <p className="text-lg leading-snug font-medium">{loading ? "Fetching address..." : contactInfo?.address}</p>
-                  </div>
-                </div>
+               {/* Address */}
+<div className="flex items-start gap-6 group">
+  <a
+    href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl cursor-pointer hover:bg-[#FFD700]"
+    onClick={(e) => {
+      if (!contactInfo?.address) {
+        e.preventDefault();
+        alert("Address not available");
+      }
+    }}
+  >
+    <MapPin size={28} />
+  </a>
+  
+  <a
+    href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+    onClick={(e) => {
+      if (!contactInfo?.address) {
+        e.preventDefault();
+        alert("Address not available");
+      }
+    }}
+  >
+    <p className="text-xs uppercase font-black text-[#FFD700] tracking-[0.2em] mb-1">Visit Us</p>
+    <p className="text-lg leading-snug font-medium">
+      {loading ? "Fetching address..." : contactInfo?.address || "Address not available"}
+    </p>
+  </a>
+</div>
 
                 {/* Phone */}
                 <a href={`tel:${contactInfo?.phone}`} className="flex items-center gap-6 group cursor-pointer">
