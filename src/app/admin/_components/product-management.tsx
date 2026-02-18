@@ -1217,6 +1217,8 @@ interface ApiResponse {
 type StatusFilter = "all" | "active" | "inactive";
 type SortOption = "newest" | "oldest" | "a-z" | "z-a";
 
+const BASE_URL = "https://barber-syndicate.vercel.app/api/v1/product";
+
 /* ---------------- Utility functions ---------------- */
 const truncateText = (text: string, maxWords: number = 4): string => {
   if (!text) return "";
@@ -1226,15 +1228,34 @@ const truncateText = (text: string, maxWords: number = 4): string => {
 };
 
 const truncateProductName = (name: string): string => {
-  if (name.includes("XBS")) {
-    return truncateText(name, 5);
-  }
+  if (name.includes("XBS")) return truncateText(name, 5);
   return truncateText(name, 4);
 };
 
-const truncateDescription = (text: string): string => {
-  return truncateText(text, 3);
-};
+const truncateDescription = (text: string): string => truncateText(text, 3);
+
+const mapApiProduct = (apiProduct: ApiProduct): Product => ({
+  id: apiProduct._id,
+  name: apiProduct.name,
+  description: apiProduct.description,
+  brand: apiProduct.brand,
+  categoryId: apiProduct.categoryId,
+  subcategoryId: apiProduct.subcategoryId?._id || "",
+  subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
+  points: apiProduct.points || [],
+  isFeature: apiProduct.isFeature || false,
+  isFeatured: apiProduct.isFeature || false,
+  variants: (apiProduct.variants || []).map((v) => ({
+    price: v.price,
+    quantity: v.quantity,
+  })),
+  images: apiProduct.images || [],
+  image: apiProduct.images?.[0] || "",
+  isActivate: apiProduct.isActivate,
+  status: apiProduct.isActivate ? "active" : "inactive",
+  key_feature: apiProduct.key_feature || "",
+  createdAt: apiProduct.createdAt,
+});
 
 export function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -1251,80 +1272,62 @@ export function ProductManagement() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortOption, setSortOption] = useState<SortOption>("newest");
 
-  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
-    new Set()
-  );
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [isSelectAll, setIsSelectAll] = useState(false);
   const [isSelectAllGlobal, setIsSelectAllGlobal] = useState(false);
 
   const [pageJumpInput, setPageJumpInput] = useState("");
   const pageJumpRef = useRef<HTMLInputElement>(null);
 
+  const getHeaders = () => {
+    const adminToken = localStorage.getItem("adminToken");
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${adminToken}`,
+    };
+  };
+
+  // 🔥 FAST: Promise.all se saare pages PARALLEL fetch — sequential loop nahi!
   const fetchAllProducts = async () => {
     setIsLoadingAll(true);
+    setAllProducts([]);
     try {
       const adminToken = localStorage.getItem("adminToken");
-      if (!adminToken) {
-        console.error("No admin token found");
-        return;
-      }
+      if (!adminToken) return;
 
-      let allFetchedProducts: Product[] = [];
-      let page = 1;
-      let hasMore = true;
+      const headers = getHeaders();
 
-      while (hasMore) {
-        const response = await fetch(
-          `https://barber-syndicate.vercel.app/api/v1/product?page=${page}&limit=100`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${adminToken}`,
-            },
-          }
-        );
+      // Step 1: Pehla page fetch karo to get totalPages
+      const firstRes = await fetch(`${BASE_URL}?page=1&limit=100`, { headers });
+      if (!firstRes.ok) return;
 
-        if (!response.ok) {
-          console.error("Failed to fetch all products");
-          break;
-        }
+      const firstData: ApiResponse = await firstRes.json();
+      const firstPageProducts = firstData.products.map(mapApiProduct);
 
-        const data: ApiResponse = await response.json();
+      // Turant pehla page dikhao — user ko wait nahi karna
+      setAllProducts(firstPageProducts);
 
-        const mappedProducts: Product[] = data.products.map((apiProduct) => ({
-          id: apiProduct._id,
-          name: apiProduct.name,
-          description: apiProduct.description,
-          brand: apiProduct.brand,
-          categoryId: apiProduct.categoryId,
-          subcategoryId: apiProduct.subcategoryId?._id || "",
-          subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
-          points: apiProduct.points || [],
-          isFeature: apiProduct.isFeature || false,
-          isFeatured: apiProduct.isFeature || false,
-          variants: (apiProduct.variants || []).map((v) => ({
-            price: v.price,
-            quantity: v.quantity,
-          })),
-          images: apiProduct.images || [],
-          image: apiProduct.images?.[0] || "",
-          isActivate: apiProduct.isActivate,
-          status: apiProduct.isActivate ? "active" : "inactive",
-          key_feature: apiProduct.key_feature || "",
-          createdAt: apiProduct.createdAt,
-        }));
+      if (firstData.totalPages <= 1) return;
 
-        allFetchedProducts = [...allFetchedProducts, ...mappedProducts];
+      // Step 2: Baaki saare pages ek saath PARALLEL fetch karo
+      const remainingPageNums = Array.from(
+        { length: firstData.totalPages - 1 },
+        (_, i) => i + 2
+      );
 
-        if (page >= data.totalPages) {
-          hasMore = false;
-        } else {
-          page++;
-        }
-      }
+      const remainingResults = await Promise.all(
+        remainingPageNums.map((page) =>
+          fetch(`${BASE_URL}?page=${page}&limit=100`, { headers })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data: ApiResponse | null) =>
+              data ? data.products.map(mapApiProduct) : []
+            )
+        )
+      );
 
-      console.log("✅ Total products fetched:", allFetchedProducts.length);
-      setAllProducts(allFetchedProducts);
+      const allFetched = [...firstPageProducts, ...remainingResults.flat()];
+      console.log("✅ Total products fetched:", allFetched.length);
+      setAllProducts(allFetched);
     } catch (err) {
       console.error("Error fetching all products:", err);
     } finally {
@@ -1332,77 +1335,41 @@ export function ProductManagement() {
     }
   };
 
+  // Current page ke products turant fetch karo (pagination ke liye)
   const fetchProducts = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
       const adminToken = localStorage.getItem("adminToken");
+      if (!adminToken) throw new Error("Authentication required. Please log in.");
 
-      if (!adminToken) {
-        throw new Error("Authentication required. Please log in.");
-      }
-
-      const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product?page=${currentPage}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
+      const response = await fetch(`${BASE_URL}?page=${currentPage}`, {
+        headers: getHeaders(),
+      });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Unauthorized: Invalid or expired token");
-        }
+        if (response.status === 401) throw new Error("Unauthorized: Invalid or expired token");
         throw new Error("Failed to fetch products");
       }
 
       const data: ApiResponse = await response.json();
 
-      const sortedProducts = data.products.sort((a, b) => {
-        if (a.isActivate && !b.isActivate) return -1;
-        if (!a.isActivate && b.isActivate) return 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-
-      const mappedProducts: Product[] = sortedProducts.map((apiProduct) => {
-        return {
-          id: apiProduct._id,
-          name: apiProduct.name,
-          description: apiProduct.description,
-          brand: apiProduct.brand,
-          categoryId: apiProduct.categoryId,
-          subcategoryId: apiProduct.subcategoryId?._id || "",
-          subcategoryName: apiProduct.subcategoryId?.subCatName || "—",
-          points: apiProduct.points || [],
-          isFeature: apiProduct.isFeature || false,
-          isFeatured: apiProduct.isFeature || false,
-          variants: (apiProduct.variants || []).map((v) => ({
-            price: v.price,
-            quantity: v.quantity,
-          })),
-          images: apiProduct.images || [],
-          image: apiProduct.images?.[0] || "",
-          isActivate: apiProduct.isActivate,
-          status: apiProduct.isActivate ? "active" : "inactive",
-          key_feature: apiProduct.key_feature || "",
-          createdAt: apiProduct.createdAt,
-        };
-      });
+      const mappedProducts = data.products
+        .sort((a, b) => {
+          if (a.isActivate && !b.isActivate) return -1;
+          if (!a.isActivate && b.isActivate) return 1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        })
+        .map(mapApiProduct);
 
       setProducts(mappedProducts);
       setTotalPages(data.totalPages);
       setTotalResults(data.totalResults);
-      
       setSelectedProducts(new Set());
       setIsSelectAll(false);
       setIsSelectAllGlobal(false);
     } catch (err: any) {
-      const errorMessage =
-        err.message || "Failed to load products. Please try again later.";
+      const errorMessage = err.message || "Failed to load products. Please try again later.";
       setError(errorMessage);
       toast.error(errorMessage);
       console.error("Error fetching products:", err);
@@ -1419,71 +1386,50 @@ export function ProductManagement() {
     fetchAllProducts();
   }, [refreshTrigger]);
 
-  const handleAddProduct = (newProduct: Product) => {
-    setRefreshTrigger(prev => prev + 1);
+  const handleAddProduct = (_newProduct: Product) => {
+    setRefreshTrigger((prev) => prev + 1);
     toast.success("Product added successfully! Refreshing...");
   };
 
-  const handleUpdateProduct = (updatedProduct: Product) => {
-    setRefreshTrigger(prev => prev + 1);
+  const handleUpdateProduct = (_updatedProduct: Product) => {
+    setRefreshTrigger((prev) => prev + 1);
     toast.success("Product updated successfully! Refreshing...");
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    setRefreshTrigger(prev => prev + 1);
+  const handleDeleteProduct = (_productId: string) => {
+    setRefreshTrigger((prev) => prev + 1);
     toast.success("Product deleted successfully! Refreshing...");
   };
 
-  const handleToggleStatus = async (
-    productId: string,
-    currentIsActivate: boolean
-  ) => {
+  const handleToggleStatus = async (productId: string, currentIsActivate: boolean) => {
     try {
       const adminToken = localStorage.getItem("adminToken");
-      if (!adminToken) {
-        toast.error("Authentication required");
-        return;
-      }
+      if (!adminToken) { toast.error("Authentication required"); return; }
 
       const response = await fetch(
         `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${adminToken}`,
-          },
-          body: JSON.stringify({ 
-            id: [productId], 
-            status: !currentIsActivate 
-          }),
+          headers: getHeaders(),
+          body: JSON.stringify({ id: [productId], status: !currentIsActivate }),
         }
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", errorText);
-        throw new Error(
-          `Failed to update product status. Status: ${response.status}`
-        );
+        throw new Error(`Failed to update product status. Status: ${response.status}`);
       }
 
       const result = await response.json();
-
       if (result.success || result.message) {
-        setRefreshTrigger(prev => prev + 1);
-        
+        setRefreshTrigger((prev) => prev + 1);
         toast.success(
           result.message ||
-            `Product ${
-              !currentIsActivate ? "activated" : "deactivated"
-            } successfully! Refreshing...`
+            `Product ${!currentIsActivate ? "activated" : "deactivated"} successfully!`
         );
       } else {
         throw new Error(result.message || "Failed to update status");
       }
     } catch (error: any) {
-      console.error("Error updating product status:", error);
       toast.error(error.message || "Failed to update product status");
     }
   };
@@ -1493,13 +1439,9 @@ export function ProductManagement() {
       toast.error("Please select at least one product");
       return;
     }
-
     try {
       const adminToken = localStorage.getItem("adminToken");
-      if (!adminToken) {
-        toast.error("Authentication required");
-        return;
-      }
+      if (!adminToken) { toast.error("Authentication required"); return; }
 
       const productIds = Array.from(selectedProducts);
 
@@ -1507,41 +1449,28 @@ export function ProductManagement() {
         `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${adminToken}`,
-          },
-          body: JSON.stringify({
-            id: productIds,
-            status: activate
-          }),
+          headers: getHeaders(),
+          body: JSON.stringify({ id: productIds, status: activate }),
         }
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", errorText);
         throw new Error(`Failed to update product status. Status: ${response.status}`);
       }
 
       const result = await response.json();
-
       if (result.success || result.message) {
-        setRefreshTrigger(prev => prev + 1);
+        setRefreshTrigger((prev) => prev + 1);
         setSelectedProducts(new Set());
         setIsSelectAll(false);
         setIsSelectAllGlobal(false);
-
         toast.success(
-          `${productIds.length} product(s) ${
-            activate ? "activated" : "deactivated"
-          } successfully! Refreshing...`
+          `${productIds.length} product(s) ${activate ? "activated" : "deactivated"} successfully!`
         );
       } else {
         throw new Error(result.message || "Failed to update product statuses");
       }
     } catch (error: any) {
-      console.error("Error in bulk status toggle:", error);
       toast.error(error.message || "Failed to update product statuses");
     }
   };
@@ -1568,29 +1497,26 @@ export function ProductManagement() {
       newSelected.add(productId);
     }
     setSelectedProducts(newSelected);
-    
-    const currentFilteredIds = filteredProducts.map((p) => p.id);
-    const allSelected = currentFilteredIds.every(id => newSelected.has(id));
+    const allSelected = filteredProducts.every((p) => newSelected.has(p.id));
     setIsSelectAll(allSelected);
   };
 
   const handleSelectAll = () => {
     if (isSelectAll) {
       const newSelected = new Set(selectedProducts);
-      filteredProducts.forEach(p => newSelected.delete(p.id));
+      filteredProducts.forEach((p) => newSelected.delete(p.id));
       setSelectedProducts(newSelected);
+      setIsSelectAll(false);
     } else {
       const newSelected = new Set(selectedProducts);
-      filteredProducts.forEach(p => newSelected.add(p.id));
+      filteredProducts.forEach((p) => newSelected.add(p.id));
       setSelectedProducts(newSelected);
+      setIsSelectAll(true);
     }
-    setIsSelectAll(!isSelectAll);
   };
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   const handlePageJump = () => {
@@ -1601,16 +1527,13 @@ export function ProductManagement() {
       pageJumpRef.current?.focus();
       return;
     }
-    
     setCurrentPage(pageNum);
     setPageJumpInput("");
     toast.success(`Jumped to page ${pageNum}`);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handlePageJump();
-    }
+    if (e.key === "Enter") handlePageJump();
   };
 
   const handleRefresh = () => {
@@ -1618,104 +1541,110 @@ export function ProductManagement() {
     setSelectedProducts(new Set());
     setIsSelectAll(false);
     setIsSelectAllGlobal(false);
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
     toast.success("Refreshing products...");
   };
 
-  // 🔥 SORTING FUNCTION - Pure database ke saare products ko sort karta hai
   const sortProducts = (productList: Product[]): Product[] => {
     const sorted = [...productList];
-    
     switch (sortOption) {
       case "newest":
-        return sorted.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA; // Newest first
-        });
-      
+        return sorted.sort(
+          (a, b) =>
+            new Date(b.createdAt || 0).getTime() -
+            new Date(a.createdAt || 0).getTime()
+        );
       case "oldest":
-        return sorted.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateA - dateB; // Oldest first
-        });
-      
+        return sorted.sort(
+          (a, b) =>
+            new Date(a.createdAt || 0).getTime() -
+            new Date(b.createdAt || 0).getTime()
+        );
       case "a-z":
-        return sorted.sort((a, b) => 
+        return sorted.sort((a, b) =>
           a.name.toLowerCase().localeCompare(b.name.toLowerCase())
         );
-      
       case "z-a":
-        return sorted.sort((a, b) => 
+        return sorted.sort((a, b) =>
           b.name.toLowerCase().localeCompare(a.name.toLowerCase())
         );
-      
       default:
         return sorted;
     }
   };
 
-  // 🔥 MAIN FIX: Filter aur Sort - HAMESHA allProducts se karo
+  const hasFilter = !!(search || statusFilter !== "all" || sortOption !== "newest");
+
+  // 🔥 Filter logic:
+  // - Filter/search/sort active? → allProducts use karo (full dataset)
+  // - Koi filter nahi? → current page products turant dikhao (super fast!)
   const filteredProducts = useMemo(() => {
-    // Agar search ya filter active hai toh allProducts use karo
-    if (search || statusFilter !== "all" || sortOption !== "newest") {
-      let list = [...allProducts];
-      
-      // Status filter apply karo
+    if (hasFilter) {
+      // allProducts load ho rahe hain toh jo bhi available hai woh use karo
+      let list = allProducts.length > 0 ? [...allProducts] : [...products];
+
       if (statusFilter === "active") {
         list = list.filter((p) => p.isActivate === true);
       } else if (statusFilter === "inactive") {
         list = list.filter((p) => p.isActivate === false);
       }
-      
-      // Search filter apply karo
+
       const q = search.trim().toLowerCase();
       if (q.length > 0) {
-        list = list.filter((p) => {
-          const name = (p.name || "").toLowerCase();
-          const desc = (p.description || "").toLowerCase();
-          const sub = (p.subcategoryName || "").toLowerCase();
-          const brand = (p.brand || "").toLowerCase();
-          const keyFeature = (p.key_feature || "").toLowerCase();
-          return name.includes(q) || desc.includes(q) || sub.includes(q) || brand.includes(q) || keyFeature.includes(q);
-        });
+        list = list.filter(
+          (p) =>
+            (p.name || "").toLowerCase().includes(q) ||
+            (p.description || "").toLowerCase().includes(q) ||
+            (p.subcategoryName || "").toLowerCase().includes(q) ||
+            (p.brand || "").toLowerCase().includes(q) ||
+            (p.key_feature || "").toLowerCase().includes(q)
+        );
       }
-      
-      // Sort apply karo
+
       return sortProducts(list);
     }
-    
-    // Agar koi filter nahi hai toh current page ke products dikhaao (without sort)
+
+    // No filter = turant current page ke products
     return [...products];
   }, [products, allProducts, search, statusFilter, sortOption]);
 
-  // 🔥 FIXED: Pagination hide karna jab koi bhi filter/sort active ho
-  const shouldShowPagination = !search && statusFilter === "all" && sortOption === "newest";
+  const shouldShowPagination = !hasFilter;
 
   useEffect(() => {
     if (filteredProducts.length > 0) {
-      const allSelected = filteredProducts.every(p => selectedProducts.has(p.id));
+      const allSelected = filteredProducts.every((p) =>
+        selectedProducts.has(p.id)
+      );
       setIsSelectAll(allSelected);
-      
-      if (allProducts.length > 0 && selectedProducts.size === allProducts.length) {
-        setIsSelectAllGlobal(true);
-      } else {
-        setIsSelectAllGlobal(false);
-      }
+    }
+    if (allProducts.length > 0 && selectedProducts.size === allProducts.length) {
+      setIsSelectAllGlobal(true);
+    } else {
+      setIsSelectAllGlobal(false);
     }
   }, [filteredProducts, selectedProducts, allProducts]);
+
+  const sortLabel =
+    sortOption === "a-z"
+      ? "A-Z"
+      : sortOption === "z-a"
+      ? "Z-A"
+      : sortOption === "newest"
+      ? "Newest"
+      : "Oldest";
 
   return (
     <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-rose-900">
-            Product Management
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-900">Product Management</h1>
           <p className="text-rose-600">
             Manage your cosmetic product catalog
-            {isLoadingAll && <span className="ml-2 text-xs">(Loading all products...)</span>}
+            {isLoadingAll && (
+              <span className="ml-2 text-xs text-rose-400">
+                (Loading {allProducts.length > 0 ? `${allProducts.length}+` : "all"} products...)
+              </span>
+            )}
           </p>
         </div>
 
@@ -1736,7 +1665,6 @@ export function ProductManagement() {
                 <EyeOff className="h-4 w-4 mr-2" />
                 Deactivate ({selectedProducts.size})
               </Button>
-              
               <Button
                 onClick={handleSelectAllGlobal}
                 className="bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-200"
@@ -1762,9 +1690,7 @@ export function ProductManagement() {
             className="px-4 py-2 bg-rose-100 text-rose-700 rounded hover:bg-rose-200 transition-colors flex items-center gap-2 border border-rose-200"
             disabled={isLoading}
           >
-            <RefreshCw
-              className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </button>
 
@@ -1772,7 +1698,7 @@ export function ProductManagement() {
         </div>
       </header>
 
-      {isLoading && (
+      {isLoading && products.length === 0 && (
         <div className="flex justify-center items-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-700"></div>
         </div>
@@ -1790,48 +1716,44 @@ export function ProductManagement() {
             <Package className="h-5 w-5" /> Product Catalog
             {selectedProducts.size > 0 && (
               <span className="ml-2 text-sm font-normal text-rose-600">
-                ({selectedProducts.size} products selected)
+                ({selectedProducts.size} selected)
               </span>
             )}
           </CardTitle>
 
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+            {/* Search */}
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-rose-500" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={
-                  allProducts.length > 0 
-                    ? `Search across ${allProducts.length} products...` 
+                  allProducts.length > 0
+                    ? `Search across ${allProducts.length}${isLoadingAll ? "+" : ""} products...`
                     : "Search products..."
                 }
                 className="pl-9 border-rose-200 focus:border-rose-500 focus:ring-rose-500"
-                disabled={isLoadingAll}
               />
               {search && (
                 <span className="absolute right-3 top-2.5 text-xs text-rose-600 font-medium">
-                  {filteredProducts.length} found
+                  {filteredProducts.length} found{isLoadingAll ? "+" : ""}
                 </span>
               )}
             </div>
 
             <div className="flex gap-2">
-              {/* 🔥 Sort Dropdown - Pure database pe kaam karega */}
+              {/* Sort */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="border-rose-200 text-rose-700 hover:bg-rose-50 w-full md:w-auto"
+                    className="border-rose-200 text-rose-700 hover:bg-rose-50"
                   >
                     <ArrowUpDown className="h-4 w-4 mr-2" />
-                    Sort:{" "}
-                    <span className="ml-2 font-semibold capitalize">
-                      {sortOption === "a-z" ? "A-Z" : sortOption === "z-a" ? "Z-A" : sortOption}
-                    </span>
+                    Sort: <span className="ml-2 font-semibold">{sortLabel}</span>
                   </Button>
                 </DropdownMenuTrigger>
-
                 <DropdownMenuContent align="end" className="w-40">
                   <DropdownMenuItem
                     className="cursor-pointer"
@@ -1861,12 +1783,12 @@ export function ProductManagement() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Status Filter Dropdown */}
+              {/* Filter */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="border-rose-200 text-rose-700 hover:bg-rose-50 w-full md:w-auto"
+                    className="border-rose-200 text-rose-700 hover:bg-rose-50"
                   >
                     Filter:{" "}
                     <span className="ml-2 font-semibold capitalize">
@@ -1874,32 +1796,22 @@ export function ProductManagement() {
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-
                 <DropdownMenuContent align="end" className="w-40">
                   <DropdownMenuItem
                     className="cursor-pointer"
-                    onClick={() => {
-                      setStatusFilter("all");
-                      setCurrentPage(1);
-                    }}
+                    onClick={() => { setStatusFilter("all"); setCurrentPage(1); }}
                   >
                     All
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="cursor-pointer"
-                    onClick={() => {
-                      setStatusFilter("active");
-                      setCurrentPage(1);
-                    }}
+                    onClick={() => { setStatusFilter("active"); setCurrentPage(1); }}
                   >
                     Active
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="cursor-pointer"
-                    onClick={() => {
-                      setStatusFilter("inactive");
-                      setCurrentPage(1);
-                    }}
+                    onClick={() => { setStatusFilter("inactive"); setCurrentPage(1); }}
                   >
                     Inactive
                   </DropdownMenuItem>
@@ -1911,11 +1823,11 @@ export function ProductManagement() {
 
         <CardContent>
           <div className="w-full border border-rose-200 rounded-md overflow-hidden">
+            {/* Table Header */}
             <div className="grid grid-cols-[70px_50px_1.4fr_1fr_1.3fr_105px_70px] bg-white sticky top-0 z-30 border-b border-rose-200">
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Image
               </div>
-
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100 flex items-center justify-center">
                 <button
                   onClick={handleSelectAll}
@@ -1929,51 +1841,45 @@ export function ProductManagement() {
                   )}
                 </button>
               </div>
-
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Product
               </div>
-
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Subcategory
               </div>
-
               <div className="px-2 py-2 font-semibold text-rose-700 border-r border-rose-100">
                 Description
               </div>
-
               <div className="px-2 py-2 font-semibold text-rose-700">
                 Status
               </div>
-
               <div className="px-1 py-2 font-semibold text-rose-700">
                 Actions
               </div>
             </div>
 
+            {/* Table Body */}
             <div className="max-h-[520px] overflow-y-auto">
-              {isLoadingAll && (search || statusFilter !== "all" || sortOption !== "newest") ? (
+              {isLoading && products.length === 0 ? (
                 <div className="text-center text-rose-700 py-10">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-700 mx-auto mb-2"></div>
-                  Loading products for filter/sort...
+                  Loading products...
                 </div>
-              ) : filteredProducts.length === 0 && !isLoading ? (
+              ) : filteredProducts.length === 0 ? (
                 <div className="text-center text-rose-700 py-10">
-                  {search || statusFilter !== "all" || sortOption !== "newest"
-                    ? "No products found matching your criteria." 
+                  {hasFilter
+                    ? "No products found matching your criteria."
                     : "No products found."}
                 </div>
               ) : (
                 filteredProducts.map((product) => (
                   <div
                     key={product.id}
-                    className={`grid grid-cols-[70px_50px_1.4fr_1fr_1.3fr_90px_70px] items-center 
-                    border-b border-rose-200 hover:bg-rose-50/40 transition ${
-                      !product.isActivate
-                        ? "opacity-60 bg-gray-50"
-                        : "bg-white"
+                    className={`grid grid-cols-[70px_50px_1.4fr_1fr_1.3fr_90px_70px] items-center border-b border-rose-200 hover:bg-rose-50/40 transition ${
+                      !product.isActivate ? "opacity-60 bg-gray-50" : "bg-white"
                     }`}
                   >
+                    {/* Image */}
                     <div className="px-2 py-2 border-r border-rose-100">
                       {product.images && product.images.length > 0 ? (
                         <img
@@ -1988,6 +1894,7 @@ export function ProductManagement() {
                       )}
                     </div>
 
+                    {/* Checkbox */}
                     <div className="px-2 py-2 border-r border-rose-100 flex items-center justify-center">
                       <button
                         onClick={() => handleSelectProduct(product.id)}
@@ -2001,6 +1908,7 @@ export function ProductManagement() {
                       </button>
                     </div>
 
+                    {/* Product Name */}
                     <div className="px-4 py-4 border-r border-rose-100 min-w-0">
                       <div
                         className="font-medium text-rose-900 cursor-help truncate"
@@ -2008,13 +1916,11 @@ export function ProductManagement() {
                       >
                         {truncateProductName(product.name)}
                       </div>
-
                       {product.key_feature && product.key_feature.trim() && (
                         <span className="mt-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded inline-block mr-2">
                           {product.key_feature}
                         </span>
                       )}
-
                       {product.isFeature && (
                         <span className="mt-1 px-2 py-0.5 text-xs bg-rose-100 text-rose-700 rounded inline-block">
                           Featured
@@ -2022,6 +1928,7 @@ export function ProductManagement() {
                       )}
                     </div>
 
+                    {/* Subcategory */}
                     <div
                       className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 min-w-0"
                       title={product.subcategoryName || "—"}
@@ -2029,6 +1936,7 @@ export function ProductManagement() {
                       <div className="truncate">{product.subcategoryName || "—"}</div>
                     </div>
 
+                    {/* Description */}
                     <div
                       className="px-2 py-2 text-rose-700 hidden md:block border-r border-rose-100 min-w-0"
                       title={product.description}
@@ -2038,6 +1946,7 @@ export function ProductManagement() {
                       </div>
                     </div>
 
+                    {/* Status */}
                     <div className="px-2 py-2">
                       <Badge
                         className={`cursor-pointer ${
@@ -2046,16 +1955,14 @@ export function ProductManagement() {
                             : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                         }`}
                         onClick={() =>
-                          handleToggleStatus(
-                            product.id,
-                            product.isActivate || false
-                          )
+                          handleToggleStatus(product.id, product.isActivate || false)
                         }
                       >
                         {product.isActivate ? "Active" : "Inactive"}
                       </Badge>
                     </div>
 
+                    {/* Actions */}
                     <div className="px-2 py-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -2063,21 +1970,16 @@ export function ProductManagement() {
                             <MoreVertical className="h-4 w-4 text-rose-700" />
                           </button>
                         </DropdownMenuTrigger>
-
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuSeparator />
-
                           <EditProduct
                             product={{
                               ...product,
-                              image:
-                                product.image || product.images?.[0] || "",
+                              image: product.image || product.images?.[0] || "",
                             }}
                             onUpdateProduct={handleUpdateProduct}
                           />
-
                           <DropdownMenuSeparator />
-
                           <DeleteProduct
                             productId={product.id}
                             productName={product.name}
@@ -2092,7 +1994,7 @@ export function ProductManagement() {
             </div>
           </div>
 
-          {/* 🔥 Pagination sirf tab dikhe jab NO filter/sort ho */}
+          {/* Pagination — only jab koi filter/search/sort nahi */}
           {shouldShowPagination && totalPages > 1 && (
             <nav className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
               <div className="flex items-center gap-2">
@@ -2100,12 +2002,9 @@ export function ProductManagement() {
                   onClick={() => handlePageChange(1)}
                   disabled={currentPage === 1}
                   className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
-                  title="First Page"
                 >
-                  <ChevronsLeft className="h-4 w-4" />
-                  First
+                  <ChevronsLeft className="h-4 w-4" /> First
                 </button>
-
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
@@ -2113,11 +2012,9 @@ export function ProductManagement() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-
                 <span className="px-4 py-2 text-rose-700 font-medium bg-rose-50 rounded border border-rose-200">
                   Page {currentPage} of {totalPages}
                 </span>
-
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -2125,22 +2022,19 @@ export function ProductManagement() {
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
-
                 <button
                   onClick={() => handlePageChange(totalPages)}
                   disabled={currentPage === totalPages}
                   className="px-3 py-2 bg-rose-100 text-rose-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-200 transition-colors border border-rose-200 flex items-center gap-1"
-                  title="Last Page"
                 >
-                  Last
-                  <ChevronsRight className="h-4 w-4" />
+                  Last <ChevronsRight className="h-4 w-4" />
                 </button>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="text-sm text-rose-700 font-medium">
+                <span className="text-sm text-rose-700 font-medium">
                   Jump to page:
-                </div>
+                </span>
                 <div className="flex items-center gap-1">
                   <Input
                     ref={pageJumpRef}
@@ -2150,35 +2044,38 @@ export function ProductManagement() {
                     value={pageJumpInput}
                     onChange={(e) => setPageJumpInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Page "
+                    placeholder="Page"
                     className="w-20 h-9 border-rose-300 focus:border-rose-500 focus:ring-rose-500 text-center"
                   />
                   <Button
                     onClick={handlePageJump}
                     className="h-9 px-4 bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1"
                   >
-                    <ArrowRight className="h-4 w-4" />
-                    GO
+                    <ArrowRight className="h-4 w-4" /> GO
                   </Button>
                 </div>
               </div>
             </nav>
           )}
 
-          {/* 🔥 Filter/Sort status dikhaana */}
-          {(search || statusFilter !== "all" || sortOption !== "newest") && filteredProducts.length > 0 && (
+          {/* Filter info bar */}
+          {hasFilter && filteredProducts.length > 0 && (
             <div className="text-center text-rose-600 text-sm mt-4">
-              Showing {filteredProducts.length} product(s) 
+              Showing {filteredProducts.length}
+              {isLoadingAll ? "+" : ""} product(s)
               {search && ` matching "${search}"`}
               {statusFilter !== "all" && ` (${statusFilter} only)`}
-              {sortOption !== "newest" && ` - Sorted by ${sortOption === "a-z" ? "A-Z" : sortOption === "z-a" ? "Z-A" : sortOption}`}
+              {sortOption !== "newest" && ` · Sorted by ${sortLabel}`}
+              {isLoadingAll && (
+                <span className="text-rose-400"> · Loading more...</span>
+              )}
             </div>
           )}
-          
+
           {selectedProducts.size > 0 && (
             <div className="text-center text-rose-700 font-medium text-sm mt-4">
-              ⚡ {selectedProducts.size} product(s) selected - 
-              Ready for bulk actions!
+              ⚡ {selectedProducts.size} product(s) selected — Ready for bulk
+              actions!
             </div>
           )}
         </CardContent>

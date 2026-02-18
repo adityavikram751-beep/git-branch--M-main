@@ -134,7 +134,7 @@ export function EditProduct({
     brands: false,
   })
 
-  const BASE_URL = "https://barber-syndicate.vercel.app" // ✅ Local dev tunnel URL
+  const BASE_URL = "https://barber-syndicate.vercel.app" // ✅ Production URL
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -482,7 +482,11 @@ export function EditProduct({
       fd.append("key_feature", formData.key_feature)
       fd.append("keywords", JSON.stringify(keywordsArray))  // ✅ Send as JSON array
       fd.append("isFeature", String(formData.isFeature))
-      fd.append("positions", JSON.stringify(["0"]))
+      
+      // ✅ Dynamic positions array – only indices that are being replaced
+      const positionsArray = Object.keys(replacedFiles).map(idx => idx.toString())
+      fd.append("positions", JSON.stringify(positionsArray))
+
       fd.append("existingImages", JSON.stringify(imagePreviews.slice(0, MAX_IMAGES)))
 
       const replaceEntries = Object.entries(replacedFiles)
