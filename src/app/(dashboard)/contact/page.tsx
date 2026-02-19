@@ -105,7 +105,7 @@ export default function ContactPage() {
     href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
     target="_blank"
     rel="noopener noreferrer"
-    className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+    className="flex-1 cursor-pointer  transition-opacity"
     onClick={(e) => {
       if (!contactInfo?.address) {
         e.preventDefault();
