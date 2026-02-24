@@ -16,9 +16,12 @@ export default function ContactPage() {
     email: "",
     message: "",
   });
-  
+
   const [contactInfo, setContactInfo] = useState<ContactData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const API_BASE_URL = "https://barber-syndicate.vercel.app";
 
   useEffect(() => {
     const fetchContactData = async () => {
@@ -29,7 +32,7 @@ export default function ContactPage() {
           setContactInfo(result.data);
         }
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error fetching contact info:", error);
       } finally {
         setLoading(false);
       }
@@ -44,12 +47,39 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    alert("Thank you! Your message has been sent successfully. ✅");
-    setFormData({ name: "", phone: "", email: "", message: "" });
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/user/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+          phone: formData.phone,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.status === true) {
+        alert("✅ Thank you! Your message has been sent successfully.");
+        setFormData({ name: "", phone: "", email: "", message: "" });
+      } else {
+        alert(`❌ Error ${response.status}: ${result.message || "Something went wrong"}`);
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("❌ Network error. Please check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    // Background updated to yellow-50
     <section className="pt-36 pb-24 min-h-screen bg-yellow-50 px-4 overflow-hidden relative">
       
       {/* Background Decorative Elements */}
@@ -84,41 +114,41 @@ export default function ContactPage() {
               </div>
 
               <div className="space-y-10">
-               {/* Address */}
-<div className="flex items-start gap-6 group">
-  <a
-    href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl cursor-pointer hover:bg-[#FFD700]"
-    onClick={(e) => {
-      if (!contactInfo?.address) {
-        e.preventDefault();
-        alert("Address not available");
-      }
-    }}
-  >
-    <MapPin size={28} />
-  </a>
-  
-  <a
-    href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex-1 cursor-pointer  transition-opacity"
-    onClick={(e) => {
-      if (!contactInfo?.address) {
-        e.preventDefault();
-        alert("Address not available");
-      }
-    }}
-  >
-    <p className="text-xs uppercase font-black text-[#FFD700] tracking-[0.2em] mb-1">Visit Us</p>
-    <p className="text-lg leading-snug font-medium">
-      {loading ? "Fetching address..." : contactInfo?.address || "Address not available"}
-    </p>
-  </a>
-</div>
+                {/* Address */}
+                <div className="flex items-start gap-6 group">
+                  <a
+                    href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl cursor-pointer hover:bg-[#FFD700]"
+                    onClick={(e) => {
+                      if (!contactInfo?.address) {
+                        e.preventDefault();
+                        alert("Address not available");
+                      }
+                    }}
+                  >
+                    <MapPin size={28} />
+                  </a>
+                  
+                  <a
+                    href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 cursor-pointer transition-opacity"
+                    onClick={(e) => {
+                      if (!contactInfo?.address) {
+                        e.preventDefault();
+                        alert("Address not available");
+                      }
+                    }}
+                  >
+                    <p className="text-xs uppercase font-black text-[#FFD700] tracking-[0.2em] mb-1">Visit Us</p>
+                    <p className="text-lg leading-snug font-medium">
+                      {loading ? "Fetching address..." : contactInfo?.address || "Address not available"}
+                    </p>
+                  </a>
+                </div>
 
                 {/* Phone */}
                 <a href={`tel:${contactInfo?.phone}`} className="flex items-center gap-6 group cursor-pointer">
@@ -211,6 +241,7 @@ export default function ContactPage() {
                   rows={4}
                   onChange={handleChange}
                   value={formData.message}
+                  required
                   className="w-full py-3 bg-transparent border-b-2 border-gray-200 focus:border-[#B30000] outline-none transition-all text-gray-800 font-medium peer resize-none"
                   placeholder=" "
                 ></textarea>
@@ -219,11 +250,18 @@ export default function ContactPage() {
 
               <button
                 type="submit"
-                className="group relative w-full md:w-fit px-12 py-5 bg-[#B30000] text-white font-black rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-[0_20px_40px_rgba(179,0,0,0.3)] active:scale-95"
+                disabled={isSubmitting}
+                className="group relative w-full md:w-fit px-12 py-5 bg-[#B30000] text-white font-black rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-[0_20px_40px_rgba(179,0,0,0.3)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="absolute inset-0 w-0 bg-black transition-all duration-[0.4s] ease-out group-hover:w-full -z-0"></div>
                 <span className="relative z-10 flex items-center justify-center gap-3 tracking-widest uppercase">
-                  Send Message <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  {isSubmitting ? (
+                    "Sending..."
+                  ) : (
+                    <>
+                      Send Message <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                    </>
+                  )}
                 </span>
               </button>
             </form>
