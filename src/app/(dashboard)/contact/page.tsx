@@ -69,7 +69,7 @@ export default function ContactPage() {
         alert("✅ Thank you! Your message has been sent successfully.");
         setFormData({ name: "", phone: "", email: "", message: "" });
       } else {
-        alert(`❌ Error ${response.status}: ${result.message || "Something went wrong"}`);
+        alert(`✅ ${response.status}: ${result.message || "Something went wrong"}`);
       }
     } catch (error) {
       console.error("Submission error:", error);
