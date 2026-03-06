@@ -1481,102 +1481,105 @@ export default function HomePage() {
   return (
     <div className="bg-white">
       {/* ================= HERO SECTION ================= */}
-      <section className="relative h-[80vh] md:h-screen w-full overflow-hidden">
-        <div className="relative h-full w-full">
-          {heroSlides.map((slide, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 transition-opacity duration-1000 ${
-                index === heroIndex
-                  ? "opacity-100 z-10"
-                  : "opacity-0 z-0 pointer-events-none"
-              }`}
-            >
-              <div className="absolute inset-0">
-                <img
-                  src={slide.websiteImg}
-                  alt={`Slide ${index + 1}`}
-                  className="hidden md:block w-full h-full object-obtain"
-                />
-                <img
-                  src={slide.mobileImg}
-                  alt={`Mobile Slide ${index + 1}`}
-                  className="md:hidden w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 md:bg-black/0 bg-black/40"></div>
-              </div>
+<section className="relative min-h-[90vh] md:min-h-screen w-full overflow-hidden pt-16 md:pt-16">
+  <div className="relative h-full w-full min-h-[90vh] md:min-h-screen">
+    {heroSlides.map((slide, index) => (
+      <div
+        key={index}
+        className={`absolute inset-0 transition-opacity duration-1000 ${
+          index === heroIndex
+            ? "opacity-100 z-10"
+            : "opacity-0 z-0 pointer-events-none"
+        }`}
+      >
+        <div className="absolute inset-0">
+          <img
+            src={slide.websiteImg}
+            alt={`Slide ${index + 1}`}
+            className="hidden md:block w-full h-full object-cover"
+          />
+          <img
+            src={slide.mobileImg}
+            alt={`Mobile Slide ${index + 1}`}
+            className="md:hidden w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 md:bg-black/0 bg-black/40"></div>
+        </div>
 
-              <Link
-                href="/product"
-                className={`absolute z-10 hidden md:flex items-center gap-2 ${slide.buttonBg} ${slide.textColor}
-                px-6 py-3.5 rounded-lg font-bold text-lg
-                transition-all duration-300 hover:scale-105 hover:shadow-2xl`}
-                style={{ top: "48%", left: "7%" }}
-              >
-                <ShoppingBag size={20} />
-                {slide.buttonText}
-                <ArrowRight size={20} />
-              </Link>
+        {/* Desktop Button - Niche kiya gaya */}
+        <Link
+          href="/product"
+          className={`absolute z-10 hidden md:flex items-center gap-2 ${slide.buttonBg} ${slide.textColor}
+          px-8 py-4 rounded-lg font-bold text-lg
+          transition-all duration-300 hover:scale-105 hover:shadow-2xl`}
+          style={{ top: "55%", left: "7%" }}
+        >
+          <ShoppingBag size={20} />
+          {slide.buttonText}
+          <ArrowRight size={20} />
+        </Link>
 
-              <div className="absolute inset-0 flex md:hidden items-center justify-center px-4">
-                <div className="w-full max-w-md mx-auto">
-                  <div className="text-center mb-8">
-                    <h1 className="text-white text-2xl font-bold mb-4 leading-tight">
-                      {slide.mobile.title}
-                    </h1>
+        {/* Mobile Content - Niche kiya gaya */}
+        <div className="absolute inset-0 flex md:hidden items-end justify-center px-4 pb-20">
+          <div className="w-full max-w-md mx-auto">
+            <div className="text-center mb-10">
+              <h1 className="text-white text-3xl font-bold mb-4 leading-tight">
+                {slide.mobile.title}
+              </h1>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-10">
+              {slide.mobile.stats.map((stat, idx) => (
+                <div
+                  key={idx}
+                  className="bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md rounded-xl p-4 text-center border border-white/20"
+                >
+                  <div className="text-white text-xl font-bold">
+                    {stat.value}
                   </div>
-
-                  <div className="grid grid-cols-3 gap-3 mb-8">
-                    {slide.mobile.stats.map((stat, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-md rounded-xl p-3 text-center border border-white/20"
-                      >
-                        <div className="text-white text-lg font-bold">
-                          {stat.value}
-                        </div>
-                        <div className="text-white/90 text-xs font-medium mt-1">
-                          {stat.label}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mb-8">
-                    <Link
-                      href="/product"
-                      className={`inline-flex items-center justify-center gap-2
-                      ${slide.buttonBg} ${slide.textColor}
-                      px-6 py-3.5 rounded-xl font-bold text-sm w-full
-                      border-2 border-white/30`}
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      {slide.buttonText}
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
+                  <div className="text-white/90 text-xs font-medium mt-1">
+                    {stat.label}
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="absolute bottom-8 left-0 right-0 z-20">
-          <div className="flex justify-center gap-3">
-            {heroSlides.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setHeroIndex(i)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
-                  heroIndex === i
-                    ? "w-10 bg-white"
-                    : "w-3 bg-white/50 hover:bg-white/80"
-                }`}
-              />
-            ))}
+            <div className="mb-10">
+              <Link
+                href="/product"
+                className={`inline-flex items-center justify-center gap-2
+                ${slide.buttonBg} ${slide.textColor}
+                px-8 py-4 rounded-xl font-bold text-base w-full
+                border-2 border-white/30 shadow-lg`}
+              >
+                <ShoppingBag className="w-5 h-5" />
+                {slide.buttonText}
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+    ))}
+  </div>
+
+  {/* Dots bhi thoda upar kiya */}
+  <div className="absolute bottom-12 left-0 right-0 z-20">
+    <div className="flex justify-center gap-3">
+      {heroSlides.map((_, i) => (
+        <button
+          key={i}
+          onClick={() => setHeroIndex(i)}
+          className={`h-3 rounded-full transition-all duration-300 ${
+            heroIndex === i
+              ? "w-12 bg-white"
+              : "w-3 bg-white/50 hover:bg-white/80"
+          }`}
+        />
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* ================= BRANDS ================= */}
       <section className="py-20 bg-yellow-50">
