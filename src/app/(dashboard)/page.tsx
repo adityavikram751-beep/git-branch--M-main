@@ -1496,7 +1496,7 @@ export default function HomePage() {
                 <img
                   src={slide.websiteImg}
                   alt={`Slide ${index + 1}`}
-                  className="hidden md:block w-full h-full object-cover"
+                  className="hidden md:block w-full h-full object-obtain"
                 />
                 <img
                   src={slide.mobileImg}
