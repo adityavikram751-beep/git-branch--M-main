@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, LogIn, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { generateFCMToken } from "@/lib/fcm"; // 👈 Step 4: Import FCM function
 
 const LoginUI = () => {
   const [formData, setFormData] = useState({
@@ -74,10 +75,17 @@ const LoginUI = () => {
       // ✅ approved
       setSuccess(message);
 
-      // 🔥 FIRE EVENT (Header instantly update without refresh)
+      // 👇 Step 5: Generate FCM token (silent fail if error)
+      try {
+        await generateFCMToken();
+      } catch (fcmError) {
+        console.warn('FCM token generation failed, but login proceeds:', fcmError);
+      }
+
+      // 🔥 Notify header to update instantly
       window.dispatchEvent(new Event('authChanged'));
 
-      // ✅ redirect instantly
+      // ✅ redirect
       router.push('/');
     } catch (err: any) {
       console.error('Login error:', err);
