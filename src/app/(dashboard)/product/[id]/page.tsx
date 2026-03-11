@@ -112,6 +112,9 @@ export default function ProductDetail() {
   const [showEnquiryPopup, setShowEnquiryPopup] = useState(false);
   const [enquiryError, setEnquiryError] = useState<string | null>(null);
 
+  // Share modal
+  const [showShareModal, setShowShareModal] = useState(false);
+
   const API_URL = `https://barber-syndicate.vercel.app/api/v1/product/single/${id}`;
   const ENQUIRY_API_URL = "https://barber-syndicate.vercel.app/api/v1/enquiry";
 
@@ -398,19 +401,26 @@ export default function ProductDetail() {
     window.open(url, "_blank");
   };
 
+  // Updated share handler with fallback modal
   const handleShare = async () => {
     if (!product) return;
+
+    const shareData = {
+      title: product.name,
+      text: product.description,
+      url: window.location.href,
+    };
+
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: product.name,
-          text: product.description,
-          url: window.location.href,
-        });
-      } catch {}
+        await navigator.share(shareData);
+      } catch (error) {
+        // User cancelled share or error occurred
+        console.log('Share cancelled or failed', error);
+      }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert("Product URL copied to clipboard!");
+      // Fallback: show custom share modal
+      setShowShareModal(true);
     }
   };
 
@@ -426,7 +436,7 @@ export default function ProductDetail() {
     return prices.length > 0 ? Math.min(...prices) : 0;
   };
 
-  // Popup
+  // Popup for enquiry success
   const EnquirySuccessPopup = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl">
@@ -454,6 +464,89 @@ export default function ProductDetail() {
       </div>
     </div>
   );
+
+  // Custom share modal (fallback)
+  const ShareModal = () => {
+    if (!showShareModal || !product) return null;
+
+    const shareUrl = window.location.href;
+    const shareTitle = product.name;
+    const shareText = product.description;
+
+    const shareLinks = [
+      {
+        name: 'WhatsApp',
+        icon: '📱',
+        url: `https://wa.me/?text=${encodeURIComponent(shareTitle + ' - ' + shareUrl)}`,
+      },
+      {
+        name: 'Twitter',
+        icon: '🐦',
+        url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}`,
+      },
+      {
+        name: 'Facebook',
+        icon: '📘',
+        url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      },
+      {
+        name: 'Email',
+        icon: '📧',
+        url: `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareText + '\n\n' + shareUrl)}`,
+      },
+    ];
+
+    const copyToClipboard = () => {
+      navigator.clipboard.writeText(shareUrl);
+      alert('Link copied to clipboard!');
+      setShowShareModal(false);
+    };
+
+    return (
+      <div 
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" 
+        onClick={() => setShowShareModal(false)}
+      >
+        <div 
+          className="bg-white rounded-xl p-6 max-w-sm w-full" 
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Share this product</h3>
+            <button 
+              onClick={() => setShowShareModal(false)} 
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {shareLinks.map(link => (
+              <a
+                key={link.name}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowShareModal(false)}
+                className="flex flex-col items-center justify-center p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-2xl mb-1">{link.icon}</span>
+                <span className="text-sm font-medium">{link.name}</span>
+              </a>
+            ))}
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={copyToClipboard}
+              className="w-full py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>📋</span> Copy Link
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -496,6 +589,7 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-yellow-50">
       {showEnquiryPopup && <EnquirySuccessPopup />}
+      <ShareModal />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
