@@ -327,7 +327,7 @@ export default function ProductCatalogClient({
       {/* Header */}
       <div className="w-full bg-[#FAF3E0] py-4 flex justify-center border-b border-orange-100">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-[#B30000]">Barber Syndicate</h1>
+          <h1 className="text-2xl font-bold text-[#B30000]">Barber Syndicate </h1>
         </div>
       </div>
 
