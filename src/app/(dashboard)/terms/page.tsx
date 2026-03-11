@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
     () => [
       {
         id: "collect-info",
-        title: "What information do we collect from you?",
+        title: "What information do we collect from yous?",
         content: [
           "We may collect personal information such as your name, email address, phone number, and delivery address when you register or place an order.",
           "We also collect information related to your usage of our website such as pages visited, time spent, and device/browser details.",
@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
       },
       {
         id: "use-info",
-        title: "How we use information we collect?",
+        title: "How we use information we collects?",
         content: [
           "We use the collected information to process orders, provide customer support, and deliver products/services efficiently.",
           "We may also use your information to send important updates, offers, or service notifications.",
@@ -32,7 +32,7 @@ export default function PrivacyPolicyPage() {
       },
       {
         id: "secure-info",
-        title: "How we secure your information?",
+        title: "How we secure your informations?",
         content: [
           "We implement standard security measures to protect your personal information.",
           "Access to sensitive information is restricted and protected by authentication and encryption where applicable.",
@@ -41,7 +41,7 @@ export default function PrivacyPolicyPage() {
       },
       {
         id: "retain-info",
-        title: "How long we keep your information?",
+        title: "How long we keep your informations?",
         content: [
           "We retain your personal information only for as long as necessary to provide services and comply with legal obligations.",
           "If you request deletion of your data, we will remove it unless we are required to keep it for legal reasons.",
