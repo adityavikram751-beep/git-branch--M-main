@@ -36,7 +36,7 @@ interface Product {
   keywords?: string[]     // ✅ Changed to array
   isFeature?: boolean
   isFeatured?: boolean
-  variants?: { price: string; quantity: string }[]
+  variants?: { price: string; quantity: string; percentage?: string }[]  // ✅ Added percentage
   images?: string[]
 }
 
@@ -73,6 +73,7 @@ interface FormDataType {
 interface Variant {
   price: string
   quantity: string
+  percentage?: string    // ✅ New field for discount percentage
 }
 
 interface EditProductProps {
@@ -106,7 +107,15 @@ export function EditProduct({
     isFeature: product.isFeature || false,
   })
 
-  const [variants, setVariants] = useState<Variant[]>(product.variants || [])
+  // ✅ Initialize variants with percentage from existing data (if any)
+  const [variants, setVariants] = useState<Variant[]>(
+    product.variants?.map(v => ({ 
+      price: v.price || "", 
+      quantity: v.quantity || "", 
+      percentage: v.percentage || "" 
+    })) || []
+  )
+
   const [imagePreviews, setImagePreviews] = useState<string[]>(
     product.images && product.images.length > 0
       ? product.images.slice(0, MAX_IMAGES)
@@ -183,7 +192,15 @@ export function EditProduct({
           isFeature: p.isFeature === true || p.isFeature === "true",
         })
 
-        setVariants(p.variants || [])
+        // ✅ Set variants with percentage if present
+        setVariants(
+          p.variants?.map((v: any) => ({ 
+            price: v.price || "", 
+            quantity: v.quantity || "", 
+            percentage: v.percentage || "" 
+          })) || []
+        )
+
         const imgs =
           p.images && Array.isArray(p.images) && p.images.length > 0
             ? p.images
@@ -293,10 +310,10 @@ export function EditProduct({
     }
   }, [formData.categoryId, subcategories])
 
-  const addVariant = () => setVariants((prev) => [...prev, { price: "", quantity: "" }])
+  const addVariant = () => setVariants((prev) => [...prev, { price: "", quantity: "", percentage: "" }])
 
   const updateVariant = (index: number, field: keyof Variant, value: string) => {
-    if (field === "price" && value && !/^\d*\.?\d*$/.test(value)) return
+    if ((field === "price" || field === "percentage") && value && !/^\d*\.?\d*$/.test(value)) return
     setVariants((prev) => {
       const updated = [...prev]
       updated[index] = { ...updated[index], [field]: value }
@@ -434,9 +451,11 @@ export function EditProduct({
       return
     }
 
+    // ✅ Include percentage in cleaned variants
     const cleanedVariants = variants.map((v) => ({
       price: v.price || "0",
       quantity: (v.quantity || "").trim(),
+      percentage: v.percentage || "", // send empty string if not provided
     }))
 
     if (cleanedVariants.some((v) => !v.quantity)) {
@@ -476,7 +495,7 @@ export function EditProduct({
       fd.append("categoryId", formData.categoryId)
       fd.append("subcategoryId", formData.subcategoryId)
       fd.append("description", formData.description.trim())
-      fd.append("variants", JSON.stringify(cleanedVariants))
+      fd.append("variants", JSON.stringify(cleanedVariants))  // ✅ includes percentage
       fd.append("brand", formData.brand)
       fd.append("points", JSON.stringify(pointsArray))
       fd.append("key_feature", formData.key_feature)
@@ -529,7 +548,7 @@ export function EditProduct({
             keywords: keywordsArray,  // ✅ Store as array
             points: pointsArray,
             isFeature: formData.isFeature,
-            variants: cleanedVariants,
+            variants: cleanedVariants,  // ✅ includes percentage
             images: imagePreviews.slice(0, MAX_IMAGES),
             image: imagePreviews[0] || product.image || "",
           }
@@ -702,6 +721,7 @@ export function EditProduct({
             {/* Keywords Field - MULTIPLE KEYWORDS SUPPORT */}
             <div className="space-y-2">
               <Label htmlFor="keywords" className="text-sm font-medium text-gray-700">
+                Keywords (Comma separated for multiple keywords)
               </Label>
               <Input
                 id="keywords"
@@ -718,7 +738,6 @@ export function EditProduct({
                     type="button"
                     onClick={() => {
                       const current = formData.keywords
-                      // ✅ Multiple keywords support with comma
                       const newKeywords = current ? `${current}, ${tag}` : tag
                       setFormData({ ...formData, keywords: newKeywords })
                     }}
@@ -729,6 +748,7 @@ export function EditProduct({
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-1">
+                Enter multiple keywords separated by commas. Example: "Hair Gel, Styling, Strong Hold"
               </p>
             </div>
 
@@ -864,6 +884,15 @@ export function EditProduct({
                         value={v.quantity}
                         onChange={(e) => updateVariant(i, "quantity", e.target.value)}
                         className="flex-1 border-rose-200 focus:border-rose-500"
+                      />
+
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="%"
+                        value={v.percentage}
+                        onChange={(e) => updateVariant(i, "percentage", e.target.value)}
+                        className="w-20 border-rose-200 focus:border-rose-500" // small width for percentage
                       />
 
                       <Button

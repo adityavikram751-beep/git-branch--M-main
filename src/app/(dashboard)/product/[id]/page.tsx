@@ -34,6 +34,7 @@ export interface Product {
     variantColor?: string;
     variantSize?: string;
     variantSKU?: string;
+    percentage?: string; // ✅ Always string for consistency
   }[];
   points: string[];
 }
@@ -51,6 +52,7 @@ interface ApiProduct {
     variantColor?: string;
     variantSize?: string;
     variantSKU?: string;
+    percentage?: number | string; // API might send as number
   }[];
   description: string;
   isFeature: boolean;
@@ -67,7 +69,7 @@ interface SimilarProduct {
   description: string;
   isFeature: boolean;
   images: string[];
-  variants: { price: string; quantity: string; _id: string }[];
+  variants: { price: string; quantity: string; _id: string; percentage?: string }[];
   points: string[];
   __v?: number;
 }
@@ -118,6 +120,16 @@ export default function ProductDetail() {
   const API_URL = `https://barber-syndicate.vercel.app/api/v1/product/single/${id}`;
   const ENQUIRY_API_URL = "https://barber-syndicate.vercel.app/api/v1/enquiry";
 
+  // ✅ Helper to calculate effective price after percentage discount
+  const getEffectivePrice = (variant: { price: string; percentage?: string }) => {
+    const original = parseFloat(variant.price || "0");
+    const percent = parseFloat(variant.percentage || "0");
+    if (percent > 0) {
+      return original * (1 - percent / 100);
+    }
+    return original;
+  };
+
   // Variant change pe quantity reset
   useEffect(() => {
     setQuantity(1);
@@ -152,6 +164,7 @@ export default function ProductDetail() {
         if (data.success && data.product) {
           const apiProduct: ApiProduct = data.product;
 
+          // ✅ Convert percentage to string for consistent handling
           setProduct({
             id: apiProduct._id,
             name: apiProduct.name,
@@ -162,7 +175,10 @@ export default function ProductDetail() {
             images: apiProduct.images?.length > 0 
               ? apiProduct.images 
               : ["https://via.placeholder.com/600x600?text=No+Image"],
-            variants: apiProduct.variants || [],
+            variants: (apiProduct.variants || []).map(v => ({
+              ...v,
+              percentage: v.percentage?.toString() || "",
+            })),
             points: apiProduct.points || [],
           });
 
@@ -182,9 +198,17 @@ export default function ProductDetail() {
               const similarData = await similarResponse.json();
 
               if (similarData.success && similarData.products) {
-                const filteredProducts = similarData.products.filter(
-                  (p: SimilarProduct) => p._id !== apiProduct._id
-                ).slice(0, 4);
+                const filteredProducts = similarData.products
+                  .filter((p: any) => p._id !== apiProduct._id)
+                  .slice(0, 4)
+                  .map((p: any) => ({
+                    ...p,
+                    // ✅ Convert percentage to string in similar products as well
+                    variants: (p.variants || []).map((v: any) => ({
+                      ...v,
+                      percentage: v.percentage?.toString() || "",
+                    })),
+                  }));
                 setSimilarProducts(filteredProducts);
                 setTotalPages(similarData.totalPages || 1);
               }
@@ -243,7 +267,7 @@ export default function ProductDetail() {
     }
   };
 
-  // FINAL ADD TO CART (MERGE QUANTITY)
+  // FINAL ADD TO CART (MERGE QUANTITY) with discounted price
   const handleEnquiry = async () => {
     if (!product || !userId || !isAuthenticated) {
       setEnquiryError("Please login to create an enquiry");
@@ -271,7 +295,8 @@ export default function ProductDetail() {
         return;
       }
 
-      const unitPrice = Number(selectedVariantData.price || 0);
+      // ✅ Use effective price after discount
+      const unitPrice = getEffectivePrice(selectedVariantData);
       const qtySelected = Number(quantity || 1);
 
       // 1) GET existing enquiries
@@ -342,7 +367,7 @@ export default function ProductDetail() {
               selectedVariantData.variantName ||
               selectedVariantData.quantity ||
               "Default Variant",
-            price: String(unitPrice),
+            price: String(unitPrice), // ✅ Send discounted price
             quantity: selectedVariantData.quantity,
             selectedQuantity: qtySelected,
             totalPrice: String(totalPrice),
@@ -385,12 +410,13 @@ export default function ProductDetail() {
     const variantName =
       selectedOption.variantName || selectedOption.quantity || "Variant";
 
-    const unitPrice = Number(selectedOption.price || 0);
+    // ✅ Use effective price for WhatsApp message
+    const unitPrice = getEffectivePrice(selectedOption);
     const total = unitPrice * quantity;
 
     const message = `Hi! I'm interested in:\n\nProduct: ${product.name}\nVariant: ${variantName}\nQuantity: ${quantity} units\n${
       isAuthenticated
-        ? `Price per unit: ₹${unitPrice}\nTotal Price: ₹${total.toFixed(2)}`
+        ? `Price per unit: ₹${unitPrice.toFixed(2)}\nTotal Price: ₹${total.toFixed(2)}`
         : ""
     }\n\nCan you please provide more details?`;
 
@@ -428,12 +454,13 @@ export default function ProductDetail() {
     if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
   };
 
-  const getLowestPrice = (
-    variants: { price: string; quantity: string; _id: string }[]
+  // ✅ Get lowest effective price from variants for "From" display
+  const getLowestEffectivePrice = (
+    variants: { price: string; percentage?: string }[]
   ) => {
     if (!variants || variants.length === 0) return 0;
-    const prices = variants.map(v => parseFloat(v.price)).filter(p => !isNaN(p));
-    return prices.length > 0 ? Math.min(...prices) : 0;
+    const effectivePrices = variants.map(v => getEffectivePrice(v));
+    return effectivePrices.length > 0 ? Math.min(...effectivePrices) : 0;
   };
 
   // Popup for enquiry success
@@ -582,9 +609,8 @@ export default function ProductDetail() {
   }
 
   const selectedVariantData = product.variants[selectedVariant];
-  const totalPrice = selectedVariantData
-    ? Number(selectedVariantData.price || 0) * quantity
-    : 0;
+  const effectivePrice = selectedVariantData ? getEffectivePrice(selectedVariantData) : 0;
+  const totalPrice = effectivePrice * quantity;
 
   return (
     <div className="min-h-screen bg-yellow-50">
@@ -601,9 +627,9 @@ export default function ProductDetail() {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* ==================== IMAGES SECTION - FIXED ==================== */}
+          {/* ==================== IMAGES SECTION ==================== */}
           <div className="space-y-4">
-            {/* Main Image - Round round cut nahi hoga */}
+            {/* Main Image */}
             <div className="aspect-square rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-200">
               <img
                 src={product.images[selectedImage] || "https://via.placeholder.com/600x600?text=No+Image"}
@@ -615,7 +641,7 @@ export default function ProductDetail() {
               />
             </div>
 
-            {/* Thumbnails - Fixed */}
+            {/* Thumbnails */}
             {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-3">
                 {product.images.map((image, index) => (
@@ -693,51 +719,73 @@ export default function ProductDetail() {
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {product.variants.map((variant, index) => (
-                      <button
-                        key={variant._id}
-                        onClick={() => setSelectedVariant(index)}
-                        className={`p-4 border-2 rounded-xl text-left transition-all ${
-                          selectedVariant === index
-                            ? "border-purple-600 bg-purple-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-gray-900">
-                              {variant.variantName ||
-                                variant.quantity ||
-                                `Variant ${index + 1}`}
-                            </h4>
-                            {variant.variantColor && (
-                              <p className="text-sm text-gray-500 mt-1">
-                                Color: {variant.variantColor}
-                              </p>
-                            )}
-                            {variant.variantSize && (
-                              <p className="text-sm text-gray-500">
-                                Size: {variant.variantSize}
-                              </p>
+                    {product.variants.map((variant, index) => {
+                      const effective = getEffectivePrice(variant);
+                      const original = parseFloat(variant.price || "0");
+                      const hasDiscount = parseFloat(variant.percentage || "0") > 0;
+
+                      return (
+                        <button
+                          key={variant._id}
+                          onClick={() => setSelectedVariant(index)}
+                          className={`p-4 border-2 rounded-xl text-left transition-all ${
+                            selectedVariant === index
+                              ? "border-purple-600 bg-purple-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium text-gray-900">
+                                {variant.variantName ||
+                                  variant.quantity ||
+                                  `Variant ${index + 1}`}
+                              </h4>
+                              {variant.variantColor && (
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Color: {variant.variantColor}
+                                </p>
+                              )}
+                              {variant.variantSize && (
+                                <p className="text-sm text-gray-500">
+                                  Size: {variant.variantSize}
+                                </p>
+                              )}
+                            </div>
+
+                            {selectedVariant === index && (
+                              <Check className="h-5 w-5 text-purple-600" />
                             )}
                           </div>
 
-                          {selectedVariant === index && (
-                            <Check className="h-5 w-5 text-purple-600" />
-                          )}
-                        </div>
-
-                        <p
-                          className={`text-lg font-bold mt-3 ${
-                            isAuthenticated ? "text-purple-600" : "text-gray-400"
-                          }`}
-                        >
-                          {isAuthenticated
-                            ? `₹${parseFloat(variant.price || "0").toFixed(2)}`
-                            : "Login to view price"}
-                        </p>
-                      </button>
-                    ))}
+                          <div className="mt-3">
+                            {isAuthenticated ? (
+                              hasDiscount ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-lg font-bold text-purple-600">
+                                    ₹{effective.toFixed(2)}
+                                  </span>
+                                  <span className="text-sm text-gray-400 line-through">
+                                    ₹{original.toFixed(2)}
+                                  </span>
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                    {variant.percentage}% off
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-lg font-bold text-purple-600">
+                                  ₹{original.toFixed(2)}
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-lg font-bold text-gray-400">
+                                Login to view price
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -775,8 +823,7 @@ export default function ProductDetail() {
                           ₹{totalPrice.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          ₹{Number(selectedVariantData.price || 0).toFixed(2)} ×{" "}
-                          {quantity} units
+                          ₹{effectivePrice.toFixed(2)} × {quantity} units
                         </p>
                       </div>
                     )}
@@ -857,7 +904,7 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* ==================== SIMILAR PRODUCTS - FIXED ==================== */}
+        {/* ==================== SIMILAR PRODUCTS ==================== */}
         {similarProducts.length > 0 && (
           <div className="mt-16">
             <h2 className="text-2xl font-bold text-gray-900 mb-8">
@@ -865,47 +912,49 @@ export default function ProductDetail() {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {similarProducts.map((similarProduct) => (
-                <Link
-                  key={similarProduct._id}
-                  href={`/product/${similarProduct._id}`}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden group"
-                >
-                  {/* Fixed Image Container - Round round cut nahi hoga */}
-                  <div className="relative w-full pt-[100%] bg-gray-50">
-                    <div className="absolute inset-0 p-3">
-                      <img
-                        src={similarProduct.images[0] || "https://via.placeholder.com/400x400?text=Product"}
-                        alt={similarProduct.name}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.currentTarget.src = "https://via.placeholder.com/400x400?text=Product";
-                        }}
-                      />
+              {similarProducts.map((similarProduct) => {
+                const lowestPrice = getLowestEffectivePrice(similarProduct.variants);
+                return (
+                  <Link
+                    key={similarProduct._id}
+                    href={`/product/${similarProduct._id}`}
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden group"
+                  >
+                    <div className="relative w-full pt-[100%] bg-gray-50">
+                      <div className="absolute inset-0 p-3">
+                        <img
+                          src={similarProduct.images[0] || "https://via.placeholder.com/400x400?text=Product"}
+                          alt={similarProduct.name}
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://via.placeholder.com/400x400?text=Product";
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-2">
-                      {similarProduct.name}
-                    </h3>
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 mb-2">
+                        {similarProduct.name}
+                      </h3>
 
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                      {similarProduct.description}
-                    </p>
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                        {similarProduct.description}
+                      </p>
 
-                    <div
-                      className={`text-lg font-bold ${
-                        isAuthenticated ? "text-purple-600" : "text-gray-400"
-                      }`}
-                    >
-                      {isAuthenticated && similarProduct.variants.length > 0
-                        ? `From ₹${getLowestPrice(similarProduct.variants).toFixed(2)}`
-                        : "Login to view price"}
+                      <div
+                        className={`text-lg font-bold ${
+                          isAuthenticated ? "text-purple-600" : "text-gray-400"
+                        }`}
+                      >
+                        {isAuthenticated && similarProduct.variants.length > 0
+                          ? `From ₹${lowestPrice.toFixed(2)}`
+                          : "Login to view price"}
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
 
             {totalPages > 1 && (

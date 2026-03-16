@@ -35,7 +35,7 @@ interface Product {
   key_feature?: string
   keywords?: string[]    // ✅ Changed to array
   isFeature?: boolean
-  variants?: { price: string; quantity: string }[]
+  variants?: { price: string; quantity: string; percentage?: string }[]  // ✅ Added percentage
   images?: string[]
 }
 
@@ -73,6 +73,7 @@ interface FormData {
 interface Variant {
   price: string
   quantity: string
+  percentage?: string    // ✅ New field for discount percentage
 }
 
 interface AddProductProps {
@@ -94,7 +95,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     isFeature: false,
   })
 
-  const [variants, setVariants] = useState<Variant[]>([{ price: "", quantity: "" }])
+  const [variants, setVariants] = useState<Variant[]>([{ price: "", quantity: "", percentage: "" }]) // ✅ Added percentage
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -231,14 +232,17 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
   }
 
   const updateVariant = (index: number, field: keyof Variant, value: string) => {
-    if (field === "price" && value && !/^\d*\.?\d*$/.test(value)) return
+    // Allow only numbers and decimal for price and percentage
+    if (field === "price" || field === "percentage") {
+      if (value && !/^\d*\.?\d*$/.test(value)) return
+    }
     const updated = [...variants]
     updated[index][field] = value
     setVariants(updated)
   }
 
   const addVariant = () => {
-    setVariants((prev) => [...prev, { price: "", quantity: "" }])
+    setVariants((prev) => [...prev, { price: "", quantity: "", percentage: "" }])
   }
 
   const removeVariant = (index: number) => {
@@ -253,7 +257,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       setImages([])
       imagePreviews.forEach((url) => URL.revokeObjectURL(url))
       setImagePreviews([])
-      setVariants([{ price: "", quantity: "" }])
+      setVariants([{ price: "", quantity: "", percentage: "" }]) // ✅ Reset with percentage
       setFormData({
         name: "",
         description: "",
@@ -327,9 +331,11 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
           : []
       data.append("points", JSON.stringify(pointsArray))
 
+      // ✅ Include percentage in cleaned variants
       const cleanedVariants = variants.map((v) => ({
         price: v.price || "0",
         quantity: v.quantity,
+        percentage: v.percentage || "", // send empty string if not provided
       }))
       data.append("variants", JSON.stringify(cleanedVariants))
 
@@ -362,7 +368,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
           subcategoryId: formData.subcategoryId,
           points: pointsArray,
           isFeature: formData.isFeature,
-          variants: cleanedVariants,
+          variants: cleanedVariants,      // ✅ Now includes percentage
           images: result.images || result.data?.images || imagePreviews,
         }
 
@@ -629,6 +635,14 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
                     value={v.quantity}
                     onChange={(e) => updateVariant(i, "quantity", e.target.value)}
                     className="flex-1 border-rose-200 focus:border-rose-500"
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="%"
+                    value={v.percentage}
+                    onChange={(e) => updateVariant(i, "percentage", e.target.value)}
+                    className="w-20 border-rose-200 focus:border-rose-500" // small width for percentage
                   />
                   {variants.length > 1 && (
                     <Button
