@@ -101,7 +101,7 @@ const RegisterUI = () => {
       // Using FormData, so DON'T set Content-Type header
       // The browser will set it automatically with the correct boundary
       const res = await fetch(
-        'https://barber-syndicate.vercel.app/api/v1/user/singup',
+        'https://api.3846.in/api/v1/user/singup',
         {
           method: 'POST',
           // No Content-Type header for FormData - let browser set it

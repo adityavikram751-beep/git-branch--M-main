@@ -24,7 +24,7 @@ export const generateFCMToken = async () => {
     if (!authToken) return;
 
     await fetch(
-      "https://barber-syndicate.vercel.app/api/v1/user/save-fcm",
+      "https://api.3846.in/api/v1/user/save-fcm",
       {
         method: "POST",
         headers: {

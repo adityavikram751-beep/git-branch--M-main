@@ -40,7 +40,7 @@
 // //   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 // //   const [categorySearchTerm, setCategorySearchTerm] = useState('');
 
-// //   const BASE_URL = "https://barber-syndicate.vercel.app";
+// //   const BASE_URL = "https://api.3846.in";
 
 // //   // Data fetching
 // //   useEffect(() => {
@@ -547,7 +547,7 @@ export default function CategoryPage() {
 
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
 
-  const BASE_URL = "https://barber-syndicate.vercel.app";
+  const BASE_URL = "https://api.3846.in";
 
   // Data fetching
   useEffect(() => {

@@ -37,7 +37,7 @@ const ForgotPassword = () => {
     const payload = { phone: formData.phone };
 
     try {
-      const res = await fetch('https://barber-syndicate.vercel.app/api/v1/user/forget-password', {
+      const res = await fetch('https://api.3846.in/api/v1/user/forget-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -77,7 +77,7 @@ const ForgotPassword = () => {
     };
 
     try {
-      const res = await fetch('https://barber-syndicate.vercel.app/api/v1/user/verify', {
+      const res = await fetch('https://api.3846.in/api/v1/user/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -117,7 +117,7 @@ const ForgotPassword = () => {
     };
 
     try {
-      const res = await fetch('https://barber-syndicate.vercel.app/api/v1/user/change-password', {
+      const res = await fetch('https://api.3846.in/api/v1/user/change-password', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -85,7 +85,7 @@ const useBrands = () => {
     try {
       const headers = getAuthHeaders("json");
       const response = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/category",
+        "https://api.3846.in/api/v1/category",
         {
           method: "GET",
           headers: headers,
@@ -106,7 +106,7 @@ const useBrands = () => {
     try {
       const headers = getAuthHeaders("json");
       const response = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/subcategory/getSubCat",
+        "https://api.3846.in/api/v1/subcategory/getSubCat",
         {
           method: "GET",
           headers: headers,
@@ -130,7 +130,7 @@ const useBrands = () => {
 
       const headers = getAuthHeaders("json");
       const response = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/brands/getall",
+        "https://api.3846.in/api/v1/brands/getall",
         {
           method: "GET",
           headers: headers,
@@ -176,7 +176,7 @@ const useBrands = () => {
       const headers = getAuthHeaders("multipart");
 
       const response = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/brands",
+        "https://api.3846.in/api/v1/brands",
         {
           method: "POST",
           headers: headers,
@@ -231,7 +231,7 @@ const useBrands = () => {
       const headers = getAuthHeaders("multipart");
 
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/brands/${id}`,
+        `https://api.3846.in/api/v1/brands/${id}`,
         {
           method: "PUT",
           headers: headers,
@@ -272,7 +272,7 @@ const useBrands = () => {
       const headers = getAuthHeaders("json");
 
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/brands/delete-brand?brand_id=${id}`,
+        `https://api.3846.in/api/v1/brands/delete-brand?brand_id=${id}`,
         {
           method: "DELETE",
           headers,

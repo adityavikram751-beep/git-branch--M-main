@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://barber-syndicate.vercel.app',
+  baseURL: 'https://api.3846.in',
   headers: {
     'Content-Type': 'application/json',
   },

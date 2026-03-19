@@ -161,7 +161,7 @@
 
 //       while (hasMore) {
 //         const response = await fetch(
-//           `https://barber-syndicate.vercel.app/api/v1/product?page=${page}&limit=100`,
+//           `https://api.3846.in/api/v1/product?page=${page}&limit=100`,
 //           {
 //             headers: {
 //               "Content-Type": "application/json",
@@ -230,7 +230,7 @@
 //       }
 
 //       const response = await fetch(
-//         `https://barber-syndicate.vercel.app/api/v1/product?page=${currentPage}`,
+//         `https://api.3846.in/api/v1/product?page=${currentPage}`,
 //         {
 //           headers: {
 //             "Content-Type": "application/json",
@@ -333,7 +333,7 @@
 //       }
 
 //       const response = await fetch(
-//         `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
+//         `https://api.3846.in/api/v1/product/active-deactive`,
 //         {
 //           method: "PUT",
 //           headers: {
@@ -392,7 +392,7 @@
 //       const productIds = Array.from(selectedProducts);
 
 //       const response = await fetch(
-//         `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
+//         `https://api.3846.in/api/v1/product/active-deactive`,
 //         {
 //           method: "PUT",
 //           headers: {
@@ -1217,7 +1217,7 @@ interface ApiResponse {
 type StatusFilter = "all" | "active" | "inactive";
 type SortOption = "newest" | "oldest" | "a-z" | "z-a";
 
-const BASE_URL = "https://barber-syndicate.vercel.app/api/v1/product";
+const BASE_URL = "https://api.3846.in/api/v1/product";
 
 /* ---------------- Utility functions ---------------- */
 const truncateText = (text: string, maxWords: number = 4): string => {
@@ -1407,7 +1407,7 @@ export function ProductManagement() {
       if (!adminToken) { toast.error("Authentication required"); return; }
 
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
+        `https://api.3846.in/api/v1/product/active-deactive`,
         {
           method: "PUT",
           headers: getHeaders(),
@@ -1446,7 +1446,7 @@ export function ProductManagement() {
       const productIds = Array.from(selectedProducts);
 
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/active-deactive`,
+        `https://api.3846.in/api/v1/product/active-deactive`,
         {
           method: "PUT",
           headers: getHeaders(),

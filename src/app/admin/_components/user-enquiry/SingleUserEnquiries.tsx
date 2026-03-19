@@ -75,8 +75,8 @@ const SingleUserOrders = ({
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
 
-  const API_BASE_URL = "https://barber-syndicate.vercel.app/api/v1/order";
-  const CONFIRM_API_URL = "https://barber-syndicate.vercel.app/api/v1/order/confrim-order";
+  const API_BASE_URL = "https://api.3846.in/api/v1/order";
+  const CONFIRM_API_URL = "https://api.3846.in/api/v1/order/confrim-order";
 
   const fetchUserOrders = async () => {
     try {

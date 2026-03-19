@@ -41,12 +41,12 @@
 // }
 
 // export default function HomePage() {
-//   const BASE_URL = "https://barber-syndicate.vercel.app"
+//   const BASE_URL = "https://api.3846.in"
 //   const NEW_ARRIVAL_API = `${BASE_URL}/api/v1/product/new-arrival`
 //   const PRODUCT_API = `${BASE_URL}/api/v1/product/user-products?page=1`
 
 //   const HERO_API =
-//     "https://barber-syndicate.vercel.app/api/v1/banner/banner-for-ui"
+//     "https://api.3846.in/api/v1/banner/banner-for-ui"
 
 //   /* ================= HERO STATES ================= */
 //   const [heroIndex, setHeroIndex] = useState(0)
@@ -1088,12 +1088,12 @@ type BannerItem = {
 }
 
 export default function HomePage() {
-  const BASE_URL = "https://barber-syndicate.vercel.app"
+  const BASE_URL = "https://api.3846.in"
   const NEW_ARRIVAL_API = `${BASE_URL}/api/v1/product/new-arrival`
   const PRODUCT_API = `${BASE_URL}/api/v1/product/user-products?page=1`
 
   const HERO_API =
-    "https://barber-syndicate.vercel.app/api/v1/banner/banner-for-ui"
+    "https://api.3846.in/api/v1/banner/banner-for-ui"
 
   /* ================= HERO STATES ================= */
   const [heroIndex, setHeroIndex] = useState(0)

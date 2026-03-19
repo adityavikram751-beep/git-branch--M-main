@@ -21,12 +21,12 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const API_BASE_URL = "https://barber-syndicate.vercel.app";
+  const API_BASE_URL = "https://api.3846.in";
 
   useEffect(() => {
     const fetchContactData = async () => {
       try {
-        const response = await fetch('https://barber-syndicate.vercel.app/api/v1/admin/contact');
+        const response = await fetch('https://api.3846.in/api/v1/admin/contact');
         const result = await response.json();
         if (result.data) {
           setContactInfo(result.data);

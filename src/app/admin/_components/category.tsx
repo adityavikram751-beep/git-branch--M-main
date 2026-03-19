@@ -22,7 +22,7 @@ import {
   Upload,
 } from "lucide-react"
 
-const API_URL = "https://barber-syndicate.vercel.app/api/v1"
+const API_URL = "https://api.3846.in/api/v1"
 
 interface Category {
   _id: string

@@ -83,8 +83,8 @@ export default function ProductCatalogClient({
   const brandId = searchParams.get("brand") || initialBrand || null;
 
   // ✅ CORRECTED API URL
-  const API_URL = "https://barber-syndicate.vercel.app/api/v1/product/user-products";
-  const SEARCH_API_URL = "https://barber-syndicate.vercel.app/api/v1/product/search-product";
+  const API_URL = "https://api.3846.in/api/v1/product/user-products";
+  const SEARCH_API_URL = "https://api.3846.in/api/v1/product/search-product";
 
   // ================= DEBOUNCE SEARCH TERM =================
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function ProductCatalogClient({
       if (categoryId) {
         try {
           const res = await fetch(
-            `https://barber-syndicate.vercel.app/api/v1/category/${categoryId}`
+            `https://api.3846.in/api/v1/category/${categoryId}`
           );
           const data = await res.json();
           if (data?.success) setCategoryName(data?.data?.categoryname || "");
@@ -115,7 +115,7 @@ export default function ProductCatalogClient({
       if (subcategoryId) {
         try {
           const res = await fetch(
-            `https://barber-syndicate.vercel.app/api/v1/subcategory/${subcategoryId}`
+            `https://api.3846.in/api/v1/subcategory/${subcategoryId}`
           );
           const data = await res.json();
           if (data?.data) setSubCategoryName(data?.data?.subCatName || "");
@@ -129,7 +129,7 @@ export default function ProductCatalogClient({
       if (brandId) {
         try {
           const res = await fetch(
-            `https://barber-syndicate.vercel.app/api/v1/brand/${brandId}`
+            `https://api.3846.in/api/v1/brand/${brandId}`
           );
           const data = await res.json();
           if (data?.success)

@@ -106,7 +106,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
   const [subCategories, setSubCategories] = useState<SubCategory[]>([])
   const [isSubCatLoading, setIsSubCatLoading] = useState(false)
 
-  const BASE_URL = "https://barber-syndicate.vercel.app"
+  const BASE_URL = "https://api.3846.in"
 
   useEffect(() => {
     if (!isOpen) return
@@ -341,7 +341,7 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
 
       images.forEach((img) => data.append("image", img))
 
-      const res = await fetch(`https://barber-syndicate.vercel.app/api/v1/product`, {
+      const res = await fetch(`https://api.3846.in/api/v1/product`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: data,

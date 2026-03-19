@@ -46,7 +46,7 @@ export function DeleteProduct({
 
       // Make API call
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/${productId}`,
+        `https://api.3846.in/api/v1/product/${productId}`,
         {
           method: "DELETE",
           headers: {

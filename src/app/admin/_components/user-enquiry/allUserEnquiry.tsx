@@ -44,7 +44,7 @@ const AllUserOrders = ({
       setError(null);
 
       const response = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/order/userlist",
+        "https://api.3846.in/api/v1/order/userlist",
         {
           method: "GET",
           headers: {
@@ -90,7 +90,7 @@ const AllUserOrders = ({
 
       setModalLoading(true);
       const response = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/order/user/${userId}`,
+        `https://api.3846.in/api/v1/order/user/${userId}`,
         {
           method: "GET",
           headers: {
@@ -162,7 +162,7 @@ const AllUserOrders = ({
       setError(null);
 
       const response = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/order/delete-order",
+        "https://api.3846.in/api/v1/order/delete-order",
         {
           method: "DELETE",
           headers: {

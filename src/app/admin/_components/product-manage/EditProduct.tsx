@@ -143,7 +143,7 @@ export function EditProduct({
     brands: false,
   })
 
-  const BASE_URL = "https://barber-syndicate.vercel.app" // ✅ Production URL
+  const BASE_URL = "https://api.3846.in" // ✅ Production URL
 
   useEffect(() => {
     if (typeof window !== "undefined") {

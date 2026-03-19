@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Pencil, Save, X, Loader2 } from "lucide-react";
 
-const BASE_URL = "https://barber-syndicate.vercel.app";
+const BASE_URL = "https://api.3846.in";
 
 export default function ContactUs() {
   // YEH PROBLEM HAI - Hardcoded values hatado

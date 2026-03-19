@@ -42,7 +42,7 @@ const LoginUI = () => {
     }
 
     try {
-      const res = await fetch('https://barber-syndicate.vercel.app/api/v1/user/login', {
+      const res = await fetch('https://api.3846.in/api/v1/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

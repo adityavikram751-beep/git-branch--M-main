@@ -60,7 +60,7 @@ export default function Header() {
     try {
       // Fetch user data
       const userRes = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/user/single-user/${userId}`,
+        `https://api.3846.in/api/v1/user/single-user/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -83,7 +83,7 @@ export default function Header() {
     try {
       // Fetch enquiry count
       const enquiryRes = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/enquiry/${userId}`,
+        `https://api.3846.in/api/v1/enquiry/${userId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -205,7 +205,7 @@ export default function Header() {
         setSearchLoading(true)
 
         const res = await fetch(
-          `https://barber-syndicate.vercel.app/api/v1/product/search-product?search=${encodeURIComponent(
+          `https://api.3846.in/api/v1/product/search-product?search=${encodeURIComponent(
             q
           )}`
         )

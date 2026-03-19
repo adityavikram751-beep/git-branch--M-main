@@ -69,7 +69,7 @@ export default function CategoryPage() {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [openBrand, setOpenBrand] = useState<string | null>(null);
 
-  const BASE_URL = "https://barber-syndicate.vercel.app";
+  const BASE_URL = "https://api.3846.in";
 
   // 🔥 Dynamic Token
   const getToken = () => {

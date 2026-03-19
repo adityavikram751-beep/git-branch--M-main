@@ -25,7 +25,7 @@ type BannerUI = {
 }
 
 /* ---------------- API CONFIG ---------------- */
-const BASE_URL = "https://barber-syndicate.vercel.app"
+const BASE_URL = "https://api.3846.in"
 const API_GET_ALL = `${BASE_URL}/api/v1/banner/all`
 const API_ADD = `${BASE_URL}/api/v1/banner/add-banner`
 const API_DELETE = `${BASE_URL}/api/v1/banner/delete-banner`

@@ -49,9 +49,9 @@ interface Brand {
   name: string;
 }
 
-const PRODUCT_API_URL = "https://barber-syndicate.vercel.app/api/v1/product";
-const CATEGORY_API_URL = "https://barber-syndicate.vercel.app/api/v1/category";
-const BRAND_API_URL = "https://barber-syndicate.vercel.app/api/v1/brands/getall";
+const PRODUCT_API_URL = "https://api.3846.in/api/v1/product";
+const CATEGORY_API_URL = "https://api.3846.in/api/v1/category";
+const BRAND_API_URL = "https://api.3846.in/api/v1/brands/getall";
 
 async function fetchInitialProducts(
   page = 1,

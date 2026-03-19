@@ -111,7 +111,7 @@ export function UserRequests() {
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false)
   const [isActionLoading, setIsActionLoading] = useState(false)
 
-  const BASE_URL = "https://barber-syndicate.vercel.app/api/v1"
+  const BASE_URL = "https://api.3846.in/api/v1"
 
   useEffect(() => {
     fetchUsers()

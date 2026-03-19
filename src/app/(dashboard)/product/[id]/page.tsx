@@ -117,8 +117,8 @@ export default function ProductDetail() {
   // Share modal
   const [showShareModal, setShowShareModal] = useState(false);
 
-  const API_URL = `https://barber-syndicate.vercel.app/api/v1/product/single/${id}`;
-  const ENQUIRY_API_URL = "https://barber-syndicate.vercel.app/api/v1/enquiry";
+  const API_URL = `https://api.3846.in/api/v1/product/single/${id}`;
+  const ENQUIRY_API_URL = "https://api.3846.in/api/v1/enquiry";
 
   // ✅ Helper to calculate effective price after percentage discount
   const getEffectivePrice = (variant: { price: string; percentage?: string }) => {
@@ -184,7 +184,7 @@ export default function ProductDetail() {
 
           // Similar products fetch
           try {
-            const SIMILAR_PRODUCTS_API = `https://barber-syndicate.vercel.app/api/v1/product/user-products?page=${currentPage}&limit=8`;
+            const SIMILAR_PRODUCTS_API = `https://api.3846.in/api/v1/product/user-products?page=${currentPage}&limit=8`;
             
             const similarResponse = await fetch(SIMILAR_PRODUCTS_API, {
               method: "GET",

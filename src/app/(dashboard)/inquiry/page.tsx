@@ -225,7 +225,7 @@ export default function InquiryPage() {
       }
 
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/enquiry/${storedUserId}`,
+        `https://api.3846.in/api/v1/enquiry/${storedUserId}`,
         {
           method: "GET",
           headers: {
@@ -440,7 +440,7 @@ export default function InquiryPage() {
       await Promise.all(
         enquiryIds.map(async (eid) => {
           const res = await fetch(
-            `https://barber-syndicate.vercel.app/api/v1/enquiry/${eid}`,
+            `https://api.3846.in/api/v1/enquiry/${eid}`,
             {
               method: "DELETE",
               headers: {
@@ -485,7 +485,7 @@ export default function InquiryPage() {
       const newQty = currentQty - 1;
 
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/enquiry/remove?e_id=${enquiryId}&pos=${variantIndex}`,
+        `https://api.3846.in/api/v1/enquiry/remove?e_id=${enquiryId}&pos=${variantIndex}`,
         {
           method: "PUT",
           headers: {
@@ -546,7 +546,7 @@ export default function InquiryPage() {
       setLoadingVariants(prev => ({ ...prev, [productId]: true }));
       
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/product/get-variants/${productId}`,
+        `https://api.3846.in/api/v1/product/get-variants/${productId}`,
         {
           method: "GET",
           headers: {
@@ -619,7 +619,7 @@ export default function InquiryPage() {
       };
 
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/enquiry/add-variants`,
+        `https://api.3846.in/api/v1/enquiry/add-variants`,
         {
           method: "PUT",
           headers: {
@@ -691,7 +691,7 @@ export default function InquiryPage() {
       };
 
       const res = await fetch(
-        "https://barber-syndicate.vercel.app/api/v1/order/place-order",
+        "https://api.3846.in/api/v1/order/place-order",
         {
           method: "POST",
           headers: {
@@ -738,7 +738,7 @@ export default function InquiryPage() {
       }
 
       const res = await fetch(
-        `https://barber-syndicate.vercel.app/api/v1/order/user-orders/${storedUserId}`,
+        `https://api.3846.in/api/v1/order/user-orders/${storedUserId}`,
         {
           method: "GET",
           headers: {

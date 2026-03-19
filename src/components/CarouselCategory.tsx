@@ -18,7 +18,7 @@ export function CategoryCards() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch("https://barber-syndicate.vercel.app/api/v1/category")
+        const res = await fetch("https://api.3846.in/api/v1/category")
         const data = await res.json()
         if (data.success && Array.isArray(data.data)) {
           setCategories(data.data)
