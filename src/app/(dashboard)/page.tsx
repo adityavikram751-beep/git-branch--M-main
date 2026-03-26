@@ -1039,21 +1039,14 @@ import { ArrowRight, ShoppingBag } from "lucide-react"
 /* ================= HERO DEFAULT FALLBACK ================= */
 const DEFAULT_HERO = [
   {
-    websiteImg: "/hero/hero sliding 1.png",
-    mobileImg: "/hero/loreal poster 1.png",
+    websiteImg: "",
+    mobileImg: "",
     buttonText: "Explore Products",
     buttonBg: "bg-[#C2185B]",
     textColor: "text-white",
     mobile: {
-      title: "Experience salon-quality beauty with",
-      subtitle: "L'Oréal Paris",
-      description:
-        "Because You're Worth It — advanced skincare, makeup, and hair care crafted by experts.",
-      stats: [
-        { value: "500+", label: "Products" },
-        { value: "1000+", label: "Happy Clients" },
-        { value: "99%+", label: "Satisfaction" },
-      ],
+     
+      
     },
   },
 ]
@@ -1191,11 +1184,7 @@ export default function HomePage() {
           title: heroMobileBanners[i]?.title || "Explore Our Collection",
           subtitle: "",
           description: "",
-          stats: [
-            { value: "500+", label: "Products" },
-            { value: "1000+", label: "Happy Clients" },
-            { value: "99%+", label: "Satisfaction" },
-          ],
+        
         },
       }
     })
@@ -1524,24 +1513,11 @@ export default function HomePage() {
           <div className="w-full max-w-md mx-auto">
             <div className="text-center mb-10">
               <h1 className="text-white text-3xl font-bold mb-4 leading-tight">
-                {slide.mobile.title}
               </h1>
             </div>
 
             <div className="grid grid-cols-3 gap-3 mb-10">
-              {slide.mobile.stats.map((stat, idx) => (
-                <div
-                  key={idx}
-                  className="bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md rounded-xl p-4 text-center border border-white/20"
-                >
-                  <div className="text-white text-xl font-bold">
-                    {stat.value}
-                  </div>
-                  <div className="text-white/90 text-xs font-medium mt-1">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
+             
             </div>
 
             <div className="mb-10">

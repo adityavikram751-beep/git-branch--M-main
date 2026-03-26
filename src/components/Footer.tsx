@@ -122,8 +122,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-[13px] font-bold">
           <p className="tracking-wide">© 2025 Barber Syndicate. All rights reserved.</p>
           <div className="flex flex-wrap justify-center gap-6">
-            <span className="bg-white/10 px-4 py-1.5 rounded-md border border-white/20">GST: 07AABCU9603R1ZX</span>
-            <span className="bg-white/10 px-4 py-1.5 rounded-md border border-white/20">Wholesale License: WL/MH/2024/001</span>
+            <span className="bg-white/10 px-4 py-1.5 rounded-md border border-white/20">GST:07AHUPA1680K1Z2</span>
           </div>
         </div>
       </div>
