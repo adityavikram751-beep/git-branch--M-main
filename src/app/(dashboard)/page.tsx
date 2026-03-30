@@ -1034,7 +1034,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, ShoppingBag } from "lucide-react"
+import { ArrowRight, ShoppingBag, X, Bell, ArrowLeft } from "lucide-react"
 
 /* ================= HERO DEFAULT FALLBACK ================= */
 const DEFAULT_HERO = [
@@ -1044,10 +1044,7 @@ const DEFAULT_HERO = [
     buttonText: "Explore Products",
     buttonBg: "bg-[#C2185B]",
     textColor: "text-white",
-    mobile: {
-     
-      
-    },
+    mobile: {},
   },
 ]
 
@@ -1080,13 +1077,149 @@ type BannerItem = {
   type: "mobile" | "website"
 }
 
+type NotificationProduct = {
+  _id: string
+  product_id: string
+  product_name: string
+  image: string
+  product_url: string
+}
+
+/* ================= MODAL (Premium Buttons on sides) ================= */
+function NotificationModal({
+  products,
+  onClose,
+}: {
+  products: NotificationProduct[]
+  onClose: () => void
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const total = products.length
+
+  const handleClose = () => {
+    localStorage.setItem("notificationDismissed", "true")
+    onClose()
+  }
+
+  const goPrev = () => {
+    setCurrentIndex((prev) => (prev === 0 ? total - 1 : prev - 1))
+  }
+
+  const goNext = () => {
+    setCurrentIndex((prev) => (prev === total - 1 ? 0 : prev + 1))
+  }
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = "auto"
+    }
+  }, [])
+
+  if (!products.length) return null
+
+  const product = products[currentIndex]
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#C2185B] to-pink-500">
+          <div className="flex items-center gap-2">
+            <Bell size={20} className="text-white" />
+            <h2 className="text-lg font-bold text-white tracking-wide">New Arrival ✨</h2>
+          </div>
+          <button
+            onClick={handleClose}
+            className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Product content with side buttons */}
+        <div className="relative">
+          {/* Prev Button - Left Side (Premium) */}
+          {total > 1 && (
+            <button
+              onClick={goPrev}
+              aria-label="Previous product"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full 
+                bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-lg 
+                hover:from-[#C2185B] hover:to-pink-500 hover:scale-110 
+                transition-all duration-300 flex items-center justify-center"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Next Button - Right Side (Premium) */}
+          {total > 1 && (
+            <button
+              onClick={goNext}
+              aria-label="Next product"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full 
+                bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-lg 
+                hover:from-[#C2185B] hover:to-pink-500 hover:scale-110 
+                transition-all duration-300 flex items-center justify-center"
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Product Card */}
+          <div className="p-6">
+            <a
+              href={product.product_url}
+              onClick={handleClose}
+              className="block cursor-pointer"
+            >
+              <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden mb-5 shadow-sm">
+                <img
+                  src={product.image || "/placeholder.jpg"}
+                  alt={product.product_name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 text-center line-clamp-2 px-2">
+                {product.product_name}
+              </h3>
+            </a>
+
+            {/* Dots (below product) */}
+            {total > 1 && (
+              <div className="flex justify-center gap-2 mt-6">
+                {products.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`transition-all duration-300 rounded-full ${
+                      idx === currentIndex
+                        ? "w-6 h-1.5 bg-[#C2185B] shadow-sm"
+                        : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const BASE_URL = "https://api.3846.in"
   const NEW_ARRIVAL_API = `${BASE_URL}/api/v1/product/new-arrival`
   const PRODUCT_API = `${BASE_URL}/api/v1/product/user-products?page=1`
+  const HERO_API = "https://api.3846.in/api/v1/banner/banner-for-ui"
+  const NOTIFICATION_API = "https://api.3846.in/api/v1/product/notification"
 
-  const HERO_API =
-    "https://api.3846.in/api/v1/banner/banner-for-ui"
+  /* ================= NOTIFICATION STATES ================= */
+  const [notificationProducts, setNotificationProducts] = useState<NotificationProduct[]>([])
+  const [showNotification, setShowNotification] = useState(false)
 
   /* ================= HERO STATES ================= */
   const [heroIndex, setHeroIndex] = useState(0)
@@ -1098,7 +1231,6 @@ export default function HomePage() {
   const [brands, setBrands] = useState<any[]>([])
   const [allProducts, setAllProducts] = useState<any[]>([])
   const [newArrivalProducts, setNewArrivalProducts] = useState<any[]>([])
-
   const [loading, setLoading] = useState(true)
 
   /* ================= RESPONSIVE SLIDES PER VIEW ================= */
@@ -1125,10 +1257,50 @@ export default function HomePage() {
       else if (window.innerWidth >= 640) setNewArrivalSlidesPerView(2)
       else setNewArrivalSlidesPerView(1)
     }
-
     handleResize()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
+  /* ================= FETCH NOTIFICATION PRODUCTS (only if not dismissed) ================= */
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const dismissed = localStorage.getItem("notificationDismissed") === "true"
+      if (dismissed) return
+
+      const token =
+        localStorage.getItem("token") ||
+        localStorage.getItem("authToken") ||
+        localStorage.getItem("userToken") ||
+        sessionStorage.getItem("token")
+
+      if (!token) return
+
+      try {
+        const res = await fetch(NOTIFICATION_API, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!res.ok) return
+
+        const data = await res.json()
+
+        const list = data?.data || data?.products || data?.notifications || []
+
+        if (Array.isArray(list) && list.length > 0) {
+          setNotificationProducts(list)
+          setShowNotification(true)
+        }
+      } catch (error) {
+        console.error("Notification fetch error:", error)
+      }
+    }
+
+    fetchNotifications()
   }, [])
 
   /* ================= FETCH HERO BANNERS ================= */
@@ -1139,13 +1311,10 @@ export default function HomePage() {
           fetch(`${HERO_API}?type=website`, { method: "GET" }),
           fetch(`${HERO_API}?type=mobile`, { method: "GET" }),
         ])
-
         const websiteData = await websiteRes.json()
         const mobileData = await mobileRes.json()
-
         setHeroWebsiteBanners(Array.isArray(websiteData?.banners) ? websiteData.banners : [])
         setHeroMobileBanners(Array.isArray(mobileData?.banners) ? mobileData.banners : [])
-
         setHeroIndex(0)
       } catch (error) {
         console.error("Error fetching hero banners:", error)
@@ -1153,7 +1322,6 @@ export default function HomePage() {
         setHeroMobileBanners([])
       }
     }
-
     fetchHeroBanners()
   }, [])
 
@@ -1162,18 +1330,11 @@ export default function HomePage() {
 
   const heroSlides = useMemo(() => {
     if (!heroLen) return DEFAULT_HERO
-
     return Array.from({ length: heroLen }).map((_, i) => {
       const websiteImg =
-        heroWebsiteBanners[i]?.banner ||
-        heroWebsiteBanners[0]?.banner ||
-        DEFAULT_HERO[0].websiteImg
-
+        heroWebsiteBanners[i]?.banner || heroWebsiteBanners[0]?.banner || DEFAULT_HERO[0].websiteImg
       const mobileImg =
-        heroMobileBanners[i]?.banner ||
-        heroMobileBanners[0]?.banner ||
-        DEFAULT_HERO[0].mobileImg
-
+        heroMobileBanners[i]?.banner || heroMobileBanners[0]?.banner || DEFAULT_HERO[0].mobileImg
       return {
         websiteImg,
         mobileImg,
@@ -1184,7 +1345,6 @@ export default function HomePage() {
           title: heroMobileBanners[i]?.title || "Explore Our Collection",
           subtitle: "",
           description: "",
-        
         },
       }
     })
@@ -1212,10 +1372,7 @@ export default function HomePage() {
         const categoriesData = await categoriesRes.json()
         if (categoriesData.success && categoriesData.data) {
           const categoriesWithTrending = categoriesData.data.map(
-            (cat: any, index: number) => ({
-              ...cat,
-              trending: index % 3 === 0,
-            })
+            (cat: any, index: number) => ({ ...cat, trending: index % 3 === 0 })
           )
           setCategories(categoriesWithTrending)
         }
@@ -1226,13 +1383,8 @@ export default function HomePage() {
 
         const newArrivalRes = await fetch(NEW_ARRIVAL_API)
         const newArrivalData = await newArrivalRes.json()
-
         const list =
-          newArrivalData?.products ||
-          newArrivalData?.data ||
-          newArrivalData?.newArrivals ||
-          []
-
+          newArrivalData?.products || newArrivalData?.data || newArrivalData?.newArrivals || []
         setNewArrivalProducts(Array.isArray(list) ? list : [])
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -1240,24 +1392,14 @@ export default function HomePage() {
         setLoading(false)
       }
     }
-
     fetchData()
   }, [PRODUCT_API, NEW_ARRIVAL_API, BASE_URL])
 
   /* ================= INFINITE DATA ================= */
-  const infiniteCategories = useMemo(
-    () => makeInfiniteSlides(categories),
-    [categories]
-  )
-  const infiniteProducts = useMemo(
-    () => makeInfiniteSlides(allProducts),
-    [allProducts]
-  )
+  const infiniteCategories = useMemo(() => makeInfiniteSlides(categories), [categories])
+  const infiniteProducts = useMemo(() => makeInfiniteSlides(allProducts), [allProducts])
   const infiniteBrands = useMemo(() => makeInfiniteSlides(brands), [brands])
-  const infiniteNewArrivals = useMemo(
-    () => makeInfiniteSlides(newArrivalProducts),
-    [newArrivalProducts]
-  )
+  const infiniteNewArrivals = useMemo(() => makeInfiniteSlides(newArrivalProducts), [newArrivalProducts])
 
   /* ================= CATEGORY SLIDER ================= */
   const [categoryPos, setCategoryPos] = useState(1)
@@ -1275,35 +1417,22 @@ export default function HomePage() {
 
   useEffect(() => {
     if (categories.length > 0) {
-      const timer = setInterval(() => {
-        setCategoryPos((p) => p + 1)
-      }, 3500)
+      const timer = setInterval(() => setCategoryPos((p) => p + 1), 3500)
       return () => clearInterval(timer)
     }
   }, [categories.length])
 
   useEffect(() => {
-    if (!categories.length) return
-    if (!infiniteCategories.length) return
-
+    if (!categories.length || !infiniteCategories.length) return
     const lastIndex = infiniteCategories.length - 1
-
     if (categoryPos === lastIndex) {
-      const t = setTimeout(() => {
-        setCatTransition(false)
-        setCategoryPos(1)
-      }, 700)
+      const t = setTimeout(() => { setCatTransition(false); setCategoryPos(1) }, 700)
       return () => clearTimeout(t)
     }
-
     if (categoryPos === 0) {
-      const t = setTimeout(() => {
-        setCatTransition(false)
-        setCategoryPos(lastIndex - 1)
-      }, 700)
+      const t = setTimeout(() => { setCatTransition(false); setCategoryPos(lastIndex - 1) }, 700)
       return () => clearTimeout(t)
     }
-
     const enableT = setTimeout(() => setCatTransition(true), 750)
     return () => clearTimeout(enableT)
   }, [categoryPos, categories.length, infiniteCategories.length])
@@ -1327,35 +1456,22 @@ export default function HomePage() {
 
   useEffect(() => {
     if (brands.length > 0) {
-      const timer = setInterval(() => {
-        setBrandPos((p) => p + 1)
-      }, 3500)
+      const timer = setInterval(() => setBrandPos((p) => p + 1), 3500)
       return () => clearInterval(timer)
     }
   }, [brands.length])
 
   useEffect(() => {
-    if (!brands.length) return
-    if (!infiniteBrands.length) return
-
+    if (!brands.length || !infiniteBrands.length) return
     const lastIndex = infiniteBrands.length - 1
-
     if (brandPos === lastIndex) {
-      const t = setTimeout(() => {
-        setBrandTransition(false)
-        setBrandPos(1)
-      }, 700)
+      const t = setTimeout(() => { setBrandTransition(false); setBrandPos(1) }, 700)
       return () => clearTimeout(t)
     }
-
     if (brandPos === 0) {
-      const t = setTimeout(() => {
-        setBrandTransition(false)
-        setBrandPos(lastIndex - 1)
-      }, 700)
+      const t = setTimeout(() => { setBrandTransition(false); setBrandPos(lastIndex - 1) }, 700)
       return () => clearTimeout(t)
     }
-
     const enableT = setTimeout(() => setBrandTransition(true), 750)
     return () => clearTimeout(enableT)
   }, [brandPos, brands.length, infiniteBrands.length])
@@ -1379,35 +1495,22 @@ export default function HomePage() {
 
   useEffect(() => {
     if (allProducts.length > 0) {
-      const timer = setInterval(() => {
-        setProductPos((p) => p + 1)
-      }, 3500)
+      const timer = setInterval(() => setProductPos((p) => p + 1), 3500)
       return () => clearInterval(timer)
     }
   }, [allProducts.length])
 
   useEffect(() => {
-    if (!allProducts.length) return
-    if (!infiniteProducts.length) return
-
+    if (!allProducts.length || !infiniteProducts.length) return
     const lastIndex = infiniteProducts.length - 1
-
     if (productPos === lastIndex) {
-      const t = setTimeout(() => {
-        setProdTransition(false)
-        setProductPos(1)
-      }, 700)
+      const t = setTimeout(() => { setProdTransition(false); setProductPos(1) }, 700)
       return () => clearTimeout(t)
     }
-
     if (productPos === 0) {
-      const t = setTimeout(() => {
-        setProdTransition(false)
-        setProductPos(lastIndex - 1)
-      }, 700)
+      const t = setTimeout(() => { setProdTransition(false); setProductPos(lastIndex - 1) }, 700)
       return () => clearTimeout(t)
     }
-
     const enableT = setTimeout(() => setProdTransition(true), 750)
     return () => clearTimeout(enableT)
   }, [productPos, allProducts.length, infiniteProducts.length])
@@ -1431,35 +1534,22 @@ export default function HomePage() {
 
   useEffect(() => {
     if (newArrivalProducts.length > 0) {
-      const timer = setInterval(() => {
-        setNewArrivalPos((p) => p + 1)
-      }, 3500)
+      const timer = setInterval(() => setNewArrivalPos((p) => p + 1), 3500)
       return () => clearInterval(timer)
     }
   }, [newArrivalProducts.length])
 
   useEffect(() => {
-    if (!newArrivalProducts.length) return
-    if (!infiniteNewArrivals.length) return
-
+    if (!newArrivalProducts.length || !infiniteNewArrivals.length) return
     const lastIndex = infiniteNewArrivals.length - 1
-
     if (newArrivalPos === lastIndex) {
-      const t = setTimeout(() => {
-        setNewArrivalTransition(false)
-        setNewArrivalPos(1)
-      }, 700)
+      const t = setTimeout(() => { setNewArrivalTransition(false); setNewArrivalPos(1) }, 700)
       return () => clearTimeout(t)
     }
-
     if (newArrivalPos === 0) {
-      const t = setTimeout(() => {
-        setNewArrivalTransition(false)
-        setNewArrivalPos(lastIndex - 1)
-      }, 700)
+      const t = setTimeout(() => { setNewArrivalTransition(false); setNewArrivalPos(lastIndex - 1) }, 700)
       return () => clearTimeout(t)
     }
-
     const enableT = setTimeout(() => setNewArrivalTransition(true), 750)
     return () => clearTimeout(enableT)
   }, [newArrivalPos, newArrivalProducts.length, infiniteNewArrivals.length])
@@ -1469,182 +1559,125 @@ export default function HomePage() {
 
   return (
     <div className="bg-white">
+
+      {/* ================= NOTIFICATION MODAL ================= */}
+      {showNotification && notificationProducts.length > 0 && (
+        <NotificationModal
+          products={notificationProducts}
+          onClose={() => setShowNotification(false)}
+        />
+      )}
+
       {/* ================= HERO SECTION ================= */}
-<section className="relative min-h-[90vh] md:min-h-screen w-full overflow-hidden pt-16 md:pt-16">
-  <div className="relative h-full w-full min-h-[90vh] md:min-h-screen">
-    {heroSlides.map((slide, index) => (
-      <div
-        key={index}
-        className={`absolute inset-0 transition-opacity duration-1000 ${
-          index === heroIndex
-            ? "opacity-100 z-10"
-            : "opacity-0 z-0 pointer-events-none"
-        }`}
-      >
-        <div className="absolute inset-0">
-          <img
-            src={slide.websiteImg}
-            alt={`Slide ${index + 1}`}
-            className="hidden md:block w-full h-full object-cover"
-          />
-          <img
-            src={slide.mobileImg}
-            alt={`Mobile Slide ${index + 1}`}
-            className="md:hidden w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 md:bg-black/0 bg-black/40"></div>
-        </div>
+      <section className="relative min-h-[90vh] md:min-h-screen w-full overflow-hidden pt-16 md:pt-16">
+        <div className="relative h-full w-full min-h-[90vh] md:min-h-screen">
+          {heroSlides.map((slide, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                index === heroIndex ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+              }`}
+            >
+              <div className="absolute inset-0">
+                <img
+                  src={slide.websiteImg}
+                  alt={`Slide ${index + 1}`}
+                  className="hidden md:block w-full h-full object-cover"
+                />
+                <img
+                  src={slide.mobileImg}
+                  alt={`Mobile Slide ${index + 1}`}
+                  className="md:hidden w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 md:bg-black/0 bg-black/40"></div>
+              </div>
 
-        {/* Desktop Button - Niche kiya gaya */}
-        <Link
-          href="/product"
-          className={`absolute z-10 hidden md:flex items-center gap-2 ${slide.buttonBg} ${slide.textColor}
-          px-8 py-4 rounded-lg font-bold text-lg
-          transition-all duration-300 hover:scale-105 hover:shadow-2xl`}
-          style={{ top: "55%", left: "7%" }}
-        >
-          <ShoppingBag size={20} />
-          {slide.buttonText}
-          <ArrowRight size={20} />
-        </Link>
-
-        {/* Mobile Content - Niche kiya gaya */}
-        <div className="absolute inset-0 flex md:hidden items-end justify-center px-4 pb-20">
-          <div className="w-full max-w-md mx-auto">
-            <div className="text-center mb-10">
-              <h1 className="text-white text-3xl font-bold mb-4 leading-tight">
-              </h1>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 mb-10">
-             
-            </div>
-
-            <div className="mb-10">
               <Link
                 href="/product"
-                className={`inline-flex items-center justify-center gap-2
-                ${slide.buttonBg} ${slide.textColor}
-                px-8 py-4 rounded-xl font-bold text-base w-full
-                border-2 border-white/30 shadow-lg`}
+                className={`absolute z-10 hidden md:flex items-center gap-2 ${slide.buttonBg} ${slide.textColor}
+                px-8 py-4 rounded-lg font-bold text-lg
+                transition-all duration-300 hover:scale-105 hover:shadow-2xl`}
+                style={{ top: "55%", left: "7%" }}
               >
-                <ShoppingBag className="w-5 h-5" />
+                <ShoppingBag size={20} />
                 {slide.buttonText}
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight size={20} />
               </Link>
+
+              <div className="absolute inset-0 flex md:hidden items-end justify-center px-4 pb-20">
+                <div className="w-full max-w-md mx-auto">
+                  <div className="text-center mb-10">
+                    <h1 className="text-white text-3xl font-bold mb-4 leading-tight"></h1>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mb-10"></div>
+                  <div className="mb-10">
+                    <Link
+                      href="/product"
+                      className={`inline-flex items-center justify-center gap-2
+                      ${slide.buttonBg} ${slide.textColor}
+                      px-8 py-4 rounded-xl font-bold text-base w-full
+                      border-2 border-white/30 shadow-lg`}
+                    >
+                      <ShoppingBag className="w-5 h-5" />
+                      {slide.buttonText}
+                      <ArrowRight className="w-5 h-5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </div>
+          ))}
+        </div>
+
+        <div className="absolute bottom-12 left-0 right-0 z-20">
+          <div className="flex justify-center gap-3">
+            {heroSlides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setHeroIndex(i)}
+                className={`h-3 rounded-full transition-all duration-300 ${
+                  heroIndex === i ? "w-12 bg-white" : "w-3 bg-white/50 hover:bg-white/80"
+                }`}
+              />
+            ))}
           </div>
         </div>
-      </div>
-    ))}
-  </div>
-
-  {/* Dots bhi thoda upar kiya */}
-  <div className="absolute bottom-12 left-0 right-0 z-20">
-    <div className="flex justify-center gap-3">
-      {heroSlides.map((_, i) => (
-        <button
-          key={i}
-          onClick={() => setHeroIndex(i)}
-          className={`h-3 rounded-full transition-all duration-300 ${
-            heroIndex === i
-              ? "w-12 bg-white"
-              : "w-3 bg-white/50 hover:bg-white/80"
-          }`}
-        />
-      ))}
-    </div>
-  </div>
-</section>
+      </section>
 
       {/* ================= BRANDS ================= */}
       <section className="py-20 bg-yellow-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
             <div>
-              <h2 className="text-[40px] font-serif font-semibold text-gray-800">
-                Explore Brands
-              </h2>
-              <p className="text-gray-600 mt-2 max-w-xl">
-                Choose a brand and explore products.
-              </p>
+              <h2 className="text-[40px] font-serif font-semibold text-gray-800">Explore Brands</h2>
+              <p className="text-gray-600 mt-2 max-w-xl">Choose a brand and explore products.</p>
             </div>
-
-            <Link
-              href="/brand"
-              className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition"
-            >
+            <Link href="/brand" className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition">
               View All Brands <span>→</span>
             </Link>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-600">
-              Loading brands...
-            </div>
+            <div className="text-center py-12 text-gray-600">Loading brands...</div>
           ) : brands.length > 0 ? (
             <div className="relative">
-              <button
-                onClick={handleBrandPrev}
-                className="absolute -left-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full text-white text-2xl
-                flex items-center justify-center shadow-xl transition
-                bg-red-500 hover:bg-red-600"
-              >
-                ‹
-              </button>
-
-              <button
-                onClick={handleBrandNext}
-                className="absolute -right-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full text-white text-2xl
-                flex items-center justify-center shadow-xl transition
-                bg-red-500 hover:bg-red-600"
-              >
-                ›
-              </button>
-
+              <button onClick={handleBrandPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">‹</button>
+              <button onClick={handleBrandNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">›</button>
               <div className="overflow-hidden">
                 <div
-                  className={`flex ${
-                    brandTransition
-                      ? "transition-transform duration-700 ease-in-out"
-                      : ""
-                  }`}
-                  style={{
-                    transform: `translateX(-${brandPos * brandSlideWidth}%)`,
-                  }}
+                  className={`flex ${brandTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${brandPos * brandSlideWidth}%)` }}
                 >
                   {infiniteBrands.map((b: any, i: number) => (
-                    <div
-                      key={`${b._id}-${i}`}
-                      style={{ minWidth: `${brandSlideWidth}%` }}
-                      className="px-3"
-                    >
-                      <Link
-                        href={`/product?brand=${b._id}`}
-                        className="block h-full"
-                      >
-                        <div
-                          className="bg-white rounded-xl shadow-md overflow-hidden
-                          transition-all duration-300 hover:shadow-xl
-                          h-[290px] flex flex-col cursor-pointer"
-                        >
+                    <div key={`${b._id}-${i}`} style={{ minWidth: `${brandSlideWidth}%` }} className="px-3">
+                      <Link href={`/product?brand=${b._id}`} className="block h-full">
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-[290px] flex flex-col cursor-pointer">
                           <div className="relative h-[240px] bg-gray-100 overflow-hidden">
-                            <img
-                              src={b.icons || "/placeholder.jpg"}
-                              alt={b.brand || "Brand"}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
-                              Brand
-                            </span>
+                            <img src={b.icons || "/placeholder.jpg"} alt={b.brand || "Brand"} className="w-full h-full object-cover" />
+                            <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">Brand</span>
                           </div>
-
                           <div className="p-5 flex flex-col flex-1">
-                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
-                              {b.brand}
-                            </h3>
+                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">{b.brand}</h3>
                           </div>
                         </div>
                       </Link>
@@ -1654,9 +1687,7 @@ export default function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-600">
-              No brands available
-            </div>
+            <div className="text-center py-12 text-gray-600">No brands available</div>
           )}
         </div>
       </section>
@@ -1666,92 +1697,35 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
             <div>
-              <h2 className="text-[40px] font-serif font-semibold text-gray-800">
-                Explore Categories
-              </h2>
-              <p className="text-gray-600 mt-2 max-w-xl">
-                Discover our curated collection of premium products across
-                different categories.
-              </p>
+              <h2 className="text-[40px] font-serif font-semibold text-gray-800">Explore Categories</h2>
+              <p className="text-gray-600 mt-2 max-w-xl">Discover our curated collection of premium products across different categories.</p>
             </div>
-
-            <Link
-              href="/category"
-              className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition"
-            >
+            <Link href="/category" className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition">
               View All Categories <span>→</span>
             </Link>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-600">
-              Loading categories...
-            </div>
+            <div className="text-center py-12 text-gray-600">Loading categories...</div>
           ) : categories.length > 0 ? (
             <div className="relative">
-              <button
-                onClick={handleCatPrev}
-                className="absolute -left-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full text-white text-2xl
-                flex items-center justify-center shadow-xl transition
-                bg-red-500 hover:bg-red-600"
-              >
-                ‹
-              </button>
-
-              <button
-                onClick={handleCatNext}
-                className="absolute -right-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full text-white text-2xl
-                flex items-center justify-center shadow-xl transition
-                bg-red-500 hover:bg-red-600"
-              >
-                ›
-              </button>
-
+              <button onClick={handleCatPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">‹</button>
+              <button onClick={handleCatNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">›</button>
               <div className="overflow-hidden">
                 <div
-                  className={`flex ${
-                    catTransition
-                      ? "transition-transform duration-700 ease-in-out"
-                      : ""
-                  }`}
-                  style={{
-                    transform: `translateX(-${
-                      categoryPos * categorySlideWidth
-                    }%)`,
-                  }}
+                  className={`flex ${catTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${categoryPos * categorySlideWidth}%)` }}
                 >
                   {infiniteCategories.map((cat: any, i: number) => (
-                    <div
-                      key={`${cat._id}-${i}`}
-                      style={{ minWidth: `${categorySlideWidth}%` }}
-                      className="px-3"
-                    >
-                      <Link
-                        href={`/product?category=${cat._id}`}
-                        className="block h-full"
-                      >
-                        <div
-                          className="bg-white rounded-xl shadow-md overflow-hidden
-                          transition-all duration-300 hover:shadow-xl
-                          h-[290px] flex flex-col cursor-pointer"
-                        >
+                    <div key={`${cat._id}-${i}`} style={{ minWidth: `${categorySlideWidth}%` }} className="px-3">
+                      <Link href={`/product?category=${cat._id}`} className="block h-full">
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-[290px] flex flex-col cursor-pointer">
                           <div className="relative h-[240px] bg-gray-100 overflow-hidden">
-                            <img
-                              src={cat.catImg || "/placeholder.jpg"}
-                              alt={cat.categoryname}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">
-                              Category
-                            </span>
+                            <img src={cat.catImg || "/placeholder.jpg"} alt={cat.categoryname} className="w-full h-full object-cover" />
+                            <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">Category</span>
                           </div>
-
                           <div className="p-5 flex flex-col flex-1">
-                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
-                              {cat.categoryname}
-                            </h3>
+                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">{cat.categoryname}</h3>
                           </div>
                         </div>
                       </Link>
@@ -1761,114 +1735,56 @@ export default function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-600">
-              No categories available
-            </div>
+            <div className="text-center py-12 text-gray-600">No categories available</div>
           )}
         </div>
       </section>
 
-      {/* ================= NEW ARRIVAL PRODUCTS - FIXED CARDS ================= */}
+      {/* ================= NEW ARRIVAL PRODUCTS ================= */}
       <section className="py-20 bg-yellow-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
             <div>
-              <h2 className="text-[40px] font-serif font-semibold text-gray-800">
-                New Arrival Products
-              </h2>
-              <p className="text-gray-600 mt-2 max-w-xl">
-                Freshly added products — explore the latest arrivals.
-              </p>
+              <h2 className="text-[40px] font-serif font-semibold text-gray-800">New Arrival Products</h2>
+              <p className="text-gray-600 mt-2 max-w-xl">Freshly added products — explore the latest arrivals.</p>
             </div>
-
-            <Link
-              href="/product"
-              className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition"
-            >
+            <Link href="/product" className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition">
               Explore Products <span>→</span>
             </Link>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-600">
-              Loading new arrivals...
-            </div>
+            <div className="text-center py-12 text-gray-600">Loading new arrivals...</div>
           ) : newArrivalProducts.length > 0 ? (
             <div className="relative">
-              <button
-                onClick={handleNewArrivalPrev}
-                className="absolute -left-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full text-white text-2xl
-                flex items-center justify-center shadow-xl transition
-                bg-red-500 hover:bg-red-600"
-              >
-                ‹
-              </button>
-
-              <button
-                onClick={handleNewArrivalNext}
-                className="absolute -right-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full text-white text-2xl
-                flex items-center justify-center shadow-xl transition
-                bg-red-500 hover:bg-red-600"
-              >
-                ›
-              </button>
-
+              <button onClick={handleNewArrivalPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">‹</button>
+              <button onClick={handleNewArrivalNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">›</button>
               <div className="overflow-hidden">
                 <div
-                  className={`flex ${
-                    newArrivalTransition
-                      ? "transition-transform duration-700 ease-in-out"
-                      : ""
-                  }`}
-                  style={{
-                    transform: `translateX(-${
-                      newArrivalPos * newArrivalSlideWidth
-                    }%)`,
-                  }}
+                  className={`flex ${newArrivalTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${newArrivalPos * newArrivalSlideWidth}%)` }}
                 >
                   {infiniteNewArrivals.map((p: any, i: number) => {
                     const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
-                    
                     return (
-                      <div
-                        key={`${p._id}-${i}`}
-                        style={{ minWidth: `${newArrivalSlideWidth}%` }}
-                        className="px-3"
-                      >
+                      <div key={`${p._id}-${i}`} style={{ minWidth: `${newArrivalSlideWidth}%` }} className="px-3">
                         <Link href={`/product/${p._id}`} className="block h-full group">
                           <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-full flex flex-col">
-                            {/* FIXED: Image container - exactly like similar products card */}
                             <div className="relative w-full pt-[100%] bg-gray-50">
                               <div className="absolute inset-0 p-3">
-                                <img
-                                  src={p.images?.[0] || "/placeholder.jpg"}
-                                  alt={p.name}
-                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                />
+                                <img src={p.images?.[0] || "/placeholder.jpg"} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
                               </div>
-                              
                               {hasKeyFeature && (
                                 <div className="absolute top-2 left-2">
-                                  <span 
-                                    className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}
-                                  >
-                                    {p.key_feature}
-                                  </span>
+                                  <span className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}>{p.key_feature}</span>
                                 </div>
                               )}
                             </div>
-
                             <div className="p-4 flex flex-col flex-1">
-                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
-                                {p.name}
-                              </h3>
-
+                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">{p.name}</h3>
                               <div className="mt-auto">
                                 <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
-                                  View Details
-                                  <ArrowRight size={14} />
+                                  View Details <ArrowRight size={14} />
                                 </button>
                               </div>
                             </div>
@@ -1881,116 +1797,56 @@ export default function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-600">
-              No new arrival products available
-            </div>
+            <div className="text-center py-12 text-gray-600">No new arrival products available</div>
           )}
         </div>
       </section>
 
-      {/* ================= PRODUCTS - FIXED CARDS ================= */}
+      {/* ================= PRODUCTS ================= */}
       <section className="py-20 bg-[#f6dcc7]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
             <div>
-              <h2 className="text-[40px] font-serif font-semibold text-gray-800">
-                Products
-              </h2>
-              <p className="text-gray-600 mt-2 max-w-xl">
-                Discover our most popular wholesale cosmetic products trusted by
-                businesses worldwide.
-              </p>
+              <h2 className="text-[40px] font-serif font-semibold text-gray-800">Products</h2>
+              <p className="text-gray-600 mt-2 max-w-xl">Discover our most popular wholesale cosmetic products trusted by businesses worldwide.</p>
             </div>
-
-            <Link
-              href="/product"
-              className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition"
-            >
-              View All Products
-              <ArrowRight size={16} />
+            <Link href="/product" className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition">
+              View All Products <ArrowRight size={16} />
             </Link>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-600">
-              Loading products...
-            </div>
+            <div className="text-center py-12 text-gray-600">Loading products...</div>
           ) : allProducts.length > 0 ? (
             <div className="relative">
-              <button
-                onClick={handleProdPrev}
-                className="absolute -left-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full
-                bg-red-500 text-white text-2xl
-                flex items-center justify-center
-                shadow-xl hover:bg-red-600"
-              >
-                ‹
-              </button>
-
-              <button
-                onClick={handleProdNext}
-                className="absolute -right-4 top-1/2 -translate-y-1/2 z-10
-                w-12 h-12 rounded-full
-                bg-red-500 text-white text-2xl
-                flex items-center justify-center
-                shadow-xl hover:bg-red-600"
-              >
-                ›
-              </button>
-
+              <button onClick={handleProdPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-red-500 text-white text-2xl flex items-center justify-center shadow-xl hover:bg-red-600">‹</button>
+              <button onClick={handleProdNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-red-500 text-white text-2xl flex items-center justify-center shadow-xl hover:bg-red-600">›</button>
               <div className="overflow-hidden">
                 <div
-                  className={`flex ${
-                    prodTransition
-                      ? "transition-transform duration-700 ease-in-out"
-                      : ""
-                  }`}
-                  style={{
-                    transform: `translateX(-${productPos * productSlideWidth}%)`,
-                  }}
+                  className={`flex ${prodTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${productPos * productSlideWidth}%)` }}
                 >
                   {infiniteProducts.map((p: any, i: number) => {
                     const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
-                    
                     return (
-                      <div
-                        key={`${p._id}-${i}`}
-                        style={{ minWidth: `${productSlideWidth}%` }}
-                        className="px-3"
-                      >
+                      <div key={`${p._id}-${i}`} style={{ minWidth: `${productSlideWidth}%` }} className="px-3">
                         <Link href={`/product/${p._id}`} className="block h-full group">
                           <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-full flex flex-col">
-                            {/* FIXED: Image container - exactly like similar products card */}
                             <div className="relative w-full pt-[100%] bg-gray-50">
                               <div className="absolute inset-0 p-3">
-                                <img
-                                  src={p.images?.[0] || "/placeholder.jpg"}
-                                  alt={p.name}
-                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                />
+                                <img src={p.images?.[0] || "/placeholder.jpg"} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
                               </div>
-                              
                               {hasKeyFeature && (
                                 <div className="absolute top-2 left-2">
-                                  <span 
-                                    className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}
-                                  >
-                                    {p.key_feature}
-                                  </span>
+                                  <span className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}>{p.key_feature}</span>
                                 </div>
                               )}
                             </div>
-
                             <div className="p-4 flex flex-col flex-1">
-                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
-                                {p.name}
-                              </h3>
-
+                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">{p.name}</h3>
                               <div className="mt-auto">
                                 <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
-                                  View Details
-                                  <ArrowRight size={14} />
+                                  View Details <ArrowRight size={14} />
                                 </button>
                               </div>
                             </div>
@@ -2003,12 +1859,11 @@ export default function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-600">
-              No products available
-            </div>
+            <div className="text-center py-12 text-gray-600">No products available</div>
           )}
         </div>
       </section>
+
     </div>
   )
 }

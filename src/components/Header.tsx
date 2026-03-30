@@ -152,6 +152,7 @@ export default function Header() {
     localStorage.removeItem("token")
     localStorage.removeItem("userId")
     localStorage.removeItem("hasSeenEnquiries")
+    localStorage.removeItem("notificationDismissed") // ✅ Added: clear flag so next login shows popup
 
     setLoggedIn(false)
     setUserName("")
