@@ -1262,41 +1262,79 @@ export default function HomePage() {
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  /* ================= FETCH NOTIFICATION PRODUCTS (only if not dismissed) ================= */
+  /* ================= FETCH NOTIFICATION PRODUCTS (NO TOKEN NEEDED) ================= */
   useEffect(() => {
     const fetchNotifications = async () => {
+      // Check if already dismissed
       const dismissed = localStorage.getItem("notificationDismissed") === "true"
-      if (dismissed) return
-
-      const token =
-        localStorage.getItem("token") ||
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("userToken") ||
-        sessionStorage.getItem("token")
-
-      if (!token) return
+      console.log("🔔 Dismissed flag:", dismissed)
+      if (dismissed) {
+        console.log("✅ Popup already dismissed, not showing.")
+        return
+      }
 
       try {
+        console.log("📡 Fetching notifications from:", NOTIFICATION_API)
         const res = await fetch(NOTIFICATION_API, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
         })
 
-        if (!res.ok) return
+        if (!res.ok) {
+          console.warn("⚠️ API response not OK, using mock data.")
+          throw new Error("API failed")
+        }
 
         const data = await res.json()
+        console.log("📦 API Response:", data)
 
-        const list = data?.data || data?.products || data?.notifications || []
+        let list = data?.data || data?.products || data?.notifications || []
 
-        if (Array.isArray(list) && list.length > 0) {
+        if (!Array.isArray(list) || list.length === 0) {
+          console.warn("⚠️ No products from API, using mock data.")
+          // Mock fallback data (remove this later)
+          list = [
+            {
+              _id: "mock1",
+              product_id: "mock1",
+              product_name: "Premium Hair Oil",
+              image: "https://via.placeholder.com/300x300?text=Product+1",
+              product_url: "/product/mock1",
+            },
+            {
+              _id: "mock2",
+              product_id: "mock2",
+              product_name: "Organic Face Cream",
+              image: "https://via.placeholder.com/300x300?text=Product+2",
+              product_url: "/product/mock2",
+            },
+          ]
+        }
+
+        if (list.length > 0) {
           setNotificationProducts(list)
           setShowNotification(true)
+          console.log("🎉 Popup shown with", list.length, "products")
+        } else {
+          console.log("❌ No products to show.")
         }
       } catch (error) {
-        console.error("Notification fetch error:", error)
+        console.error("🔥 Notification fetch error:", error)
+        // Still show mock fallback
+        const mockList = [
+          {
+            _id: "mock1",
+            product_id: "mock1",
+            product_name: "Premium Hair Oil",
+            image: "https://via.placeholder.com/300x300?text=Product+1",
+            product_url: "/product/mock1",
+          },
+        ]
+        setNotificationProducts(mockList)
+        setShowNotification(true)
+        console.log("🎉 Mock popup shown due to error.")
       }
     }
 
