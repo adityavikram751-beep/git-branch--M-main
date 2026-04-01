@@ -1627,7 +1627,7 @@ export default function HomePage() {
                   alt={`Mobile Slide ${index + 1}`}
                   className="md:hidden w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 md:bg-black/0 bg-black/40"></div>
+                <div className="absolute inset-0 "></div>
               </div>
 
               <Link
