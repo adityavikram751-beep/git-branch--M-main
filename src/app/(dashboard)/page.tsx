@@ -1295,22 +1295,7 @@ export default function HomePage() {
         if (!Array.isArray(list) || list.length === 0) {
           console.warn("⚠️ No products from API, using mock data.")
           // Mock fallback data (remove this later)
-          list = [
-            {
-              _id: "mock1",
-              product_id: "mock1",
-              product_name: "Premium Hair Oil",
-              image: "https://via.placeholder.com/300x300?text=Product+1",
-              product_url: "/product/mock1",
-            },
-            {
-              _id: "mock2",
-              product_id: "mock2",
-              product_name: "Organic Face Cream",
-              image: "https://via.placeholder.com/300x300?text=Product+2",
-              product_url: "/product/mock2",
-            },
-          ]
+         
         }
 
         if (list.length > 0) {
