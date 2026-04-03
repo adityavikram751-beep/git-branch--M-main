@@ -9,6 +9,7 @@ const RegisterUI = () => {
     name: '',
     email: '',
     phone: '',
+    dob: '', // new field for date of birth
     password: '',
     confirmPassword: '',
     gstnumber: '',
@@ -23,31 +24,44 @@ const RegisterUI = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to calculate age from DOB
+  const calculateAge = (dob: string): number => {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear age-related error when user changes DOB
+    if (name === 'dob') {
+      setError('');
+    }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     
     if (selectedFile) {
-      // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(selectedFile.type)) {
         setError('Please upload a valid image file (JPEG, PNG, GIF, WebP)');
         return;
       }
       
-      // Validate file size (max 5MB)
       if (selectedFile.size > 5 * 1024 * 1024) {
         setError('File size should be less than 5MB');
         return;
       }
       
       setFile(selectedFile);
-      
-      // Create preview URL
       const previewUrl = URL.createObjectURL(selectedFile);
       setPreview(previewUrl);
       setError('');
@@ -68,15 +82,24 @@ const RegisterUI = () => {
     setSuccess('');
     setIsLoading(true);
 
-    // Basic validation
+    // Password match validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setIsLoading(false);
       return;
     }
 
-    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.address) {
+    // Required fields validation
+    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.address || !formData.dob) {
       setError('Please fill in all required fields');
+      setIsLoading(false);
+      return;
+    }
+
+    // Age validation (18+)
+    const age = calculateAge(formData.dob);
+    if (age < 18) {
+      setError('You must be at least 18 years old to register.');
       setIsLoading(false);
       return;
     }
@@ -84,30 +107,23 @@ const RegisterUI = () => {
     // Create FormData object for multipart/form-data
     const formDataToSend = new FormData();
     
-    // Append text fields
     formDataToSend.append('name', formData.name);
     formDataToSend.append('email', formData.email);
     formDataToSend.append('phone', formData.phone);
+    formDataToSend.append('dob', formData.dob);
     formDataToSend.append('password', formData.password);
     formDataToSend.append('gstnumber', formData.gstnumber);
     formDataToSend.append('address', formData.address);
     
-    // Append file if exists
     if (file) {
       formDataToSend.append('file', file);
     }
 
     try {
-      // Using FormData, so DON'T set Content-Type header
-      // The browser will set it automatically with the correct boundary
-      const res = await fetch(
-        'https://api.3846.in/api/v1/user/singup',
-        {
-          method: 'POST',
-          // No Content-Type header for FormData - let browser set it
-          body: formDataToSend,
-        }
-      );
+      const res = await fetch('https://api.3846.in/api/v1/user/singup', {
+        method: 'POST',
+        body: formDataToSend,
+      });
 
       const data = await res.json();
       console.log('Response data:', data);
@@ -115,7 +131,6 @@ const RegisterUI = () => {
         throw new Error(data?.message || data?.error || 'Failed to register');
       }
 
-      // Save token to localStorage if provided
       if (data.token) {
         localStorage.setItem('token', data.token);
         console.log('Registration successful. Token saved:', data.token);
@@ -128,12 +143,13 @@ const RegisterUI = () => {
         name: '',
         email: '',
         phone: '',
+        dob: '',
         password: '',
         confirmPassword: '',
         gstnumber: '',
         address: '',
       });
-      removeFile(); // Clear file input
+      removeFile();
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {
@@ -154,7 +170,6 @@ const RegisterUI = () => {
           </div>
 
           <div className="px-8 py-6">
-            {/* Error message */}
             {error && (
               <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -162,7 +177,6 @@ const RegisterUI = () => {
               </div>
             )}
 
-            {/* Success message */}
             {success && (
               <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start space-x-3">
                 <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
@@ -170,9 +184,7 @@ const RegisterUI = () => {
               </div>
             )}
 
-            {/* Form */}
             <form className="space-y-6" onSubmit={handleSubmit}>
-              {/* Full Name and Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -206,7 +218,6 @@ const RegisterUI = () => {
                 </div>
               </div>
 
-              {/* Email */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address *
@@ -223,7 +234,25 @@ const RegisterUI = () => {
                 />
               </div>
 
-              {/* Address */}
+              {/* Date of Birth - Age verification */}
+              <div>
+                <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-2">
+                  Date of Birth *
+                </label>
+                <input
+                  id="dob"
+                  name="dob"
+                  type="date"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  value={formData.dob}
+                  onChange={handleChange}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  You must be at least 18 years old to register.
+                </p>
+              </div>
+
               <div>
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
                   Business Address *
@@ -240,7 +269,6 @@ const RegisterUI = () => {
                 />
               </div>
 
-              {/* GST Number */}
               <div>
                 <label htmlFor="gstnumber" className="block text-sm font-medium text-gray-700 mb-2">
                   GST Number
@@ -315,7 +343,6 @@ const RegisterUI = () => {
                 )}
               </div>
 
-              {/* Password and Confirm Password */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
@@ -350,14 +377,12 @@ const RegisterUI = () => {
                 </div>
               </div>
 
-              {/* Info */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-blue-800 text-sm">
                   <strong>Admin Approval Required:</strong> After registration, your account will be reviewed and approved by our team.
                 </p>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -367,7 +392,6 @@ const RegisterUI = () => {
               </button>
             </form>
 
-            {/* Sign in link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
