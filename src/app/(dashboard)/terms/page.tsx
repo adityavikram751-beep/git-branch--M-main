@@ -182,7 +182,7 @@ export default function TermsAndConditionsPage() {
                   }}
                   className={`w-full text-left text-sm md:text-base transition-all ${
                     isActive
-                      ? "text-blue-600 font-semibold"
+                      ? ""
                       : "text-gray-700 hover:text-blue-600"
                   }`}
                 >
