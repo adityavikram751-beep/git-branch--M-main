@@ -1034,6 +1034,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowRight, ShoppingBag, X, Bell, ArrowLeft } from "lucide-react"
 
 /* ================= HERO DEFAULT FALLBACK ================= */
@@ -1041,10 +1042,7 @@ const DEFAULT_HERO = [
   {
     websiteImg: "",
     mobileImg: "",
-    buttonText: "Explore Products",
-    buttonBg: "bg-[#C2185B]",
-    textColor: "text-white",
-    mobile: {},
+    url: "/product",
   },
 ]
 
@@ -1075,6 +1073,13 @@ type BannerItem = {
   banner: string
   title: string
   type: "mobile" | "website"
+  url?: string | null
+}
+
+type HeroSlide = {
+  websiteImg: string
+  mobileImg: string
+  url: string
 }
 
 type NotificationProduct = {
@@ -1085,7 +1090,7 @@ type NotificationProduct = {
   product_url: string
 }
 
-/* ================= MODAL (Premium Buttons on sides) ================= */
+/* ================= MODAL ================= */
 function NotificationModal({
   products,
   onClose,
@@ -1101,104 +1106,53 @@ function NotificationModal({
     onClose()
   }
 
-  const goPrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? total - 1 : prev - 1))
-  }
+  const goPrev = () => setCurrentIndex((prev) => (prev === 0 ? total - 1 : prev - 1))
+  const goNext = () => setCurrentIndex((prev) => (prev === total - 1 ? 0 : prev + 1))
 
-  const goNext = () => {
-    setCurrentIndex((prev) => (prev === total - 1 ? 0 : prev + 1))
-  }
-
-  // Lock body scroll when modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden"
-    return () => {
-      document.body.style.overflow = "auto"
-    }
+    return () => { document.body.style.overflow = "auto" }
   }, [])
 
   if (!products.length) return null
-
   const product = products[currentIndex]
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300">
-        {/* Header */}
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#C2185B] to-pink-500">
           <div className="flex items-center gap-2">
             <Bell size={20} className="text-white" />
             <h2 className="text-lg font-bold text-white tracking-wide">New Arrival ✨</h2>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
-          >
+          <button onClick={handleClose} className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
             <X size={20} />
           </button>
         </div>
 
-        {/* Product content with side buttons */}
         <div className="relative">
-          {/* Prev Button - Left Side (Premium) */}
           {total > 1 && (
-            <button
-              onClick={goPrev}
-              aria-label="Previous product"
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full 
-                bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-lg 
-                hover:from-[#C2185B] hover:to-pink-500 hover:scale-110 
-                transition-all duration-300 flex items-center justify-center"
-            >
+            <button onClick={goPrev} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-lg hover:from-[#C2185B] hover:to-pink-500 hover:scale-110 transition-all duration-300 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-
-          {/* Next Button - Right Side (Premium) */}
           {total > 1 && (
-            <button
-              onClick={goNext}
-              aria-label="Next product"
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full 
-                bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-lg 
-                hover:from-[#C2185B] hover:to-pink-500 hover:scale-110 
-                transition-all duration-300 flex items-center justify-center"
-            >
+            <button onClick={goNext} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-lg hover:from-[#C2185B] hover:to-pink-500 hover:scale-110 transition-all duration-300 flex items-center justify-center">
               <ArrowRight className="w-5 h-5" />
             </button>
           )}
-
-          {/* Product Card */}
           <div className="p-6">
-            <a
-              href={product.product_url}
-              onClick={handleClose}
-              className="block cursor-pointer"
-            >
+            <a href={product.product_url} onClick={handleClose} className="block cursor-pointer">
               <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden mb-5 shadow-sm">
-                <img
-                  src={product.image || "/placeholder.jpg"}
-                  alt={product.product_name}
-                  className="w-full h-full object-contain"
-                />
+                <img src={product.image || "/placeholder.jpg"} alt={product.product_name} className="w-full h-full object-contain" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 text-center line-clamp-2 px-2">
-                {product.product_name}
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-800 text-center line-clamp-2 px-2">{product.product_name}</h3>
             </a>
-
-            {/* Dots (below product) */}
             {total > 1 && (
               <div className="flex justify-center gap-2 mt-6">
                 {products.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`transition-all duration-300 rounded-full ${
-                      idx === currentIndex
-                        ? "w-6 h-1.5 bg-[#C2185B] shadow-sm"
-                        : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400"
-                    }`}
+                  <button key={idx} onClick={() => setCurrentIndex(idx)}
+                    className={`transition-all duration-300 rounded-full ${idx === currentIndex ? "w-6 h-1.5 bg-[#C2185B]" : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400"}`}
                   />
                 ))}
               </div>
@@ -1211,29 +1165,29 @@ function NotificationModal({
 }
 
 export default function HomePage() {
+  const router = useRouter()
   const BASE_URL = "https://api.3846.in"
   const NEW_ARRIVAL_API = `${BASE_URL}/api/v1/product/new-arrival`
   const PRODUCT_API = `${BASE_URL}/api/v1/product/user-products?page=1`
-  const HERO_API = "https://api.3846.in/api/v1/banner/banner-for-ui"
-  const NOTIFICATION_API = "https://api.3846.in/api/v1/product/notification"
+  const HERO_API = `${BASE_URL}/api/v1/banner/banner-for-ui`
+  const NOTIFICATION_API = `${BASE_URL}/api/v1/product/notification`
 
-  /* ================= NOTIFICATION STATES ================= */
+  /* ================= NOTIFICATION ================= */
   const [notificationProducts, setNotificationProducts] = useState<NotificationProduct[]>([])
   const [showNotification, setShowNotification] = useState(false)
 
-  /* ================= HERO STATES ================= */
+  /* ================= HERO ================= */
   const [heroIndex, setHeroIndex] = useState(0)
-  const [heroWebsiteBanners, setHeroWebsiteBanners] = useState<BannerItem[]>([])
-  const [heroMobileBanners, setHeroMobileBanners] = useState<BannerItem[]>([])
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(DEFAULT_HERO)
 
-  /* ================= DATA STATES ================= */
+  /* ================= DATA ================= */
   const [categories, setCategories] = useState<any[]>([])
   const [brands, setBrands] = useState<any[]>([])
   const [allProducts, setAllProducts] = useState<any[]>([])
   const [newArrivalProducts, setNewArrivalProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  /* ================= RESPONSIVE SLIDES PER VIEW ================= */
+  /* ================= SLIDES PER VIEW ================= */
   const [categorySlidesPerView, setCategorySlidesPerView] = useState(1)
   const [productSlidesPerView, setProductSlidesPerView] = useState(1)
   const [brandSlidesPerView, setBrandSlidesPerView] = useState(1)
@@ -1241,88 +1195,31 @@ export default function HomePage() {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) setCategorySlidesPerView(3)
-      else if (window.innerWidth >= 640) setCategorySlidesPerView(2)
-      else setCategorySlidesPerView(1)
-
-      if (window.innerWidth >= 1024) setProductSlidesPerView(3)
-      else if (window.innerWidth >= 640) setProductSlidesPerView(2)
-      else setProductSlidesPerView(1)
-
-      if (window.innerWidth >= 1024) setBrandSlidesPerView(3)
-      else if (window.innerWidth >= 640) setBrandSlidesPerView(2)
-      else setBrandSlidesPerView(1)
-
-      if (window.innerWidth >= 1024) setNewArrivalSlidesPerView(3)
-      else if (window.innerWidth >= 640) setNewArrivalSlidesPerView(2)
-      else setNewArrivalSlidesPerView(1)
+      const w = window.innerWidth
+      setCategorySlidesPerView(w >= 1024 ? 3 : w >= 640 ? 2 : 1)
+      setProductSlidesPerView(w >= 1024 ? 3 : w >= 640 ? 2 : 1)
+      setBrandSlidesPerView(w >= 1024 ? 3 : w >= 640 ? 2 : 1)
+      setNewArrivalSlidesPerView(w >= 1024 ? 3 : w >= 640 ? 2 : 1)
     }
     handleResize()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  /* ================= FETCH NOTIFICATION PRODUCTS (NO TOKEN NEEDED) ================= */
+  /* ================= FETCH NOTIFICATIONS ================= */
   useEffect(() => {
     const fetchNotifications = async () => {
-      // Check if already dismissed
-      const dismissed = localStorage.getItem("notificationDismissed") === "true"
-      console.log("🔔 Dismissed flag:", dismissed)
-      if (dismissed) {
-        console.log("✅ Popup already dismissed, not showing.")
-        return
-      }
-
+      if (localStorage.getItem("notificationDismissed") === "true") return
       try {
-        console.log("📡 Fetching notifications from:", NOTIFICATION_API)
-        const res = await fetch(NOTIFICATION_API, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!res.ok) {
-          console.warn("⚠️ API response not OK, using mock data.")
-          throw new Error("API failed")
-        }
-
+        const res = await fetch(NOTIFICATION_API)
+        if (!res.ok) throw new Error("API failed")
         const data = await res.json()
-        console.log("📦 API Response:", data)
-
-        let list = data?.data || data?.products || data?.notifications || []
-
-        if (!Array.isArray(list) || list.length === 0) {
-          console.warn("⚠️ No products from API, using mock data.")
-          // Mock fallback data (remove this later)
-         
-        }
-
-        if (list.length > 0) {
-          setNotificationProducts(list)
-          setShowNotification(true)
-          console.log("🎉 Popup shown with", list.length, "products")
-        } else {
-          console.log("❌ No products to show.")
-        }
-      } catch (error) {
-        console.error("🔥 Notification fetch error:", error)
-        // Still show mock fallback
-        const mockList = [
-          {
-            _id: "mock1",
-            product_id: "mock1",
-            product_name: "Premium Hair Oil",
-            image: "https://via.placeholder.com/300x300?text=Product+1",
-            product_url: "/product/mock1",
-          },
-        ]
-        setNotificationProducts(mockList)
-        setShowNotification(true)
-        console.log("🎉 Mock popup shown due to error.")
+        const list = data?.data || data?.products || data?.notifications || []
+        if (list.length > 0) { setNotificationProducts(list); setShowNotification(true) }
+      } catch {
+        // silent fail
       }
     }
-
     fetchNotifications()
   }, [])
 
@@ -1331,54 +1228,38 @@ export default function HomePage() {
     const fetchHeroBanners = async () => {
       try {
         const [websiteRes, mobileRes] = await Promise.all([
-          fetch(`${HERO_API}?type=website`, { method: "GET" }),
-          fetch(`${HERO_API}?type=mobile`, { method: "GET" }),
+          fetch(`${HERO_API}?type=website`),
+          fetch(`${HERO_API}?type=mobile`),
         ])
         const websiteData = await websiteRes.json()
         const mobileData = await mobileRes.json()
-        setHeroWebsiteBanners(Array.isArray(websiteData?.banners) ? websiteData.banners : [])
-        setHeroMobileBanners(Array.isArray(mobileData?.banners) ? mobileData.banners : [])
+
+        const websiteBanners: BannerItem[] = Array.isArray(websiteData?.banners) ? websiteData.banners : []
+        const mobileBanners: BannerItem[] = Array.isArray(mobileData?.banners) ? mobileData.banners : []
+
+        const maxLen = Math.max(websiteBanners.length, mobileBanners.length)
+        if (maxLen === 0) { setHeroSlides(DEFAULT_HERO); return }
+
+        // ✅ Har slide mein url bhi store karo (website banner ki url use karo)
+        const slides: HeroSlide[] = Array.from({ length: maxLen }).map((_, i) => ({
+          websiteImg: websiteBanners[i]?.banner || websiteBanners[0]?.banner || "",
+          mobileImg: mobileBanners[i]?.banner || mobileBanners[0]?.banner || "",
+          url: websiteBanners[i]?.url || mobileBanners[i]?.url || "/product",
+        }))
+
+        setHeroSlides(slides)
         setHeroIndex(0)
-      } catch (error) {
-        console.error("Error fetching hero banners:", error)
-        setHeroWebsiteBanners([])
-        setHeroMobileBanners([])
+      } catch {
+        setHeroSlides(DEFAULT_HERO)
       }
     }
     fetchHeroBanners()
   }, [])
 
-  /* ================= HERO SLIDES ================= */
-  const heroLen = Math.max(heroWebsiteBanners.length, heroMobileBanners.length)
-
-  const heroSlides = useMemo(() => {
-    if (!heroLen) return DEFAULT_HERO
-    return Array.from({ length: heroLen }).map((_, i) => {
-      const websiteImg =
-        heroWebsiteBanners[i]?.banner || heroWebsiteBanners[0]?.banner || DEFAULT_HERO[0].websiteImg
-      const mobileImg =
-        heroMobileBanners[i]?.banner || heroMobileBanners[0]?.banner || DEFAULT_HERO[0].mobileImg
-      return {
-        websiteImg,
-        mobileImg,
-        buttonText: "Explore Products",
-        buttonBg: "bg-[#C2185B]",
-        textColor: "text-white",
-        mobile: {
-          title: heroMobileBanners[i]?.title || "Explore Our Collection",
-          subtitle: "",
-          description: "",
-        },
-      }
-    })
-  }, [heroLen, heroWebsiteBanners, heroMobileBanners])
-
   /* ================= HERO AUTO SLIDER ================= */
   useEffect(() => {
     if (!heroSlides.length) return
-    const timer = setInterval(() => {
-      setHeroIndex((p) => (p + 1) % heroSlides.length)
-    }, 4500)
+    const timer = setInterval(() => setHeroIndex((p) => (p + 1) % heroSlides.length), 4500)
     return () => clearInterval(timer)
   }, [heroSlides.length])
 
@@ -1387,27 +1268,25 @@ export default function HomePage() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const allProductsRes = await fetch(PRODUCT_API)
+        const [allProductsRes, categoriesRes, brandsRes, newArrivalRes] = await Promise.all([
+          fetch(PRODUCT_API),
+          fetch(`${BASE_URL}/api/v1/category`),
+          fetch(`${BASE_URL}/api/v1/brands/getall`),
+          fetch(NEW_ARRIVAL_API),
+        ])
         const allProductsData = await allProductsRes.json()
         setAllProducts(allProductsData?.products || [])
 
-        const categoriesRes = await fetch(`${BASE_URL}/api/v1/category`)
         const categoriesData = await categoriesRes.json()
         if (categoriesData.success && categoriesData.data) {
-          const categoriesWithTrending = categoriesData.data.map(
-            (cat: any, index: number) => ({ ...cat, trending: index % 3 === 0 })
-          )
-          setCategories(categoriesWithTrending)
+          setCategories(categoriesData.data.map((cat: any, i: number) => ({ ...cat, trending: i % 3 === 0 })))
         }
 
-        const brandsRes = await fetch(`${BASE_URL}/api/v1/brands/getall`)
         const brandsData = await brandsRes.json()
         setBrands(brandsData?.data || [])
 
-        const newArrivalRes = await fetch(NEW_ARRIVAL_API)
         const newArrivalData = await newArrivalRes.json()
-        const list =
-          newArrivalData?.products || newArrivalData?.data || newArrivalData?.newArrivals || []
+        const list = newArrivalData?.products || newArrivalData?.data || newArrivalData?.newArrivals || []
         setNewArrivalProducts(Array.isArray(list) ? list : [])
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -1416,7 +1295,7 @@ export default function HomePage() {
       }
     }
     fetchData()
-  }, [PRODUCT_API, NEW_ARRIVAL_API, BASE_URL])
+  }, [])
 
   /* ================= INFINITE DATA ================= */
   const infiniteCategories = useMemo(() => makeInfiniteSlides(categories), [categories])
@@ -1424,175 +1303,66 @@ export default function HomePage() {
   const infiniteBrands = useMemo(() => makeInfiniteSlides(brands), [brands])
   const infiniteNewArrivals = useMemo(() => makeInfiniteSlides(newArrivalProducts), [newArrivalProducts])
 
-  /* ================= CATEGORY SLIDER ================= */
-  const [categoryPos, setCategoryPos] = useState(1)
-  const [catTransition, setCatTransition] = useState(true)
+  /* ================= SLIDER LOGIC (reusable) ================= */
+  const useSlider = (dataLen: number) => {
+    const [pos, setPos] = useState(1)
+    const [transition, setTransition] = useState(true)
+    const infiniteLen = dataLen + 2
+
+    useEffect(() => {
+      if (dataLen > 0) { setTransition(false); setPos(1); setTimeout(() => setTransition(true), 50) }
+    }, [dataLen])
+
+    useEffect(() => {
+      if (dataLen > 0) {
+        const timer = setInterval(() => setPos((p) => p + 1), 3500)
+        return () => clearInterval(timer)
+      }
+    }, [dataLen])
+
+    useEffect(() => {
+      if (!dataLen) return
+      const lastIndex = infiniteLen - 1
+      if (pos === lastIndex) { setTimeout(() => { setTransition(false); setPos(1) }, 700) }
+      else if (pos === 0) { setTimeout(() => { setTransition(false); setPos(lastIndex - 1) }, 700) }
+      else { setTimeout(() => setTransition(true), 750) }
+    }, [pos, dataLen, infiniteLen])
+
+    return { pos, transition, next: () => setPos((p) => p + 1), prev: () => setPos((p) => p - 1) }
+  }
+
+  const catSlider = useSlider(categories.length)
+  const brandSlider = useSlider(brands.length)
+  const prodSlider = useSlider(allProducts.length)
+  const newArrSlider = useSlider(newArrivalProducts.length)
+
   const categorySlideWidth = 100 / categorySlidesPerView
-
-  useEffect(() => {
-    if (categories.length > 0) {
-      setCatTransition(false)
-      setCategoryPos(1)
-      const t = setTimeout(() => setCatTransition(true), 50)
-      return () => clearTimeout(t)
-    }
-  }, [categories.length])
-
-  useEffect(() => {
-    if (categories.length > 0) {
-      const timer = setInterval(() => setCategoryPos((p) => p + 1), 3500)
-      return () => clearInterval(timer)
-    }
-  }, [categories.length])
-
-  useEffect(() => {
-    if (!categories.length || !infiniteCategories.length) return
-    const lastIndex = infiniteCategories.length - 1
-    if (categoryPos === lastIndex) {
-      const t = setTimeout(() => { setCatTransition(false); setCategoryPos(1) }, 700)
-      return () => clearTimeout(t)
-    }
-    if (categoryPos === 0) {
-      const t = setTimeout(() => { setCatTransition(false); setCategoryPos(lastIndex - 1) }, 700)
-      return () => clearTimeout(t)
-    }
-    const enableT = setTimeout(() => setCatTransition(true), 750)
-    return () => clearTimeout(enableT)
-  }, [categoryPos, categories.length, infiniteCategories.length])
-
-  const handleCatNext = () => setCategoryPos((p) => p + 1)
-  const handleCatPrev = () => setCategoryPos((p) => p - 1)
-
-  /* ================= BRAND SLIDER ================= */
-  const [brandPos, setBrandPos] = useState(1)
-  const [brandTransition, setBrandTransition] = useState(true)
   const brandSlideWidth = 100 / brandSlidesPerView
-
-  useEffect(() => {
-    if (brands.length > 0) {
-      setBrandTransition(false)
-      setBrandPos(1)
-      const t = setTimeout(() => setBrandTransition(true), 50)
-      return () => clearTimeout(t)
-    }
-  }, [brands.length])
-
-  useEffect(() => {
-    if (brands.length > 0) {
-      const timer = setInterval(() => setBrandPos((p) => p + 1), 3500)
-      return () => clearInterval(timer)
-    }
-  }, [brands.length])
-
-  useEffect(() => {
-    if (!brands.length || !infiniteBrands.length) return
-    const lastIndex = infiniteBrands.length - 1
-    if (brandPos === lastIndex) {
-      const t = setTimeout(() => { setBrandTransition(false); setBrandPos(1) }, 700)
-      return () => clearTimeout(t)
-    }
-    if (brandPos === 0) {
-      const t = setTimeout(() => { setBrandTransition(false); setBrandPos(lastIndex - 1) }, 700)
-      return () => clearTimeout(t)
-    }
-    const enableT = setTimeout(() => setBrandTransition(true), 750)
-    return () => clearTimeout(enableT)
-  }, [brandPos, brands.length, infiniteBrands.length])
-
-  const handleBrandNext = () => setBrandPos((p) => p + 1)
-  const handleBrandPrev = () => setBrandPos((p) => p - 1)
-
-  /* ================= PRODUCT SLIDER ================= */
-  const [productPos, setProductPos] = useState(1)
-  const [prodTransition, setProdTransition] = useState(true)
   const productSlideWidth = 100 / productSlidesPerView
-
-  useEffect(() => {
-    if (allProducts.length > 0) {
-      setProdTransition(false)
-      setProductPos(1)
-      const t = setTimeout(() => setProdTransition(true), 50)
-      return () => clearTimeout(t)
-    }
-  }, [allProducts.length])
-
-  useEffect(() => {
-    if (allProducts.length > 0) {
-      const timer = setInterval(() => setProductPos((p) => p + 1), 3500)
-      return () => clearInterval(timer)
-    }
-  }, [allProducts.length])
-
-  useEffect(() => {
-    if (!allProducts.length || !infiniteProducts.length) return
-    const lastIndex = infiniteProducts.length - 1
-    if (productPos === lastIndex) {
-      const t = setTimeout(() => { setProdTransition(false); setProductPos(1) }, 700)
-      return () => clearTimeout(t)
-    }
-    if (productPos === 0) {
-      const t = setTimeout(() => { setProdTransition(false); setProductPos(lastIndex - 1) }, 700)
-      return () => clearTimeout(t)
-    }
-    const enableT = setTimeout(() => setProdTransition(true), 750)
-    return () => clearTimeout(enableT)
-  }, [productPos, allProducts.length, infiniteProducts.length])
-
-  const handleProdNext = () => setProductPos((p) => p + 1)
-  const handleProdPrev = () => setProductPos((p) => p - 1)
-
-  /* ================= NEW ARRIVAL SLIDER ================= */
-  const [newArrivalPos, setNewArrivalPos] = useState(1)
-  const [newArrivalTransition, setNewArrivalTransition] = useState(true)
   const newArrivalSlideWidth = 100 / newArrivalSlidesPerView
 
-  useEffect(() => {
-    if (newArrivalProducts.length > 0) {
-      setNewArrivalTransition(false)
-      setNewArrivalPos(1)
-      const t = setTimeout(() => setNewArrivalTransition(true), 50)
-      return () => clearTimeout(t)
+  /* ================= BANNER CLICK HANDLER ================= */
+  const handleBannerClick = (url: string) => {
+    if (!url || url === "/product") {
+      router.push("/product")
+    } else if (url.startsWith("http")) {
+      // External ya full URL — same tab mein open karo
+      window.location.href = url
+    } else {
+      router.push(url)
     }
-  }, [newArrivalProducts.length])
-
-  useEffect(() => {
-    if (newArrivalProducts.length > 0) {
-      const timer = setInterval(() => setNewArrivalPos((p) => p + 1), 3500)
-      return () => clearInterval(timer)
-    }
-  }, [newArrivalProducts.length])
-
-  useEffect(() => {
-    if (!newArrivalProducts.length || !infiniteNewArrivals.length) return
-    const lastIndex = infiniteNewArrivals.length - 1
-    if (newArrivalPos === lastIndex) {
-      const t = setTimeout(() => { setNewArrivalTransition(false); setNewArrivalPos(1) }, 700)
-      return () => clearTimeout(t)
-    }
-    if (newArrivalPos === 0) {
-      const t = setTimeout(() => { setNewArrivalTransition(false); setNewArrivalPos(lastIndex - 1) }, 700)
-      return () => clearTimeout(t)
-    }
-    const enableT = setTimeout(() => setNewArrivalTransition(true), 750)
-    return () => clearTimeout(enableT)
-  }, [newArrivalPos, newArrivalProducts.length, infiniteNewArrivals.length])
-
-  const handleNewArrivalNext = () => setNewArrivalPos((p) => p + 1)
-  const handleNewArrivalPrev = () => setNewArrivalPos((p) => p - 1)
+  }
 
   return (
     <div className="bg-white">
 
       {/* ================= NOTIFICATION MODAL ================= */}
       {showNotification && notificationProducts.length > 0 && (
-        <NotificationModal
-          products={notificationProducts}
-          onClose={() => setShowNotification(false)}
-        />
+        <NotificationModal products={notificationProducts} onClose={() => setShowNotification(false)} />
       )}
 
       {/* ================= HERO SECTION ================= */}
-      <section className="relative min-h-[90vh] md:min-h-screen w-full overflow-hidden pt-16 md:pt-16">
+      <section className="relative min-h-[90vh] md:min-h-screen w-full overflow-hidden pt-16">
         <div className="relative h-full w-full min-h-[90vh] md:min-h-screen">
           {heroSlides.map((slide, index) => (
             <div
@@ -1601,57 +1371,29 @@ export default function HomePage() {
                 index === heroIndex ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
               }`}
             >
-              <div className="absolute inset-0">
+              {/* ✅ Poora banner clickable — koi button nahi */}
+              <div
+                className="absolute inset-0 cursor-pointer"
+                onClick={() => handleBannerClick(slide.url)}
+              >
+                {/* Desktop Image */}
                 <img
                   src={slide.websiteImg}
                   alt={`Slide ${index + 1}`}
                   className="hidden md:block w-full h-full object-cover"
                 />
+                {/* Mobile Image */}
                 <img
                   src={slide.mobileImg}
                   alt={`Mobile Slide ${index + 1}`}
                   className="md:hidden w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 "></div>
-              </div>
-
-              <Link
-                href="/product"
-                className={`absolute z-10 hidden md:flex items-center gap-2 ${slide.buttonBg} ${slide.textColor}
-                px-8 py-4 rounded-lg font-bold text-lg
-                transition-all duration-300 hover:scale-105 hover:shadow-2xl`}
-                style={{ top: "55%", left: "7%" }}
-              >
-                <ShoppingBag size={20} />
-                {slide.buttonText}
-                <ArrowRight size={20} />
-              </Link>
-
-              <div className="absolute inset-0 flex md:hidden items-end justify-center px-4 pb-20">
-                <div className="w-full max-w-md mx-auto">
-                  <div className="text-center mb-10">
-                    <h1 className="text-white text-3xl font-bold mb-4 leading-tight"></h1>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 mb-10"></div>
-                  <div className="mb-10">
-                    <Link
-                      href="/product"
-                      className={`inline-flex items-center justify-center gap-2
-                      ${slide.buttonBg} ${slide.textColor}
-                      px-8 py-4 rounded-xl font-bold text-base w-full
-                      border-2 border-white/30 shadow-lg`}
-                    >
-                      <ShoppingBag className="w-5 h-5" />
-                      {slide.buttonText}
-                      <ArrowRight className="w-5 h-5" />
-                    </Link>
-                  </div>
-                </div>
               </div>
             </div>
           ))}
         </div>
 
+        {/* Dots */}
         <div className="absolute bottom-12 left-0 right-0 z-20">
           <div className="flex justify-center gap-3">
             {heroSlides.map((_, i) => (
@@ -1679,29 +1421,24 @@ export default function HomePage() {
               View All Brands <span>→</span>
             </Link>
           </div>
-
           {loading ? (
             <div className="text-center py-12 text-gray-600">Loading brands...</div>
           ) : brands.length > 0 ? (
             <div className="relative">
-              <button onClick={handleBrandPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">‹</button>
-              <button onClick={handleBrandNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">›</button>
+              <button onClick={brandSlider.prev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl bg-red-500 hover:bg-red-600">‹</button>
+              <button onClick={brandSlider.next} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl bg-red-500 hover:bg-red-600">›</button>
               <div className="overflow-hidden">
-                <div
-                  className={`flex ${brandTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
-                  style={{ transform: `translateX(-${brandPos * brandSlideWidth}%)` }}
-                >
+                <div className={`flex ${brandSlider.transition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${brandSlider.pos * brandSlideWidth}%)` }}>
                   {infiniteBrands.map((b: any, i: number) => (
                     <div key={`${b._id}-${i}`} style={{ minWidth: `${brandSlideWidth}%` }} className="px-3">
                       <Link href={`/product?brand=${b._id}`} className="block h-full">
-                        <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-[290px] flex flex-col cursor-pointer">
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-[290px] flex flex-col">
                           <div className="relative h-[240px] bg-gray-100 overflow-hidden">
                             <img src={b.icons || "/placeholder.jpg"} alt={b.brand || "Brand"} className="w-full h-full object-cover" />
                             <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">Brand</span>
                           </div>
-                          <div className="p-5 flex flex-col flex-1">
-                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">{b.brand}</h3>
-                          </div>
+                          <div className="p-5"><h3 className="text-base font-semibold text-gray-800 line-clamp-1">{b.brand}</h3></div>
                         </div>
                       </Link>
                     </div>
@@ -1709,9 +1446,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12 text-gray-600">No brands available</div>
-          )}
+          ) : <div className="text-center py-12 text-gray-600">No brands available</div>}
         </div>
       </section>
 
@@ -1721,35 +1456,30 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
             <div>
               <h2 className="text-[40px] font-serif font-semibold text-gray-800">Explore Categories</h2>
-              <p className="text-gray-600 mt-2 max-w-xl">Discover our curated collection of premium products across different categories.</p>
+              <p className="text-gray-600 mt-2 max-w-xl">Discover our curated collection of premium products.</p>
             </div>
             <Link href="/category" className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition">
               View All Categories <span>→</span>
             </Link>
           </div>
-
           {loading ? (
             <div className="text-center py-12 text-gray-600">Loading categories...</div>
           ) : categories.length > 0 ? (
             <div className="relative">
-              <button onClick={handleCatPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">‹</button>
-              <button onClick={handleCatNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">›</button>
+              <button onClick={catSlider.prev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl bg-red-500 hover:bg-red-600">‹</button>
+              <button onClick={catSlider.next} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl bg-red-500 hover:bg-red-600">›</button>
               <div className="overflow-hidden">
-                <div
-                  className={`flex ${catTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
-                  style={{ transform: `translateX(-${categoryPos * categorySlideWidth}%)` }}
-                >
+                <div className={`flex ${catSlider.transition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${catSlider.pos * categorySlideWidth}%)` }}>
                   {infiniteCategories.map((cat: any, i: number) => (
                     <div key={`${cat._id}-${i}`} style={{ minWidth: `${categorySlideWidth}%` }} className="px-3">
                       <Link href={`/product?category=${cat._id}`} className="block h-full">
-                        <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-[290px] flex flex-col cursor-pointer">
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-[290px] flex flex-col">
                           <div className="relative h-[240px] bg-gray-100 overflow-hidden">
                             <img src={cat.catImg || "/placeholder.jpg"} alt={cat.categoryname} className="w-full h-full object-cover" />
                             <span className="absolute top-3 right-3 bg-pink-500 text-white text-xs px-3 py-1 rounded">Category</span>
                           </div>
-                          <div className="p-5 flex flex-col flex-1">
-                            <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">{cat.categoryname}</h3>
-                          </div>
+                          <div className="p-5"><h3 className="text-base font-semibold text-gray-800 line-clamp-1">{cat.categoryname}</h3></div>
                         </div>
                       </Link>
                     </div>
@@ -1757,13 +1487,11 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12 text-gray-600">No categories available</div>
-          )}
+          ) : <div className="text-center py-12 text-gray-600">No categories available</div>}
         </div>
       </section>
 
-      {/* ================= NEW ARRIVAL PRODUCTS ================= */}
+      {/* ================= NEW ARRIVALS ================= */}
       <section className="py-20 bg-yellow-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
@@ -1775,53 +1503,45 @@ export default function HomePage() {
               Explore Products <span>→</span>
             </Link>
           </div>
-
           {loading ? (
             <div className="text-center py-12 text-gray-600">Loading new arrivals...</div>
           ) : newArrivalProducts.length > 0 ? (
             <div className="relative">
-              <button onClick={handleNewArrivalPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">‹</button>
-              <button onClick={handleNewArrivalNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl transition bg-red-500 hover:bg-red-600">›</button>
+              <button onClick={newArrSlider.prev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl bg-red-500 hover:bg-red-600">‹</button>
+              <button onClick={newArrSlider.next} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full text-white text-2xl flex items-center justify-center shadow-xl bg-red-500 hover:bg-red-600">›</button>
               <div className="overflow-hidden">
-                <div
-                  className={`flex ${newArrivalTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
-                  style={{ transform: `translateX(-${newArrivalPos * newArrivalSlideWidth}%)` }}
-                >
-                  {infiniteNewArrivals.map((p: any, i: number) => {
-                    const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
-                    return (
-                      <div key={`${p._id}-${i}`} style={{ minWidth: `${newArrivalSlideWidth}%` }} className="px-3">
-                        <Link href={`/product/${p._id}`} className="block h-full group">
-                          <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-full flex flex-col">
-                            <div className="relative w-full pt-[100%] bg-gray-50">
-                              <div className="absolute inset-0 p-3">
-                                <img src={p.images?.[0] || "/placeholder.jpg"} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
-                              </div>
-                              {hasKeyFeature && (
-                                <div className="absolute top-2 left-2">
-                                  <span className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}>{p.key_feature}</span>
-                                </div>
-                              )}
+                <div className={`flex ${newArrSlider.transition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${newArrSlider.pos * newArrivalSlideWidth}%)` }}>
+                  {infiniteNewArrivals.map((p: any, i: number) => (
+                    <div key={`${p._id}-${i}`} style={{ minWidth: `${newArrivalSlideWidth}%` }} className="px-3">
+                      <Link href={`/product/${p._id}`} className="block h-full group">
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl h-full flex flex-col transition-all duration-300">
+                          <div className="relative w-full pt-[100%] bg-gray-50">
+                            <div className="absolute inset-0 p-3">
+                              <img src={p.images?.[0] || "/placeholder.jpg"} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
                             </div>
-                            <div className="p-4 flex flex-col flex-1">
-                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">{p.name}</h3>
-                              <div className="mt-auto">
-                                <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
-                                  View Details <ArrowRight size={14} />
-                                </button>
+                            {p.key_feature?.trim() && (
+                              <div className="absolute top-2 left-2">
+                                <span className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}>{p.key_feature}</span>
                               </div>
+                            )}
+                          </div>
+                          <div className="p-4 flex flex-col flex-1">
+                            <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">{p.name}</h3>
+                            <div className="mt-auto">
+                              <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
+                                View Details <ArrowRight size={14} />
+                              </button>
                             </div>
                           </div>
-                        </Link>
-                      </div>
-                    )
-                  })}
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12 text-gray-600">No new arrival products available</div>
-          )}
+          ) : <div className="text-center py-12 text-gray-600">No new arrival products available</div>}
         </div>
       </section>
 
@@ -1831,59 +1551,51 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-14">
             <div>
               <h2 className="text-[40px] font-serif font-semibold text-gray-800">Products</h2>
-              <p className="text-gray-600 mt-2 max-w-xl">Discover our most popular wholesale cosmetic products trusted by businesses worldwide.</p>
+              <p className="text-gray-600 mt-2 max-w-xl">Discover our most popular wholesale cosmetic products.</p>
             </div>
             <Link href="/product" className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition">
               View All Products <ArrowRight size={16} />
             </Link>
           </div>
-
           {loading ? (
             <div className="text-center py-12 text-gray-600">Loading products...</div>
           ) : allProducts.length > 0 ? (
             <div className="relative">
-              <button onClick={handleProdPrev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-red-500 text-white text-2xl flex items-center justify-center shadow-xl hover:bg-red-600">‹</button>
-              <button onClick={handleProdNext} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-red-500 text-white text-2xl flex items-center justify-center shadow-xl hover:bg-red-600">›</button>
+              <button onClick={prodSlider.prev} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-red-500 text-white text-2xl flex items-center justify-center shadow-xl hover:bg-red-600">‹</button>
+              <button onClick={prodSlider.next} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-red-500 text-white text-2xl flex items-center justify-center shadow-xl hover:bg-red-600">›</button>
               <div className="overflow-hidden">
-                <div
-                  className={`flex ${prodTransition ? "transition-transform duration-700 ease-in-out" : ""}`}
-                  style={{ transform: `translateX(-${productPos * productSlideWidth}%)` }}
-                >
-                  {infiniteProducts.map((p: any, i: number) => {
-                    const hasKeyFeature = p.key_feature && p.key_feature.trim() !== ""
-                    return (
-                      <div key={`${p._id}-${i}`} style={{ minWidth: `${productSlideWidth}%` }} className="px-3">
-                        <Link href={`/product/${p._id}`} className="block h-full group">
-                          <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl h-full flex flex-col">
-                            <div className="relative w-full pt-[100%] bg-gray-50">
-                              <div className="absolute inset-0 p-3">
-                                <img src={p.images?.[0] || "/placeholder.jpg"} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
-                              </div>
-                              {hasKeyFeature && (
-                                <div className="absolute top-2 left-2">
-                                  <span className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}>{p.key_feature}</span>
-                                </div>
-                              )}
+                <div className={`flex ${prodSlider.transition ? "transition-transform duration-700 ease-in-out" : ""}`}
+                  style={{ transform: `translateX(-${prodSlider.pos * productSlideWidth}%)` }}>
+                  {infiniteProducts.map((p: any, i: number) => (
+                    <div key={`${p._id}-${i}`} style={{ minWidth: `${productSlideWidth}%` }} className="px-3">
+                      <Link href={`/product/${p._id}`} className="block h-full group">
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl h-full flex flex-col transition-all duration-300">
+                          <div className="relative w-full pt-[100%] bg-gray-50">
+                            <div className="absolute inset-0 p-3">
+                              <img src={p.images?.[0] || "/placeholder.jpg"} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
                             </div>
-                            <div className="p-4 flex flex-col flex-1">
-                              <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">{p.name}</h3>
-                              <div className="mt-auto">
-                                <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
-                                  View Details <ArrowRight size={14} />
-                                </button>
+                            {p.key_feature?.trim() && (
+                              <div className="absolute top-2 left-2">
+                                <span className={`${getBadgeStyle(i)} text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shadow-lg`}>{p.key_feature}</span>
                               </div>
+                            )}
+                          </div>
+                          <div className="p-4 flex flex-col flex-1">
+                            <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[40px]">{p.name}</h3>
+                            <div className="mt-auto">
+                              <button className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 hover:bg-gray-800 transition-colors">
+                                View Details <ArrowRight size={14} />
+                              </button>
                             </div>
                           </div>
-                        </Link>
-                      </div>
-                    )
-                  })}
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12 text-gray-600">No products available</div>
-          )}
+          ) : <div className="text-center py-12 text-gray-600">No products available</div>}
         </div>
       </section>
 
