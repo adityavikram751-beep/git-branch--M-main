@@ -14,8 +14,6 @@ type ApiBanner = {
   type: "website" | "mobile" | string;
   banner: string;
   createdAt?: string;
-  brandId?: any;
-  brand?: any;
 };
 
 type BannerUI = {
@@ -24,12 +22,6 @@ type BannerUI = {
   type: "website" | "mobile";
   banner: string;
   createdAt?: string;
-  brandName?: string;
-};
-
-type Brand = {
-  _id: string;
-  brand: string;
 };
 
 /* ---------------- API CONFIG ---------------- */
@@ -37,7 +29,6 @@ const BASE_URL = "https://api.3846.in";
 const API_GET_ALL = `${BASE_URL}/api/v1/banner/all`;
 const API_ADD = `${BASE_URL}/api/v1/banner/add-banner`;
 const API_DELETE = `${BASE_URL}/api/v1/banner/delete-banner`;
-const API_BRANDS = `${BASE_URL}/api/v1/brands/getall`;
 
 /* ---------------- TOKEN ---------------- */
 const getAuthToken = () => {
@@ -56,41 +47,14 @@ const parseBannersList = (data: any): ApiBanner[] => {
   return [];
 };
 
-const parseBrandsList = (data: any): Brand[] => {
-  if (Array.isArray(data)) return data;
-  if (data?.data && Array.isArray(data.data)) return data.data;
-  if (data?.brands && Array.isArray(data.brands)) return data.brands;
-  if (data?.results && Array.isArray(data.results)) return data.results;
-  return [];
-};
-
-// ✅ FIXED: API mein brand ka field naam 'brand' hai, 'name' nahi
-const mapApiToUI = (b: ApiBanner, brandsList: Brand[]): BannerUI => {
+const mapApiToUI = (b: ApiBanner): BannerUI => {
   const t = (b.type || "").toLowerCase();
-
-  let brandName = "";
-
-  // Banner mein brandId ya brand dono try karo
-  const rawRef = b.brandId ?? b.brand ?? null;
-
-  if (rawRef) {
-    if (typeof rawRef === "object" && rawRef !== null) {
-      // Populated object aaya — 'brand' field hai
-      brandName = rawRef.brand || rawRef.name || rawRef.title || "";
-    } else if (typeof rawRef === "string") {
-      // Sirf ID aaya — brandsList se match karo
-      const found = brandsList.find((br) => br._id === rawRef);
-      brandName = found?.brand || ""; // ✅ found.brand, found.name nahi
-    }
-  }
-
   return {
     id: b._id,
     title: b.title || "",
     type: t === "mobile" ? "mobile" : "website",
     banner: b.banner || "",
     createdAt: b.createdAt,
-    brandName,
   };
 };
 
@@ -99,17 +63,14 @@ export default function SlidingBanners() {
 
   const [selectedType, setSelectedType] = useState<"website" | "mobile">("website");
   const [title, setTitle] = useState("");
+  const [redirectUrl, setRedirectUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
 
   const [allBanners, setAllBanners] = useState<BannerUI[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [selectedBrandId, setSelectedBrandId] = useState<string>("");
-
   const [loading, setLoading] = useState(false);
   const [posting, setPosting] = useState(false);
   const [deletingId, setDeletingId] = useState<string>("");
-  const [brandsLoading, setBrandsLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
   const showMsg = (msg: string) => alert(msg);
@@ -123,60 +84,8 @@ export default function SlidingBanners() {
     [allBanners]
   );
 
-  /* ---------------- FETCH BRANDS ---------------- */
-  const fetchBrands = async (): Promise<Brand[]> => {
-    try {
-      setBrandsLoading(true);
-      setError("");
-
-      const token = getAuthToken();
-      if (!token) {
-        const msg = "Token missing! Cannot load brands.";
-        setError(msg);
-        showMsg(msg);
-        return [];
-      }
-
-      const res = await fetch(API_BRANDS, {
-        method: "GET",
-        headers: { Authorization: token },
-      });
-
-      const rawText = await res.text();
-      let data;
-      try { data = JSON.parse(rawText); } catch {
-        setError("Invalid JSON from brands API");
-        return [];
-      }
-
-      if (!res.ok) {
-        setError(data?.message || `HTTP ${res.status}`);
-        showMsg(data?.message || "Failed to load brands");
-        return [];
-      }
-
-      const brandsList = parseBrandsList(data);
-      setBrands(brandsList);
-
-      if (brandsList.length > 0) {
-        setSelectedBrandId(brandsList[0]._id);
-        console.log("✅ Brands loaded:", brandsList.length, "| First:", brandsList[0].brand);
-      } else {
-        setError("No brands available. Please add brands first.");
-      }
-
-      return brandsList;
-    } catch (err: any) {
-      setError(err.message);
-      showMsg("Network error while loading brands");
-      return [];
-    } finally {
-      setBrandsLoading(false);
-    }
-  };
-
   /* ---------------- FETCH BANNERS ---------------- */
-  const fetchBanners = async (brandsList: Brand[] = []) => {
+  const fetchBanners = async () => {
     try {
       setLoading(true);
       setError("");
@@ -195,7 +104,9 @@ export default function SlidingBanners() {
 
       const rawText = await res.text();
       let data;
-      try { data = JSON.parse(rawText); } catch {
+      try {
+        data = JSON.parse(rawText);
+      } catch {
         setError("Invalid JSON from banners API");
         return;
       }
@@ -207,17 +118,11 @@ export default function SlidingBanners() {
       }
 
       const list = parseBannersList(data);
-
-      if (list.length > 0) {
-        console.log("🔍 First banner raw:", JSON.stringify(list[0], null, 2));
-      }
-
       const mapped = list
-        .map((b) => mapApiToUI(b, brandsList))
+        .map((b) => mapApiToUI(b))
         .filter((x) => x.banner && x.banner.trim() !== "");
 
       setAllBanners(mapped);
-      console.log("✅ Banners:", mapped.map((b) => `${b.title} → ${b.brandName || "N/A"}`));
     } catch (err: any) {
       setError(err.message);
       showMsg("Network error while loading banners");
@@ -228,18 +133,17 @@ export default function SlidingBanners() {
 
   /* ---------------- INIT ---------------- */
   useEffect(() => {
-    const init = async () => {
-      const bl = await fetchBrands();
-      await fetchBanners(bl);
-    };
-    init();
+    fetchBanners();
   }, []);
 
   /* ---------------- FILE UPLOAD ---------------- */
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!f.type.startsWith("image/")) { showMsg("Only image files allowed"); return; }
+    if (!f.type.startsWith("image/")) {
+      showMsg("Only image files allowed");
+      return;
+    }
     setFile(f);
     setPreview(URL.createObjectURL(f));
   };
@@ -251,21 +155,15 @@ export default function SlidingBanners() {
       if (!token) { showMsg("Token missing!"); return; }
       if (!title.trim()) return showMsg("Please enter banner title");
       if (!file) return showMsg("Please upload banner image");
-      if (!selectedBrandId) return showMsg("Please select a brand");
 
       setPosting(true);
-
-      console.log("🚀 Adding banner with brandId:", selectedBrandId);
 
       const fd = new FormData();
       fd.append("file", file);
       fd.append("type", selectedType);
       fd.append("title", title.trim());
-    
-      fd.append("brand", selectedBrandId);   // backend brand expect kare toh
-
-      for (const [key, val] of fd.entries()) {
-        console.log(`  fd → ${key}:`, val);
+      if (redirectUrl.trim()) {
+        fd.append("url", redirectUrl.trim());
       }
 
       const res = await fetch(API_ADD, {
@@ -275,19 +173,22 @@ export default function SlidingBanners() {
       });
 
       const rawRes = await res.text();
-      console.log("📩 Add banner response:", rawRes);
       let data: any = {};
       try { data = JSON.parse(rawRes); } catch {}
-      if (!res.ok) { showMsg(data?.message || "Failed to add banner"); return; }
+
+      if (!res.ok) {
+        showMsg(data?.message || "Failed to add banner");
+        return;
+      }
 
       setTitle("");
+      setRedirectUrl("");
       setFile(null);
       setPreview("");
       if (fileRef.current) fileRef.current.value = "";
 
       showMsg("Banner added ✅");
-      const bl = await fetchBrands();
-      await fetchBanners(bl);
+      await fetchBanners();
     } catch {
       showMsg("Something went wrong while adding banner");
     } finally {
@@ -309,11 +210,13 @@ export default function SlidingBanners() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showMsg(data?.message || "Failed to delete banner"); return; }
+      if (!res.ok) {
+        showMsg(data?.message || "Failed to delete banner");
+        return;
+      }
 
       showMsg("Banner deleted ✅");
-      const bl = await fetchBrands();
-      await fetchBanners(bl);
+      await fetchBanners();
     } catch {
       showMsg("Something went wrong while deleting banner");
     } finally {
@@ -329,11 +232,6 @@ export default function SlidingBanners() {
       </div>
       <div className="p-4 space-y-1">
         <h3 className="font-semibold text-rose-900">{b.title}</h3>
-        {b.brandName ? (
-          <p className="text-xs text-rose-500 font-medium">🏷️ Brand: {b.brandName}</p>
-        ) : (
-          <p className="text-xs text-gray-400 italic"></p>
-        )}
         <div className="pt-2">
           <Button
             variant="destructive"
@@ -354,20 +252,17 @@ export default function SlidingBanners() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-lg font-semibold text-rose-900">Sliding Banners</h2>
         <Button
-          onClick={async () => {
-            const bl = await fetchBrands();
-            await fetchBanners(bl);
-          }}
+          onClick={fetchBanners}
           variant="outline"
           className="border-rose-200 text-rose-700 hover:bg-rose-50"
-          disabled={loading || brandsLoading}
+          disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading || brandsLoading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
 
-      {/* Error Display */}
+      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md text-sm">
           ⚠️ {error}
@@ -380,7 +275,8 @@ export default function SlidingBanners() {
           <CardTitle className="text-rose-900">Add Banner</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Type */}
+
+          {/* Banner Type */}
           <div className="space-y-2">
             <p className="text-sm font-medium text-rose-900">Banner Type</p>
             <select
@@ -393,38 +289,31 @@ export default function SlidingBanners() {
             </select>
           </div>
 
-          {/* Brand Dropdown */}
+          {/* Title */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-rose-900">Brand</p>
-            <select
-              value={selectedBrandId}
-              onChange={(e) => setSelectedBrandId(e.target.value)}
+            <p className="text-sm font-medium text-rose-900">Banner Title</p>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter banner title"
               className="w-full rounded-md border border-rose-200 bg-white px-3 py-2 text-sm"
-              disabled={brandsLoading || brands.length === 0}
-            >
-              {brandsLoading ? (
-                <option>Loading brands...</option>
-              ) : brands.length === 0 ? (
-                <option value="">No brands found</option>
-              ) : (
-                brands.map((brand) => (
-                  <option key={brand._id} value={brand._id}>
-                    {brand.brand} {/* ✅ brand.brand field */}
-                  </option>
-                ))
-              )}
-            </select>
+            />
           </div>
 
-          {/* Title */}
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Banner Title"
-            className="w-full rounded-md border border-rose-200 bg-white px-3 py-2 text-sm"
-          />
+          {/* Redirect URL */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-rose-900">
+              Redirect URL <span className="text-rose-400 font-normal"></span>
+            </p>
+            <input
+              value={redirectUrl}
+              onChange={(e) => setRedirectUrl(e.target.value)}
+              placeholder="https://example.com"
+              className="w-full rounded-md border border-rose-200 bg-white px-3 py-2 text-sm"
+            />
+          </div>
 
-          {/* Upload */}
+          {/* Upload + Add */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <input
@@ -440,13 +329,13 @@ export default function SlidingBanners() {
                 className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-rose-700 hover:bg-rose-50"
               >
                 <UploadCloud className="h-4 w-4" />
-                Upload Banner
+                {file ? file.name.slice(0, 20) + "…" : "Upload Banner"}
               </label>
             </div>
             <Button
               onClick={addBanner}
               className="bg-rose-600 hover:bg-rose-700"
-              disabled={posting || brandsLoading}
+              disabled={posting}
             >
               <Plus className="h-4 w-4 mr-2" />
               {posting ? "Adding..." : "Add Banner"}
@@ -457,7 +346,7 @@ export default function SlidingBanners() {
           {preview && (
             <div className="rounded-xl border border-rose-200 p-3">
               <p className="text-sm font-medium text-rose-900 mb-2">
-                Preview ({selectedType}) - {title || "No Title"}
+                Preview ({selectedType}) — {title || "No Title"}
               </p>
               <div className="relative h-[180px] w-full overflow-hidden rounded-lg">
                 <Image src={preview} alt="preview" fill className="object-cover" unoptimized />
