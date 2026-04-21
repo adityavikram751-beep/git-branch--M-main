@@ -35,7 +35,7 @@ interface SubCategory {
   subCatName: string
   subCatTitle: string
   catId: string
-  icon?: string  // Image is stored in "icon" field
+  icon?: string
   isDelete: boolean
 }
 
@@ -68,12 +68,19 @@ export default function CategoryManagement() {
   const [selectedImages, setSelectedImages] = useState<ImageFile[]>([])
   const [selectedSubCatImages, setSelectedSubCatImages] = useState<ImageFile[]>([])
   
-  // Update Image Modal States
+  // Update Image Modal States (Category)
   const [updateImageModalOpen, setUpdateImageModalOpen] = useState<boolean>(false)
   const [categoryToUpdateImage, setCategoryToUpdateImage] = useState<Category | null>(null)
   const [newCategoryImage, setNewCategoryImage] = useState<ImageFile[]>([])
   const [updateImageDragOver, setUpdateImageDragOver] = useState<boolean>(false)
   const [updateImageLoading, setUpdateImageLoading] = useState<boolean>(false)
+
+  // Update Subcategory Image Modal States
+  const [updateSubCatImageModalOpen, setUpdateSubCatImageModalOpen] = useState<boolean>(false)
+  const [subCatToUpdateImage, setSubCatToUpdateImage] = useState<SubCategory | null>(null)
+  const [newSubCatImage, setNewSubCatImage] = useState<ImageFile[]>([])
+  const [updateSubCatImageDragOver, setUpdateSubCatImageDragOver] = useState<boolean>(false)
+  const [updateSubCatImageLoading, setUpdateSubCatImageLoading] = useState<boolean>(false)
   
   // UI States
   const [searchTerm, setSearchTerm] = useState<string>("")
@@ -193,7 +200,6 @@ export default function CategoryManagement() {
   }
 
   const getSubCatImage = (subCat: SubCategory) => {
-    // Subcategory image is stored in "icon" field
     return subCat.icon || null
   }
 
@@ -458,6 +464,140 @@ export default function CategoryManagement() {
     }
   }
 
+  // ===================== SUBCATEGORY IMAGE UPDATE FUNCTIONS =====================
+  const openUpdateSubCatImageModal = (subCat: SubCategory) => {
+    setSubCatToUpdateImage(subCat)
+    setNewSubCatImage([])
+    setUpdateSubCatImageModalOpen(true)
+    setError("")
+    setSuccess("")
+  }
+
+  const closeUpdateSubCatImageModal = () => {
+    setUpdateSubCatImageModalOpen(false)
+    setSubCatToUpdateImage(null)
+    setNewSubCatImage([])
+    setUpdateSubCatImageDragOver(false)
+  }
+
+  const handleUpdateSubCatImageDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setUpdateSubCatImageDragOver(true)
+  }
+
+  const handleUpdateSubCatImageDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setUpdateSubCatImageDragOver(false)
+  }
+
+  const handleUpdateSubCatImageDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setUpdateSubCatImageDragOver(false)
+
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 1) {
+      setError("You can only upload 1 image")
+      return
+    }
+
+    const file = files[0]
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files allowed")
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image size should be less than 2MB")
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setNewSubCatImage([{ file, previewUrl }])
+  }
+
+  const handleUpdateSubCatImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length > 1) {
+      setError("You can only upload 1 image")
+      return
+    }
+
+    const file = files[0]
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files allowed")
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image size should be less than 2MB")
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setNewSubCatImage([{ file, previewUrl }])
+    
+    e.target.value = ""
+  }
+
+  const removeUpdateSubCatImage = () => {
+    setNewSubCatImage([])
+  }
+
+  // Update subcategory image using PUT API
+  const handleUpdateSubCategoryImage = async () => {
+    if (!subCatToUpdateImage || newSubCatImage.length === 0) {
+      setError("Please select a new image")
+      return
+    }
+
+    try {
+      setUpdateSubCatImageLoading(true)
+      setError("")
+      setSuccess("")
+
+      console.log("Updating subcategory image for:", subCatToUpdateImage._id)
+      
+      const formData = new FormData()
+      formData.append("image", newSubCatImage[0].file)
+
+      const response = await fetch(`${API_URL}/subcategory/update-image/${subCatToUpdateImage._id}`, {
+        method: "PUT",   // Important: PUT method as per your API
+        headers: {
+          ...getAuthHeaders(),
+        },
+        body: formData,
+      })
+
+      const responseText = await response.text()
+      console.log("Update subcategory image response:", response.status, responseText)
+      
+      let data: any = null
+      try {
+        data = JSON.parse(responseText)
+      } catch {
+        // Not JSON
+      }
+
+      if (response.ok || (data && data.message && data.message === "subcategory image updated successfully")) {
+        setSuccess("Subcategory image updated successfully!")
+        await fetchSubCategories()   // Refresh list
+        setTimeout(() => {
+          closeUpdateSubCatImageModal()
+        }, 1500)
+      } else if (data && data.message) {
+        throw new Error(data.message)
+      } else {
+        throw new Error(responseText || "Failed to update subcategory image")
+      }
+      
+    } catch (err: unknown) {
+      console.error("Update subcategory image error:", err)
+      const errorMessage = err instanceof Error ? err.message : "Failed to update subcategory image"
+      setError(errorMessage)
+    } finally {
+      setUpdateSubCatImageLoading(false)
+    }
+  }
+  // ==================================================================
+
   // Category CRUD Operations
   const handleSaveCategory = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -599,37 +739,27 @@ export default function CategoryManagement() {
           body: JSON.stringify(requestBody),
         })
 
-        // Log the response status
-        console.log("Response status:", response.status)
-
-        // Try to get the response text first
         const responseText = await response.text()
         console.log("Response text:", responseText)
 
-        // Try to parse as JSON if possible
         let data: any = {}
         try {
           data = JSON.parse(responseText)
         } catch {
-          // If not JSON, use the text as message
           console.log("Response is not JSON, using text")
         }
 
-        // Check if update was successful
         if (response.ok || (data && (data.status === "success" || data.success))) {
           setSuccess("Subcategory updated successfully!")
           
-          // Reset form
           setSubCatName("")
           setSubCatTitle("")
           setSelectedCatId("")
           setSelectedSubCatImages([])
           setEditingSubCategory(null)
           
-          // Refresh subcategories
           await fetchSubCategories()
         } else {
-          // Handle error
           const errorMessage = data.message || responseText || "Failed to update subcategory"
           throw new Error(errorMessage)
         }
@@ -684,7 +814,6 @@ export default function CategoryManagement() {
         }
       }
 
-      // Reset form for both add and edit success cases
       if (!editingSubCategory) {
         setSubCatName("")
         setSubCatTitle("")
@@ -750,10 +879,8 @@ export default function CategoryManagement() {
       let url = ""
       
       if (deleteType === "category") {
-        // Category delete endpoint
         url = `${API_URL}/category/${itemToDelete._id}`
       } else {
-        // Subcategory delete endpoint
         url = `${API_URL}/subcategory/deletesubcat/${itemToDelete._id}`
       }
 
@@ -773,7 +900,6 @@ export default function CategoryManagement() {
         const text = await response.text()
         console.error("Non-JSON response:", text)
         
-        // Check if text contains success message
         if (text.includes("deleted") || text.includes("success")) {
           setSuccess(`${deleteType === "category" ? "Category" : "Subcategory"} deleted successfully!`)
           setDeleteModalOpen(false)
@@ -795,7 +921,6 @@ export default function CategoryManagement() {
           throw new Error(data.message || "Failed to delete category")
         }
       } else {
-        // Check for both possible response formats
         if (response.ok || data.status === "success" || data.success) {
           setSuccess("Subcategory deleted successfully!")
         } else {
@@ -937,7 +1062,6 @@ export default function CategoryManagement() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Category Image</label>
                     <div className="space-y-4">
-                      {/* Image previews */}
                       {selectedImages.length > 0 && (
                         <div className="flex flex-wrap gap-4">
                           {selectedImages.map((img, index) => (
@@ -961,7 +1085,6 @@ export default function CategoryManagement() {
                         </div>
                       )}
 
-                      {/* Upload area */}
                       {selectedImages.length < 1 && (
                         <div
                           className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
@@ -1093,7 +1216,6 @@ export default function CategoryManagement() {
                               ;(e.target as HTMLImageElement).src = "/abstract-categories.png"
                             }}
                           />
-                          {/* Edit and Delete buttons on top right of image */}
                           <div className="absolute top-2 right-2 flex gap-1">
                             <button
                               className="p-2 bg-white/80 hover:bg-white rounded-full shadow-sm"
@@ -1372,7 +1494,6 @@ export default function CategoryManagement() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Subcategory Image</label>
                     <div className="space-y-4">
-                      {/* Image previews */}
                       {selectedSubCatImages.length > 0 && (
                         <div className="flex flex-wrap gap-4">
                           {selectedSubCatImages.map((img, index) => (
@@ -1396,7 +1517,6 @@ export default function CategoryManagement() {
                         </div>
                       )}
 
-                      {/* Upload area */}
                       {selectedSubCatImages.length < 1 && (
                         <div
                           className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
@@ -1515,7 +1635,7 @@ export default function CategoryManagement() {
                               <Layers className="w-16 h-16 text-blue-400" />
                             </div>
                           )}
-                          {/* Edit and Delete buttons on top right of image */}
+                          {/* Edit and Delete buttons on top right */}
                           <div className="absolute top-2 right-2 flex gap-1">
                             <button
                               className="p-2 bg-white/80 hover:bg-white rounded-full shadow-sm"
@@ -1523,6 +1643,14 @@ export default function CategoryManagement() {
                               title="Edit subcategory"
                             >
                               <Edit size={16} className="text-blue-600" />
+                            </button>
+                            {/* NEW: Update Image button for subcategory */}
+                            <button
+                              className="p-2 bg-white/80 hover:bg-white rounded-full shadow-sm"
+                              onClick={() => openUpdateSubCatImageModal(subCat)}
+                              title="Update subcategory image"
+                            >
+                              <Upload size={16} className="text-green-600" />
                             </button>
                             <button
                               onClick={() => openDeleteModal(subCat, "subcategory")}
@@ -1623,7 +1751,6 @@ export default function CategoryManagement() {
               </button>
             </div>
 
-            {/* Current Image */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Current Image</label>
               <div className="w-full h-48 border border-gray-200 rounded-lg overflow-hidden">
@@ -1638,11 +1765,9 @@ export default function CategoryManagement() {
               </div>
             </div>
 
-            {/* New Image Upload */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">New Image</label>
               <div className="space-y-4">
-                {/* New image preview */}
                 {newCategoryImage.length > 0 && (
                   <div>
                     <p className="text-sm text-gray-700 mb-2">New image preview:</p>
@@ -1665,7 +1790,6 @@ export default function CategoryManagement() {
                   </div>
                 )}
 
-                {/* Upload area */}
                 {newCategoryImage.length === 0 && (
                   <div
                     className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
@@ -1707,6 +1831,129 @@ export default function CategoryManagement() {
                 disabled={updateImageLoading || newCategoryImage.length === 0}
               >
                 {updateImageLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Update Image
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Update Subcategory Image Modal */}
+      {updateSubCatImageModalOpen && subCatToUpdateImage && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Update Subcategory Image</h2>
+                <p className="text-gray-600 text-sm mt-1">
+                  Update image for: <span className="font-semibold">{subCatToUpdateImage.subCatName}</span>
+                </p>
+              </div>
+              <button
+                onClick={closeUpdateSubCatImageModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Image */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Current Image</label>
+              <div className="w-full h-48 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                {subCatToUpdateImage.icon ? (
+                  <img
+                    src={subCatToUpdateImage.icon}
+                    alt={subCatToUpdateImage.subCatName}
+                    className="w-full h-full object-cover"
+                    onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                      (e.target as HTMLImageElement).src = "/abstract-categories.png"
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <ImageIcon className="w-12 h-12" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* New Image Upload */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">New Image</label>
+              <div className="space-y-4">
+                {newSubCatImage.length > 0 && (
+                  <div>
+                    <p className="text-sm text-gray-700 mb-2">New image preview:</p>
+                    <div className="relative">
+                      <div className="w-full h-48 border border-gray-200 rounded-lg overflow-hidden">
+                        <img
+                          src={newSubCatImage[0].previewUrl || "/placeholder.svg"}
+                          alt="New subcategory preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs flex items-center justify-center"
+                        onClick={removeUpdateSubCatImage}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {newSubCatImage.length === 0 && (
+                  <div
+                    className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      updateSubCatImageDragOver
+                        ? "border-green-400 bg-green-50"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    onDragOver={handleUpdateSubCatImageDragOver}
+                    onDragLeave={handleUpdateSubCatImageDragLeave}
+                    onDrop={handleUpdateSubCatImageDrop}
+                  >
+                    <ImageIcon className={`w-10 h-10 mx-auto mb-3 ${updateSubCatImageDragOver ? "text-green-500" : "text-gray-400"}`} />
+                    <p className={`text-sm font-medium mb-2 ${updateSubCatImageDragOver ? "text-green-600" : "text-gray-600"}`}>
+                      {updateSubCatImageDragOver ? "Drop your image here" : "Drag & drop a new image here"}
+                    </p>
+                    <p className="text-gray-500 text-sm mb-3">or</p>
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg cursor-pointer transition-colors">
+                      <Upload className="w-4 h-4" />
+                      Choose New Image
+                      <input type="file" accept="image/*" onChange={handleUpdateSubCatImageUpload} className="hidden" />
+                    </label>
+                    <p className="text-xs text-gray-400 mt-2">Max file size: 2MB</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <button
+                className="flex-1 px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors"
+                onClick={closeUpdateSubCatImageModal}
+                disabled={updateSubCatImageLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                onClick={handleUpdateSubCategoryImage}
+                disabled={updateSubCatImageLoading || newSubCatImage.length === 0}
+              >
+                {updateSubCatImageLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     Updating...
