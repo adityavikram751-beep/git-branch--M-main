@@ -1,300 +1,334 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { useRouter, usePathname } from "next/navigation"
-import { Menu, X, LogOut, FileText, User, Search, ShoppingBag, Mic } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
+import { Menu, X, LogOut, FileText, User, Search, ShoppingBag, Mic } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [loggedIn, setLoggedIn] = useState(false)
-  const [userName, setUserName] = useState("")
-  const [enquiryCount, setEnquiryCount] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [showEnquiryBadge, setShowEnquiryBadge] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [enquiryCount, setEnquiryCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [showEnquiryBadge, setShowEnquiryBadge] = useState(false);
 
-  const [searchQuery, _setSearchQuery] = useState("")
-  const searchQueryRef = useRef("")
+  const [searchQuery, _setSearchQuery] = useState("");
+  const searchQueryRef = useRef("");
   const setSearchQuery = useCallback((val: string) => {
-    searchQueryRef.current = val
-    _setSearchQuery(val)
-  }, [])
+    searchQueryRef.current = val;
+    _setSearchQuery(val);
+  }, []);
 
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  // isListening: BOTH state (JSX re-render) AND ref (for callbacks — no stale closure)
-  const [isListening, setIsListening] = useState(false)
-  const isListeningRef = useRef(false)
+  const [isListening, setIsListening] = useState(false);
+  const isListeningRef = useRef(false);
 
-  // Direct DOM refs for mic buttons — instant visual update without waiting for re-render
-  const desktopMicBtnRef = useRef<HTMLButtonElement>(null)
-  const mobileMicBtnRef = useRef<HTMLButtonElement>(null)
+  const desktopMicBtnRef = useRef<HTMLButtonElement>(null);
+  const mobileMicBtnRef = useRef<HTMLButtonElement>(null);
 
-  const recognitionRef = useRef<any>(null)
-  const router = useRouter()
-  const pathname = usePathname()
+  const recognitionRef = useRef<any>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // ==================== DIRECT DOM MIC UPDATE ====================
-  // Updates mic button appearance IMMEDIATELY — no React re-render lag
+  // Helper to detect mobile (matches Tailwind's md breakpoint)
+  const isMobile = useCallback(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 768;
+  }, []);
+
+  // Direct DOM mic update
   const applyMicStyle = useCallback((listening: boolean) => {
-    const btns = [desktopMicBtnRef.current, mobileMicBtnRef.current]
+    const btns = [desktopMicBtnRef.current, mobileMicBtnRef.current];
     btns.forEach((btn) => {
-      if (!btn) return
+      if (!btn) return;
       if (listening) {
-        btn.style.backgroundColor = "#ef4444"
-        btn.style.border = "none"
-        btn.style.color = "#ffffff"
-        btn.style.boxShadow = "0 0 0 4px rgba(239,68,68,0.25)"
+        btn.style.backgroundColor = "#ef4444";
+        btn.style.border = "none";
+        btn.style.color = "#ffffff";
+        btn.style.boxShadow = "0 0 0 4px rgba(239,68,68,0.25)";
         btn.innerHTML = `
           <span style="display:flex;align-items:center;gap:2px;height:16px;">
             <span style="display:block;width:3px;border-radius:3px;background:#fff;height:8px;animation:micWave 0.6s ease-in-out 0s infinite alternate;"></span>
             <span style="display:block;width:3px;border-radius:3px;background:#fff;height:14px;animation:micWave 0.6s ease-in-out 0.12s infinite alternate;"></span>
             <span style="display:block;width:3px;border-radius:3px;background:#fff;height:10px;animation:micWave 0.6s ease-in-out 0.24s infinite alternate;"></span>
             <span style="display:block;width:3px;border-radius:3px;background:#fff;height:6px;animation:micWave 0.6s ease-in-out 0.36s infinite alternate;"></span>
-          </span>`
+          </span>`;
       } else {
-        btn.style.backgroundColor = "#ffffff"
-        btn.style.border = "1.5px solid #e5e7eb"
-        btn.style.color = "#9ca3af"
-        btn.style.boxShadow = "none"
-        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`
+        btn.style.backgroundColor = "#ffffff";
+        btn.style.border = "1.5px solid #e5e7eb";
+        btn.style.color = "#9ca3af";
+        btn.style.boxShadow = "none";
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
       }
-    })
-  }, [])
+    });
+  }, []);
 
-  // ==================== VOICE SEARCH ====================
+  // ==================== VOICE SEARCH (Mobile dropdown + Desktop direct) ====================
   const initSpeechRecognition = useCallback(() => {
-    if (typeof window === "undefined") return null
+    if (typeof window === "undefined") return null;
     const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) return null
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
 
-    const recognition = new SpeechRecognition()
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.lang = navigator.language || "en-IN"
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = navigator.language || "en-IN";
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.trim()
-      if (transcript) {
-        setSearchQuery(transcript)
-        router.push(`/product?search=${encodeURIComponent(transcript)}`)
-        setShowDropdown(false)
-        setMobileSearchOpen(false)
-        setIsMenuOpen(false)
+      const transcript = event.results[0][0].transcript.trim();
+      if (!transcript) return;
+
+      const mobile = isMobile();
+
+      if (mobile) {
+        // MOBILE: just set search query -> dropdown will appear (via useEffect)
+        setSearchQuery(transcript);
+        // Keep mobile search open and ensure dropdown can show
+        setMobileSearchOpen(true);  // if closed, open it
+        setShowDropdown(true);      // force dropdown to show
+        // Do NOT navigate away
+      } else {
+        // DESKTOP: direct navigation (same as before)
+        setSearchQuery(transcript);
+        router.push(`/product?search=${encodeURIComponent(transcript)}`);
+        setShowDropdown(false);
+        setMobileSearchOpen(false);
+        setIsMenuOpen(false);
       }
-      isListeningRef.current = false
-      setIsListening(false)
-      applyMicStyle(false)
-    }
+
+      // Cleanup listening state
+      isListeningRef.current = false;
+      setIsListening(false);
+      applyMicStyle(false);
+    };
 
     recognition.onerror = () => {
-      isListeningRef.current = false
-      setIsListening(false)
-      applyMicStyle(false)
-    }
+      isListeningRef.current = false;
+      setIsListening(false);
+      applyMicStyle(false);
+    };
 
     recognition.onend = () => {
-      isListeningRef.current = false
-      setIsListening(false)
-      applyMicStyle(false)
-    }
+      isListeningRef.current = false;
+      setIsListening(false);
+      applyMicStyle(false);
+    };
 
-    return recognition
-  }, [router, setSearchQuery, applyMicStyle])
+    return recognition;
+  }, [router, setSearchQuery, applyMicStyle, isMobile]);
 
-  // toggleVoiceSearch has NO dependency on isListening state — uses isListeningRef instead
   const toggleVoiceSearch = useCallback(() => {
     if (!recognitionRef.current) {
-      recognitionRef.current = initSpeechRecognition()
+      recognitionRef.current = initSpeechRecognition();
       if (!recognitionRef.current) {
-        alert("Voice search is not supported in your browser. Try Chrome, Edge, or Safari.")
-        return
+        alert("Voice search is not supported in your browser. Try Chrome, Edge, or Safari.");
+        return;
       }
     }
 
     if (isListeningRef.current) {
-      try { recognitionRef.current.stop() } catch (e) {}
-      isListeningRef.current = false
-      setIsListening(false)
-      applyMicStyle(false)
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+      isListeningRef.current = false;
+      setIsListening(false);
+      applyMicStyle(false);
     } else {
       try {
-        recognitionRef.current.start()
-        isListeningRef.current = true
-        setIsListening(true)
-        applyMicStyle(true)  // instant DOM update — no re-render needed
+        recognitionRef.current.start();
+        isListeningRef.current = true;
+        setIsListening(true);
+        applyMicStyle(true);
       } catch (err) {
-        console.error("Start failed", err)
-        isListeningRef.current = false
-        setIsListening(false)
-        applyMicStyle(false)
+        console.error("Start failed", err);
+        isListeningRef.current = false;
+        setIsListening(false);
+        applyMicStyle(false);
       }
     }
-  }, [initSpeechRecognition, applyMicStyle]) // intentionally NO isListening in deps
+  }, [initSpeechRecognition, applyMicStyle]);
 
   useEffect(() => {
-    recognitionRef.current = initSpeechRecognition()
+    recognitionRef.current = initSpeechRecognition();
     return () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort() } catch (e) {}
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
       }
-    }
-  }, [initSpeechRecognition])
+    };
+  }, [initSpeechRecognition]);
 
+  // Stop listening if mobile search is closed while listening
   useEffect(() => {
     if (!mobileSearchOpen && isListeningRef.current && recognitionRef.current) {
-      try { recognitionRef.current.stop() } catch (e) {}
-      isListeningRef.current = false
-      setIsListening(false)
-      applyMicStyle(false)
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+      isListeningRef.current = false;
+      setIsListening(false);
+      applyMicStyle(false);
     }
-  }, [mobileSearchOpen, applyMicStyle])
+  }, [mobileSearchOpen, applyMicStyle]);
 
-  // ==================== HEADER DATA ====================
+  // ==================== HEADER DATA (unchanged) ====================
   const loadHeaderData = useCallback(async () => {
-    setLoading(true)
-    const token = localStorage.getItem("token")
-    const userId = localStorage.getItem("userId")
-    const hasSeenEnquiries = localStorage.getItem("hasSeenEnquiries") === "true"
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    const hasSeenEnquiries = localStorage.getItem("hasSeenEnquiries") === "true";
 
     if (!token || !userId) {
-      setLoggedIn(false)
-      setUserName("")
-      setEnquiryCount(0)
-      setShowEnquiryBadge(false)
-      setLoading(false)
-      return
+      setLoggedIn(false);
+      setUserName("");
+      setEnquiryCount(0);
+      setShowEnquiryBadge(false);
+      setLoading(false);
+      return;
     }
-    setLoggedIn(true)
+    setLoggedIn(true);
 
     try {
       const userRes = await fetch(`https://api.3846.in/api/v1/user/single-user/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      const userData = await userRes.json()
-      setUserName(userData?.user?.name || "User")
+      });
+      const userData = await userRes.json();
+      setUserName(userData?.user?.name || "User");
     } catch {
-      setUserName("User")
+      setUserName("User");
     }
 
     try {
       const enquiryRes = await fetch(`https://api.3846.in/api/v1/enquiry/${userId}`, {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      })
-      const enquiryData = await enquiryRes.json()
+      });
+      const enquiryData = await enquiryRes.json();
       if (enquiryData?.success && Array.isArray(enquiryData?.data)) {
-        const count = enquiryData.data.length
-        setEnquiryCount(count)
-        setShowEnquiryBadge(count > 0 && !hasSeenEnquiries)
+        const count = enquiryData.data.length;
+        setEnquiryCount(count);
+        setShowEnquiryBadge(count > 0 && !hasSeenEnquiries);
       } else {
-        setEnquiryCount(0)
-        setShowEnquiryBadge(false)
+        setEnquiryCount(0);
+        setShowEnquiryBadge(false);
       }
     } catch {
-      setEnquiryCount(0)
-      setShowEnquiryBadge(false)
+      setEnquiryCount(0);
+      setShowEnquiryBadge(false);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
-
-  useEffect(() => { loadHeaderData() }, [loadHeaderData])
+  }, []);
 
   useEffect(() => {
-    const handleAuthChanged = () => loadHeaderData()
-    window.addEventListener("authChanged", handleAuthChanged)
-    return () => window.removeEventListener("authChanged", handleAuthChanged)
-  }, [loadHeaderData])
+    loadHeaderData();
+  }, [loadHeaderData]);
 
-  // ==================== SEARCH ====================
   useEffect(() => {
-    const q = searchQuery.trim()
-    if (!q) { setSearchResults([]); setShowDropdown(false); return }
+    const handleAuthChanged = () => loadHeaderData();
+    window.addEventListener("authChanged", handleAuthChanged);
+    return () => window.removeEventListener("authChanged", handleAuthChanged);
+  }, [loadHeaderData]);
+
+  // ==================== SEARCH DROPDOWN (unchanged) ====================
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
 
     const timer = setTimeout(async () => {
       try {
-        setSearchLoading(true)
+        setSearchLoading(true);
         const res = await fetch(
           `https://api.3846.in/api/v1/product/search-product?search=${encodeURIComponent(q)}`
-        )
-        const data = await res.json()
-        const products = data?.data || data?.products || data?.results || []
+        );
+        const data = await res.json();
+        const products = data?.data || data?.products || data?.results || [];
         if (Array.isArray(products)) {
-          setSearchResults(products.filter((p: any) => p?.name && p?.images?.[0]).slice(0, 15))
+          setSearchResults(products.filter((p: any) => p?.name && p?.images?.[0]).slice(0, 15));
         } else {
-          setSearchResults([])
+          setSearchResults([]);
         }
-        setShowDropdown(true)
+        setShowDropdown(true);
       } catch {
-        setSearchResults([])
-        setShowDropdown(false)
+        setSearchResults([]);
+        setShowDropdown(false);
       } finally {
-        setSearchLoading(false)
+        setSearchLoading(false);
       }
-    }, 450)
+    }, 450);
 
-    return () => clearTimeout(timer)
-  }, [searchQuery])
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleSelectProduct = (product: any) => {
-    setShowDropdown(false)
-    setSearchQuery("")
-    setIsMenuOpen(false)
-    setMobileSearchOpen(false)
-    router.push(product?._id || product?.id ? `/product/${product._id || product.id}` : "/product")
-  }
+    setShowDropdown(false);
+    setSearchQuery("");
+    setIsMenuOpen(false);
+    setMobileSearchOpen(false);
+    router.push(product?._id || product?.id ? `/product/${product._id || product.id}` : "/product");
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const q = searchQueryRef.current.trim()
-    if (!q) return
-    setShowDropdown(false)
-    setIsMenuOpen(false)
-    setMobileSearchOpen(false)
-    router.push(`/product?search=${encodeURIComponent(q)}`)
-  }
+    e.preventDefault();
+    const q = searchQueryRef.current.trim();
+    if (!q) return;
+    setShowDropdown(false);
+    setIsMenuOpen(false);
+    setMobileSearchOpen(false);
+    router.push(`/product?search=${encodeURIComponent(q)}`);
+  };
 
-  const closeSearchDropdown = () => { setShowDropdown(false); setSearchResults([]) }
+  const closeSearchDropdown = () => {
+    setShowDropdown(false);
+    setSearchResults([]);
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("userId")
-    localStorage.removeItem("hasSeenEnquiries")
-    localStorage.removeItem("notificationDismissed")
-    setLoggedIn(false)
-    setUserName("")
-    setEnquiryCount(0)
-    setShowEnquiryBadge(false)
-    setIsMenuOpen(false)
-    window.dispatchEvent(new Event("authChanged"))
-    router.push("/login")
-  }
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("hasSeenEnquiries");
+    localStorage.removeItem("notificationDismissed");
+    setLoggedIn(false);
+    setUserName("");
+    setEnquiryCount(0);
+    setShowEnquiryBadge(false);
+    setIsMenuOpen(false);
+    window.dispatchEvent(new Event("authChanged"));
+    router.push("/login");
+  };
 
   const handleEnquiryClick = () => {
-    setIsMenuOpen(false)
-    localStorage.setItem("hasSeenEnquiries", "true")
-    setShowEnquiryBadge(false)
-    router.push("/inquiry")
-  }
+    setIsMenuOpen(false);
+    localStorage.setItem("hasSeenEnquiries", "true");
+    setShowEnquiryBadge(false);
+    router.push("/inquiry");
+  };
 
   const navClass = (href: string) =>
     `text-[17px] font-semibold tracking-wide transition-colors ${
-      pathname === href ? "text-[#3f3cff] underline underline-offset-4" : "text-black hover:text-[#3f3cff]"
-    }`
+      pathname === href
+        ? "text-[#3f3cff] underline underline-offset-4"
+        : "text-black hover:text-[#3f3cff]"
+    }`;
 
   const navItems = [
     { href: "/", label: "Home", icon: "🏠" },
@@ -302,9 +336,8 @@ export default function Header() {
     { href: "/brand", label: "Brands", icon: "🏢" },
     { href: "/category", label: "Category", icon: "📁" },
     { href: "/contact", label: "Contacts", icon: "📞" },
-  ]
+  ];
 
-  // Base mic button style — appearance is overridden directly via applyMicStyle() on click
   const micBtnStyle: React.CSSProperties = {
     position: "absolute",
     right: "8px",
@@ -324,7 +357,7 @@ export default function Header() {
     outline: "none",
     flexShrink: 0,
     transition: "background-color 0.15s ease, box-shadow 0.15s ease",
-  }
+  };
 
   const inputStyle = (fullWidth?: boolean): React.CSSProperties => ({
     width: fullWidth ? "100%" : "420px",
@@ -338,13 +371,12 @@ export default function Header() {
     backgroundColor: isListening ? "#fff5f5" : "#ffffff",
     boxShadow: isListening ? "0 0 0 3px rgba(239,68,68,0.15)" : "none",
     transition: "all 0.25s ease",
-  })
+  });
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#fff9f2] border-b shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-2 lg:px-0">
         <div className="h-16 flex items-center justify-between gap-4">
-
           {/* LEFT */}
           <div className="flex items-center gap-3">
             <button
@@ -377,20 +409,19 @@ export default function Header() {
 
           {/* RIGHT */}
           <div className="flex items-center gap-2">
-
             <button
-              onClick={() => { setMobileSearchOpen((p) => !p); setShowDropdown(false) }}
+              onClick={() => {
+                setMobileSearchOpen((p) => !p);
+                setShowDropdown(false);
+              }}
               className="md:hidden p-2 rounded-md hover:bg-black/5 transition"
               aria-label="Search"
             >
               <Search size={22} className="text-gray-800" />
             </button>
 
-            {/* ========== DESKTOP SEARCH ========== */}
-            <div
-              className="hidden md:flex items-center search-container"
-              onClick={(e) => e.stopPropagation()}
-            >
+            {/* DESKTOP SEARCH */}
+            <div className="hidden md:flex items-center search-container" onClick={(e) => e.stopPropagation()}>
               <div className="relative">
                 <form onSubmit={handleSearchSubmit}>
                   <div className="relative">
@@ -402,7 +433,6 @@ export default function Header() {
                       placeholder={isListening ? "Listening..." : "Search products..."}
                       style={inputStyle()}
                     />
-                    {/* DESKTOP MIC — ref for direct DOM style updates */}
                     <button
                       ref={desktopMicBtnRef}
                       type="button"
@@ -415,38 +445,45 @@ export default function Header() {
                   </div>
                 </form>
 
-                {/* Listening banner below input */}
                 {isListening && (
-                  <div style={{
-                    position: "absolute",
-                    top: "50px",
-                    left: 0,
-                    right: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "7px 14px",
-                    backgroundColor: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#ef4444",
-                    zIndex: 60,
-                  }}>
-                    <span style={{
-                      width: "8px", height: "8px", borderRadius: "50%",
-                      backgroundColor: "#ef4444",
-                      animation: "micPulseCircle 1s ease-in-out infinite",
-                      flexShrink: 0,
-                    }} />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50px",
+                      left: 0,
+                      right: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "7px 14px",
+                      backgroundColor: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#ef4444",
+                      zIndex: 60,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: "#ef4444",
+                        animation: "micPulseCircle 1s ease-in-out infinite",
+                        flexShrink: 0,
+                      }}
+                    />
                     Listening... Speak now
                   </div>
                 )}
 
-                {/* Desktop dropdown */}
                 {showDropdown && !isListening && (
-                  <div className="absolute left-0 w-[600px] bg-white border-2 border-gray-200 rounded-2xl shadow-2xl z-50 overflow-hidden" style={{ top: "52px" }}>
+                  <div
+                    className="absolute left-0 w-[600px] bg-white border-2 border-gray-200 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                    style={{ top: "52px" }}
+                  >
                     <div className="flex justify-between items-center px-4 py-2 border-b bg-gray-50">
                       <span className="text-sm font-medium text-gray-600">Search Results</span>
                       <button onClick={closeSearchDropdown} className="p-1 rounded-full hover:bg-gray-200">
@@ -473,9 +510,16 @@ export default function Header() {
                             >
                               <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 border-2 border-gray-200 group-hover:border-[#3f3cff]">
                                 {p?.images?.[0] ? (
-                                  <Image src={p.images[0]} alt={p?.name || "Product"} width={80} height={80}
+                                  <Image
+                                    src={p.images[0]}
+                                    alt={p?.name || "Product"}
+                                    width={80}
+                                    height={80}
                                     className="w-20 h-20 object-cover"
-                                    onError={(e) => ((e.target as HTMLImageElement).src = "https://via.placeholder.com/80x80?text=No+Image")}
+                                    onError={(e) =>
+                                      ((e.target as HTMLImageElement).src =
+                                        "https://via.placeholder.com/80x80?text=No+Image")
+                                    }
                                   />
                                 ) : (
                                   <div className="w-20 h-20 flex items-center justify-center bg-gray-200">
@@ -484,7 +528,9 @@ export default function Header() {
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-[#3f3cff]">{p?.name || "Product"}</p>
+                                <p className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-[#3f3cff]">
+                                  {p?.name || "Product"}
+                                </p>
                                 {p?.price && <p className="text-lg font-bold text-green-600 mt-1">₹{p.price}</p>}
                               </div>
                             </button>
@@ -506,7 +552,10 @@ export default function Header() {
             {/* AUTH */}
             {loggedIn ? (
               <>
-                <button onClick={handleEnquiryClick} className="md:hidden p-2 relative hover:bg-black/5 rounded-md transition">
+                <button
+                  onClick={handleEnquiryClick}
+                  className="md:hidden p-2 relative hover:bg-black/5 rounded-md transition"
+                >
                   <FileText size={22} className="text-gray-800" />
                   {enquiryCount > 0 && showEnquiryBadge && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
@@ -515,11 +564,19 @@ export default function Header() {
                   )}
                 </button>
                 <div className="hidden md:flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={handleEnquiryClick} className="relative hover:bg-[#f0edff]">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleEnquiryClick}
+                    className="relative hover:bg-[#f0edff]"
+                  >
                     <FileText className="w-5 h-5" />
                     <span className="ml-2">My Cart</span>
                     {enquiryCount > 0 && showEnquiryBadge && (
-                      <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                      >
                         {enquiryCount > 99 ? "99+" : enquiryCount}
                       </Badge>
                     )}
@@ -547,14 +604,21 @@ export default function Header() {
               </>
             ) : (
               <div className="hidden md:flex items-center gap-4">
-                <Link href="/login" className="text-[18px] font-semibold text-black hover:text-[#3f3cff]">Log In</Link>
-                <Link href="/register" className="px-4 py-2 rounded-md bg-[#d9d2ff] text-[#3f3cff] font-semibold hover:bg-[#c8beff] text-sm">Register</Link>
+                <Link href="/login" className="text-[18px] font-semibold text-black hover:text-[#3f3cff]">
+                  Log In
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-4 py-2 rounded-md bg-[#d9d2ff] text-[#3f3cff] font-semibold hover:bg-[#c8beff] text-sm"
+                >
+                  Register
+                </Link>
               </div>
             )}
           </div>
         </div>
 
-        {/* ========== MOBILE SEARCH ========== */}
+        {/* MOBILE SEARCH */}
         {mobileSearchOpen && (
           <div className="md:hidden pb-3 search-container" onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleSearchSubmit}>
@@ -567,7 +631,6 @@ export default function Header() {
                   placeholder={isListening ? "Listening..." : "Search products..."}
                   style={inputStyle(true)}
                 />
-                {/* MOBILE MIC — separate ref */}
                 <button
                   ref={mobileMicBtnRef}
                   type="button"
@@ -581,18 +644,31 @@ export default function Header() {
             </form>
 
             {isListening && (
-              <div style={{
-                display: "flex", alignItems: "center", gap: "8px",
-                marginTop: "8px", padding: "6px 12px",
-                backgroundColor: "#fef2f2", border: "1px solid #fecaca",
-                borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "#ef4444",
-              }}>
-                <span style={{
-                  width: "8px", height: "8px", borderRadius: "50%",
-                  backgroundColor: "#ef4444",
-                  animation: "micPulseCircle 1s ease-in-out infinite",
-                  flexShrink: 0,
-                }} />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "8px",
+                  padding: "6px 12px",
+                  backgroundColor: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#ef4444",
+                }}
+              >
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    backgroundColor: "#ef4444",
+                    animation: "micPulseCircle 1s ease-in-out infinite",
+                    flexShrink: 0,
+                  }}
+                />
                 Listening... Speak now
               </div>
             )}
@@ -617,13 +693,22 @@ export default function Header() {
                     </div>
                     <div className="divide-y divide-gray-100">
                       {searchResults.map((p: any, index: number) => (
-                        <button key={index} onClick={() => handleSelectProduct(p)}
-                          className="w-full text-left p-3 hover:bg-gray-50 flex items-center gap-3">
+                        <button
+                          key={index}
+                          onClick={() => handleSelectProduct(p)}
+                          className="w-full text-left p-3 hover:bg-gray-50 flex items-center gap-3"
+                        >
                           <div className="w-14 h-14 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
                             {p?.images?.[0] ? (
-                              <Image src={p.images[0]} alt={p?.name || "Product"} width={56} height={56}
+                              <Image
+                                src={p.images[0]}
+                                alt={p?.name || "Product"}
+                                width={56}
+                                height={56}
                                 className="w-14 h-14 object-cover"
-                                onError={(e) => ((e.target as HTMLImageElement).src = "https://via.placeholder.com/56x56")}
+                                onError={(e) =>
+                                  ((e.target as HTMLImageElement).src = "https://via.placeholder.com/56x56")
+                                }
                               />
                             ) : (
                               <div className="w-14 h-14 flex items-center justify-center bg-gray-200">
@@ -668,7 +753,9 @@ export default function Header() {
                       key={item.href}
                       href={item.href}
                       className={`flex items-center gap-3 py-3 px-4 rounded-lg mx-2 mb-1 transition-colors ${
-                        pathname === item.href ? "bg-[#f0edff] text-[#3f3cff]" : "hover:bg-gray-50 text-gray-700"
+                        pathname === item.href
+                          ? "bg-[#f0edff] text-[#3f3cff]"
+                          : "hover:bg-gray-50 text-gray-700"
                       }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -708,13 +795,19 @@ export default function Header() {
                     </>
                   ) : (
                     <div className="space-y-3">
-                      <Link href="/login"
+                      <Link
+                        href="/login"
                         className="block w-full py-3 text-center rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 text-sm"
-                        onClick={() => setIsMenuOpen(false)}>Log In
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Log In
                       </Link>
-                      <Link href="/register"
+                      <Link
+                        href="/register"
                         className="block w-full py-3 text-center rounded-lg bg-[#d9d2ff] text-[#3f3cff] font-semibold hover:bg-[#c8beff] text-sm"
-                        onClick={() => setIsMenuOpen(false)}>Register
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Register
                       </Link>
                     </div>
                   )}
@@ -727,19 +820,38 @@ export default function Header() {
 
       <style jsx>{`
         @keyframes slideIn {
-          from { transform: translateX(-100%); }
-          to   { transform: translateX(0); }
+          from {
+            transform: translateX(-100%);
+          }
+          to {
+            transform: translateX(0);
+          }
         }
-        .animate-slideIn { animation: slideIn 0.3s ease-out; }
+        .animate-slideIn {
+          animation: slideIn 0.3s ease-out;
+        }
 
         @keyframes micWave {
-          from { transform: scaleY(0.35); opacity: 0.7; }
-          to   { transform: scaleY(1.3);  opacity: 1; }
+          from {
+            transform: scaleY(0.35);
+            opacity: 0.7;
+          }
+          to {
+            transform: scaleY(1.3);
+            opacity: 1;
+          }
         }
 
         @keyframes micPulseCircle {
-          0%, 100% { transform: scale(1);   opacity: 1; }
-          50%       { transform: scale(1.6); opacity: 0.4; }
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.6);
+            opacity: 0.4;
+          }
         }
 
         .line-clamp-1 {
@@ -756,5 +868,5 @@ export default function Header() {
         }
       `}</style>
     </header>
-  )
+  );
 }
