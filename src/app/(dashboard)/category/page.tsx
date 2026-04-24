@@ -684,7 +684,7 @@ export default function CategoryPage() {
                 "https://via.placeholder.com/400"
               }
               alt={item.categoryname || item.subCatName}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               onError={(e) => {
                 e.currentTarget.src = "https://via.placeholder.com/400";
               }}
