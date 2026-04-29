@@ -1038,13 +1038,12 @@ import { useRouter } from "next/navigation"
 import { ArrowRight, ShoppingBag, X, Bell, ArrowLeft } from "lucide-react"
 
 /* ================= HERO DEFAULT FALLBACK ================= */
-const DEFAULT_HERO = [
-  {
-    websiteImg: "",
-    mobileImg: "",
-    url: "/product",
-  },
-]
+const DEFAULT_HERO: HeroSlide = {
+  websiteImg: "",
+  mobileImg: "",
+  websiteUrl: "/product",
+  mobileUrl: "/product",
+}
 
 /* ================= HELPER: MAKE INFINITE SLIDES ================= */
 const makeInfiniteSlides = (items: any[]) => {
@@ -1079,7 +1078,8 @@ type BannerItem = {
 type HeroSlide = {
   websiteImg: string
   mobileImg: string
-  url: string
+  websiteUrl: string
+  mobileUrl: string
 }
 
 type NotificationProduct = {
@@ -1178,7 +1178,17 @@ export default function HomePage() {
 
   /* ================= HERO ================= */
   const [heroIndex, setHeroIndex] = useState(0)
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(DEFAULT_HERO)
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([DEFAULT_HERO])
+
+  /* ================= DEVICE DETECTION ================= */
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkDevice = () => setIsMobile(window.innerWidth < 768)
+    checkDevice()
+    window.addEventListener("resize", checkDevice)
+    return () => window.removeEventListener("resize", checkDevice)
+  }, [])
 
   /* ================= DATA ================= */
   const [categories, setCategories] = useState<any[]>([])
@@ -1223,7 +1233,7 @@ export default function HomePage() {
     fetchNotifications()
   }, [])
 
-  /* ================= FETCH HERO BANNERS ================= */
+  /* ================= FETCH HERO BANNERS (FIXED) ================= */
   useEffect(() => {
     const fetchHeroBanners = async () => {
       try {
@@ -1238,19 +1248,22 @@ export default function HomePage() {
         const mobileBanners: BannerItem[] = Array.isArray(mobileData?.banners) ? mobileData.banners : []
 
         const maxLen = Math.max(websiteBanners.length, mobileBanners.length)
-        if (maxLen === 0) { setHeroSlides(DEFAULT_HERO); return }
+        if (maxLen === 0) {
+          setHeroSlides([DEFAULT_HERO])
+          return
+        }
 
-        // ✅ Har slide mein url bhi store karo (website banner ki url use karo)
         const slides: HeroSlide[] = Array.from({ length: maxLen }).map((_, i) => ({
           websiteImg: websiteBanners[i]?.banner || websiteBanners[0]?.banner || "",
           mobileImg: mobileBanners[i]?.banner || mobileBanners[0]?.banner || "",
-          url: websiteBanners[i]?.url || mobileBanners[i]?.url || "/product",
+          websiteUrl: websiteBanners[i]?.url || "/product",
+          mobileUrl: mobileBanners[i]?.url || "/product",
         }))
 
         setHeroSlides(slides)
         setHeroIndex(0)
       } catch {
-        setHeroSlides(DEFAULT_HERO)
+        setHeroSlides([DEFAULT_HERO])
       }
     }
     fetchHeroBanners()
@@ -1341,12 +1354,13 @@ export default function HomePage() {
   const productSlideWidth = 100 / productSlidesPerView
   const newArrivalSlideWidth = 100 / newArrivalSlidesPerView
 
-  /* ================= BANNER CLICK HANDLER ================= */
-  const handleBannerClick = (url: string) => {
+  /* ================= BANNER CLICK HANDLER (FIXED) ================= */
+  const handleBannerClick = (slide: HeroSlide) => {
+    const url = isMobile ? slide.mobileUrl : slide.websiteUrl
     if (!url || url === "/product") {
       router.push("/product")
     } else if (url.startsWith("http")) {
-      // External ya full URL — same tab mein open karo
+      // External or full URL – open in same tab
       window.location.href = url
     } else {
       router.push(url)
@@ -1361,7 +1375,7 @@ export default function HomePage() {
         <NotificationModal products={notificationProducts} onClose={() => setShowNotification(false)} />
       )}
 
-      {/* ================= HERO SECTION ================= */}
+      {/* ================= HERO SECTION (FIXED) ================= */}
       <section className="relative min-h-[90vh] md:min-h-screen w-full overflow-hidden pt-16">
         <div className="relative h-full w-full min-h-[90vh] md:min-h-screen">
           {heroSlides.map((slide, index) => (
@@ -1371,10 +1385,9 @@ export default function HomePage() {
                 index === heroIndex ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
               }`}
             >
-              {/* ✅ Poora banner clickable — koi button nahi */}
               <div
                 className="absolute inset-0 cursor-pointer"
-                onClick={() => handleBannerClick(slide.url)}
+                onClick={() => handleBannerClick(slide)}
               >
                 {/* Desktop Image */}
                 <img
