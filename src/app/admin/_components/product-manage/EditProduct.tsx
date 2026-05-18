@@ -388,23 +388,82 @@ export function EditProduct({
         return
       }
 
-      const fd = new FormData()
-      fd.append("image", file)
-
+      // =========================
+      // STEP 1 → GET PRESIGNED URL
+      // =========================
+      
+      const presignedRes = await fetch(
+        "https://api.3846.in/api/v1/upload/presigned-url",
+        {
+          method: "POST",
+      
+          headers: {
+            "Content-Type": "application/json",
+          },
+      
+          body: JSON.stringify({
+            fileType: file.type,
+          }),
+        }
+      )
+      
+      if (!presignedRes.ok) {
+        throw new Error("Failed to get presigned URL")
+      }
+      
+      const presignedData = await presignedRes.json()
+      
+      // =========================
+      // STEP 2 → UPLOAD TO S3
+      // =========================
+      
+      const uploadRes = await fetch(
+        presignedData.uploadUrl,
+        {
+          method: "PUT",
+      
+          headers: {
+            "Content-Type": file.type,
+          },
+      
+          body: file,
+        }
+      )
+      
+      if (!uploadRes.ok) {
+        throw new Error("S3 Upload Failed")
+      }
+      
+      // =========================
+      // STEP 3 → SAVE IMAGE URL
+      // =========================
+      
       const res = await fetch(
         `${BASE_URL}/api/v1/product/add-image/${product.id}`,
         {
           method: "POST",
+      
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          body: fd,
+      
+          body: JSON.stringify({
+            file: presignedData.fileUrl,
+          }),
         }
       )
 
       const result = await res.json()
 
-      if (res.ok && (result.success || result.status === "success")) {
+      if (
+        res.ok &&
+        (
+          result.success ||
+          result.status === true ||
+          result.status === "success"
+        )
+      ) {
         const updatedImages =
           result?.data?.images ||
           result?.product?.images ||
@@ -489,46 +548,124 @@ export function EditProduct({
         .filter((keyword) => keyword.length > 0)
       
       console.log("Keywords array:", keywordsArray)
-
-      const fd = new FormData()
-      fd.append("name", formData.name.trim())
-      fd.append("categoryId", formData.categoryId)
-      fd.append("subcategoryId", formData.subcategoryId)
-      fd.append("description", formData.description.trim())
-      fd.append("variants", JSON.stringify(cleanedVariants))  // ✅ includes percentage
-      fd.append("brand", formData.brand)
-      fd.append("points", JSON.stringify(pointsArray))
-      fd.append("key_feature", formData.key_feature)
-      fd.append("keywords", JSON.stringify(keywordsArray))  // ✅ Send as JSON array
-      fd.append("isFeature", String(formData.isFeature))
+      // =========================
+      // STEP 1 → UPLOAD REPLACED IMAGES
+      // =========================
       
-      // ✅ Dynamic positions array – only indices that are being replaced
-      const positionsArray = Object.keys(replacedFiles).map(idx => idx.toString())
-      fd.append("positions", JSON.stringify(positionsArray))
+      // ✅ ONLY REAL S3 IMAGES
 
-      fd.append("existingImages", JSON.stringify(imagePreviews.slice(0, MAX_IMAGES)))
+      // ✅ COPY ORIGINAL ARRAY
 
-      const replaceEntries = Object.entries(replacedFiles)
-      replaceEntries.forEach(([idx, file]) => {
-        fd.append("replaceIndex", idx)
-        fd.append("image", file)
-      })
+      let updatedImages = [...imagePreviews]
+      for (const [index, file] of Object.entries(replacedFiles)) {
+      
+        // GET PRESIGNED URL
+        const presignedRes = await fetch(
+          "https://api.3846.in/api/v1/upload/presigned-url",
+          {
+            method: "POST",
+      
+            headers: {
+              "Content-Type": "application/json",
+            },
+      
+            body: JSON.stringify({
+              fileType: file.type,
+            }),
+          }
+        )
+      
+        if (!presignedRes.ok) {
+          throw new Error("Failed to get presigned URL")
+        }
+      
+        const presignedData = await presignedRes.json()
+      
+        // UPLOAD TO S3
+        const uploadRes = await fetch(
+          presignedData.uploadUrl,
+          {
+            method: "PUT",
+      
+            headers: {
+              "Content-Type": file.type,
+            },
+      
+            body: file,
+          }
+        )
+      
+        if (!uploadRes.ok) {
+          throw new Error("S3 Upload Failed")
+        }
+      
+        // ✅ REMOVE ALL BLOB URLS
 
+        updatedImages = updatedImages.map((img) =>
+          img.startsWith("blob:")
+            ? presignedData.fileUrl
+            : img
+        )
+        
+        console.log(
+          "Updated Images:",
+          updatedImages
+        )
+      }
+      
+      // =========================
+      // STEP 2 → UPDATE PRODUCT
+      // =========================
+      
       const res = await fetch(
         `${BASE_URL}/api/v1/product/${product.id}`,
         {
           method: "PUT",
+      
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          body: fd,
+      
+          body: JSON.stringify({
+            name: formData.name.trim(),
+      
+            categoryId: formData.categoryId,
+      
+            subcategoryId: formData.subcategoryId,
+      
+            description: formData.description.trim(),
+      
+            variants: cleanedVariants,
+      
+            brand: formData.brand,
+      
+            points: pointsArray,
+      
+            key_feature: formData.key_feature,
+      
+            keywords: keywordsArray,
+      
+            isFeature: formData.isFeature,
+      
+            images: updatedImages,
+
+            image: updatedImages[0],      
+          }),
         }
       )
-
+        
       const result = await res.json()
       console.log("Update API Response:", result)
 
-      if (res.ok && result.success) {
+      if (
+        res.ok &&
+        (
+          result.success ||
+          result.status === true ||
+          result.status === "success"
+        )
+      ) {
         setSuccess("✅ Product updated successfully!")
         
         // 🔥 AUTOMATIC UPDATE: Success के बाद तुरंत fresh data fetch करो
@@ -549,8 +686,7 @@ export function EditProduct({
             points: pointsArray,
             isFeature: formData.isFeature,
             variants: cleanedVariants,  // ✅ includes percentage
-            images: imagePreviews.slice(0, MAX_IMAGES),
-            image: imagePreviews[0] || product.image || "",
+            images: updatedImages,            image: updatedImages[0] || product.image || "",
           }
 
           if (onUpdateProduct) onUpdateProduct(updatedProduct)

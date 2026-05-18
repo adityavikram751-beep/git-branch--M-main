@@ -104,25 +104,87 @@ const RegisterUI = () => {
       return;
     }
 
-    // Create FormData object for multipart/form-data
-    const formDataToSend = new FormData();
+    // =========================
+    // STEP 1 → UPLOAD IMAGE TO S3
+    // =========================
     
-    formDataToSend.append('name', formData.name);
-    formDataToSend.append('email', formData.email);
-    formDataToSend.append('phone', formData.phone);
-    formDataToSend.append('dob', formData.dob);
-    formDataToSend.append('password', formData.password);
-    formDataToSend.append('gstnumber', formData.gstnumber);
-    formDataToSend.append('address', formData.address);
+    let uploadedFileUrl = "";
     
     if (file) {
-      formDataToSend.append('file', file);
+    
+      const presignedRes = await fetch(
+        "https://api.3846.in/api/v1/upload/presigned-url",
+        {
+          method: "POST",
+    
+          headers: {
+            "Content-Type": "application/json",
+          },
+    
+          body: JSON.stringify({
+            fileType: file.type,
+          }),
+        }
+      )
+    
+      if (!presignedRes.ok) {
+        throw new Error("Failed to get presigned URL")
+      }
+    
+      const presignedData = await presignedRes.json()
+    
+      console.log("Presigned Data:", presignedData)
+    
+      // =========================
+      // STEP 2 → UPLOAD TO S3
+      // =========================
+    
+      const uploadRes = await fetch(
+        presignedData.uploadUrl,
+        {
+          method: "PUT",
+    
+          headers: {
+            "Content-Type": file.type,
+          },
+    
+          body: file,
+        }
+      )
+    
+      if (!uploadRes.ok) {
+        throw new Error("S3 Upload Failed")
+      }
+    
+      uploadedFileUrl = presignedData.fileUrl
+    
+      console.log("Uploaded File URL:", uploadedFileUrl)
     }
 
     try {
       const res = await fetch('https://api.3846.in/api/v1/user/singup', {
         method: 'POST',
-        body: formDataToSend,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        
+        body: JSON.stringify({
+          name: formData.name,
+        
+          email: formData.email,
+        
+          phone: formData.phone,
+        
+          dob: formData.dob,
+        
+          password: formData.password,
+        
+          gstnumber: formData.gstnumber,
+        
+          address: formData.address,
+        
+          file: uploadedFileUrl,
+        }),
       });
 
       const data = await res.json();

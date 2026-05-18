@@ -31,6 +31,7 @@ const menuItems = [
   { title: "Brands", icon: BarChart3, id: "brands" },
   { title: "Contact Us", icon: Mail, id: "contact-us" },
   { title: "Sliding Banners", icon: ImageIcon, id: "sliding-banners" },
+  { title: "test", icon: ImageIcon, id: "test" },
 ]
 
 interface AdminSidebarProps {

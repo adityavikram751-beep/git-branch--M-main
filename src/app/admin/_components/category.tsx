@@ -410,57 +410,99 @@ export default function CategoryManagement() {
 
   // Update category image using the separate API endpoint
   const handleUpdateCategoryImage = async () => {
+
     if (!categoryToUpdateImage || newCategoryImage.length === 0) {
-      setError("Please select a new image")
+      setError("Please select image")
       return
     }
-
+  
     try {
+  
       setUpdateImageLoading(true)
-      setError("")
-      setSuccess("")
-
-      console.log("Updating category image for:", categoryToUpdateImage._id)
-      
-      const formData = new FormData()
-      formData.append("image", newCategoryImage[0].file)
-
-      const response = await fetch(`${API_URL}/category/update-image/${categoryToUpdateImage._id}`, {
-        method: "POST",
+  
+      const file = newCategoryImage[0].file
+  
+      // =========================
+      // GET PRESIGNED URL
+      // =========================
+  
+      const presignedRes = await fetch(
+        "https://api.3846.in/api/v1/upload/presigned-url",
+        {
+          method: "POST",
+  
+          headers: {
+            "Content-Type": "application/json",
+          },
+  
+          body: JSON.stringify({
+            fileType: file.type,
+          }),
+        }
+      )
+  
+      const presignedData = await presignedRes.json()
+  
+      // =========================
+      // UPLOAD TO S3
+      // =========================
+  
+      await fetch(presignedData.uploadUrl, {
+        method: "PUT",
+  
         headers: {
-          ...getAuthHeaders(),
+          "Content-Type": file.type,
         },
-        body: formData,
+  
+        body: file,
       })
-
-      const responseText = await response.text()
-      console.log("Update image response:", response.status, responseText)
-      
-      let data: any = null
-      try {
-        data = JSON.parse(responseText)
-      } catch {
-        // Not JSON
-      }
-
-      if (response.ok || (data && data.message && data.message.includes("success"))) {
-        setSuccess("Category image updated successfully!")
+  
+      // =========================
+      // UPDATE CATEGORY IMAGE
+      // =========================
+  
+      const response = await fetch(
+        `${API_URL}/category/update-image/${categoryToUpdateImage._id}`,
+        {
+          method: "POST",
+  
+          headers: {
+            ...getAuthHeaders(),
+            "Content-Type": "application/json",
+          },
+  
+          body: JSON.stringify({
+            file: presignedData.fileUrl,
+          }),
+        }
+      )
+  
+      const data = await response.json()
+  
+      if (response.ok) {
+  
+        setSuccess("Category image updated")
+  
         await fetchCategories()
-        setTimeout(() => {
-          closeUpdateImageModal()
-        }, 1500)
-      } else if (data && data.message) {
-        throw new Error(data.message)
+  
+        closeUpdateImageModal()
+  
       } else {
-        throw new Error(responseText || "Failed to update category image")
+  
+        throw new Error(data.message)
+  
       }
-      
-    } catch (err: unknown) {
-      console.error("Update category image error:", err)
-      const errorMessage = err instanceof Error ? err.message : "Failed to update category image"
-      setError(errorMessage)
+  
+    } catch (error) {
+  
+      console.log(error)
+  
+      setError("Failed to update image")
+  
     } finally {
+  
       setUpdateImageLoading(false)
+  
     }
   }
 
@@ -472,6 +514,10 @@ export default function CategoryManagement() {
     setError("")
     setSuccess("")
   }
+
+
+
+
 
   const closeUpdateSubCatImageModal = () => {
     setUpdateSubCatImageModalOpen(false)
@@ -541,59 +587,147 @@ export default function CategoryManagement() {
     setNewSubCatImage([])
   }
 
-  // Update subcategory image using PUT API
+  // Update subcategory image using PRESIGNED URL
   const handleUpdateSubCategoryImage = async () => {
+  
     if (!subCatToUpdateImage || newSubCatImage.length === 0) {
       setError("Please select a new image")
       return
     }
-
+  
     try {
+  
       setUpdateSubCatImageLoading(true)
+  
       setError("")
+  
       setSuccess("")
-
-      console.log("Updating subcategory image for:", subCatToUpdateImage._id)
-      
-      const formData = new FormData()
-      formData.append("image", newSubCatImage[0].file)
-
-      const response = await fetch(`${API_URL}/subcategory/update-image/${subCatToUpdateImage._id}`, {
-        method: "PUT",   // Important: PUT method as per your API
-        headers: {
-          ...getAuthHeaders(),
-        },
-        body: formData,
-      })
-
-      const responseText = await response.text()
-      console.log("Update subcategory image response:", response.status, responseText)
-      
-      let data: any = null
-      try {
-        data = JSON.parse(responseText)
-      } catch {
-        // Not JSON
+  
+      console.log(
+        "Updating subcategory image for:",
+        subCatToUpdateImage._id
+      )
+  
+      // =========================
+      // STEP 1 → GET FILE
+      // =========================
+  
+      const file = newSubCatImage[0].file
+  
+      // =========================
+      // STEP 2 → GET PRESIGNED URL
+      // =========================
+  
+      const presignedRes = await fetch(
+        "https://api.3846.in/api/v1/upload/presigned-url",
+        {
+          method: "POST",
+  
+          headers: {
+            "Content-Type": "application/json",
+          },
+  
+          body: JSON.stringify({
+            fileType: file.type,
+          }),
+        }
+      )
+  
+      if (!presignedRes.ok) {
+        throw new Error("Failed to get presigned URL")
       }
-
-      if (response.ok || (data && data.message && data.message === "subcategory image updated successfully")) {
+  
+      const presignedData = await presignedRes.json()
+  
+      console.log("Presigned URL Data:", presignedData)
+  
+      // =========================
+      // STEP 3 → UPLOAD TO S3
+      // =========================
+  
+      const uploadRes = await fetch(
+        presignedData.uploadUrl,
+        {
+          method: "PUT",
+  
+          headers: {
+            "Content-Type": file.type,
+          },
+  
+          body: file,
+        }
+      )
+  
+      if (!uploadRes.ok) {
+        throw new Error("S3 Upload Failed")
+      }
+  
+      console.log("S3 Upload Success")
+  
+      // =========================
+      // STEP 4 → UPDATE SUBCATEGORY
+      // =========================
+  
+      const response = await fetch(
+        `${API_URL}/subcategory/update-image/${subCatToUpdateImage._id}`,
+        {
+          method: "PUT",
+  
+          headers: {
+            ...getAuthHeaders(),
+            "Content-Type": "application/json",
+          },
+  
+          body: JSON.stringify({
+            file: presignedData.fileUrl,
+          }),
+        }
+      )
+  
+      const data = await response.json()
+  
+      console.log("Update Response:", data)
+  
+      if (
+        response.ok ||
+        data.success ||
+        data.status === "success"
+      ) {
+  
         setSuccess("Subcategory image updated successfully!")
-        await fetchSubCategories()   // Refresh list
+  
+        await fetchSubCategories()
+  
         setTimeout(() => {
           closeUpdateSubCatImageModal()
         }, 1500)
-      } else if (data && data.message) {
-        throw new Error(data.message)
+  
       } else {
-        throw new Error(responseText || "Failed to update subcategory image")
+  
+        throw new Error(
+          data.message || "Failed to update subcategory image"
+        )
+  
       }
-      
+  
     } catch (err: unknown) {
-      console.error("Update subcategory image error:", err)
-      const errorMessage = err instanceof Error ? err.message : "Failed to update subcategory image"
+  
+      console.error(
+        "Update subcategory image error:",
+        err
+      )
+  
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to update subcategory image"
+  
       setError(errorMessage)
+  
     } finally {
+  
       setUpdateSubCatImageLoading(false)
+  
     }
   }
   // ==================================================================
@@ -646,17 +780,89 @@ export default function CategoryManagement() {
           return
         }
 
-        const formData = new FormData()
-        formData.append("name", categoryName.trim())
-        formData.append("image", selectedImages[0].file)
+        const file = selectedImages[0].file
 
-        const response = await fetch(`${API_URL}/category`, {
-          method: "POST",
+        // ==============================
+        // STEP 1 → GET PRESIGNED URL
+        // ==============================
+        
+        const presignedRes = await fetch(
+          "https://api.3846.in/api/v1/upload/presigned-url",
+          {
+            method: "POST",
+        
+            headers: {
+              "Content-Type": "application/json",
+            },
+        
+            body: JSON.stringify({
+              fileType: file.type,
+            }),
+          }
+        )
+        
+        if (!presignedRes.ok) {
+          throw new Error("Failed to get presigned URL")
+        }
+        
+        const presignedData = await presignedRes.json()
+        
+        console.log("Presigned:", presignedData)
+        
+        // ==============================
+        // STEP 2 → UPLOAD IMAGE TO S3
+        // ==============================
+        
+        const uploadRes = await fetch(presignedData.uploadUrl, {
+          method: "PUT",
+        
           headers: {
-            ...getAuthHeaders(),
+            "Content-Type": file.type,
           },
-          body: formData,
+        
+          body: file,
         })
+        
+        if (!uploadRes.ok) {
+          throw new Error("S3 Upload Failed")
+        }
+        console.log("S3 Upload Responsessss:", uploadRes)
+        
+        
+        // ==============================
+        // STEP 3 → SAVE CATEGORY
+        // ==============================
+        const response = await fetch(
+          `${API_URL}/category`,
+          {
+            method: "POST",
+        
+            headers: {
+              ...getAuthHeaders(),
+              "Content-Type": "application/json",
+            },
+        
+            body: JSON.stringify({
+                name: categoryName.trim(),
+                file: presignedData.fileUrl,
+              }),
+          }
+        )
+        
+        const data = await response.json()
+        
+        console.log("Category Saved:", data)
+        
+        if (
+          data.success ||
+          data.status === "success" ||
+          (data.message &&
+            data.message.toLowerCase().includes("success"))
+        ) {
+          setSuccess("Category added successfully!")
+        } else {
+          throw new Error(data.message || "Failed to add category")
+        }
 
         const contentType = response.headers.get("content-type")
         if (!contentType || !contentType.includes("application/json")) {
@@ -685,6 +891,7 @@ export default function CategoryManagement() {
       await fetchCategories()
       await fetchSubCategories()
     } catch (err: unknown) {
+      console.error("error:", err)
       const errorMessage =
         err instanceof Error ? err.message : `Failed to ${editingCategory ? "update" : "add"} category`
       setError(errorMessage)
@@ -771,46 +978,107 @@ export default function CategoryManagement() {
           return
         }
 
-        const formData = new FormData()
-        formData.append("subCatName", subCatName.trim())
-        formData.append("subCatTitle", subCatTitle.trim())
-        formData.append("catId", selectedCatId)
-        formData.append("image", selectedSubCatImages[0].file)
+        const file = selectedSubCatImages[0].file
 
-        console.log("Adding subcategory with data:", {
-          subCatName: subCatName.trim(),
-          subCatTitle: subCatTitle.trim(),
-          catId: selectedCatId,
-          imageName: selectedSubCatImages[0].file.name
-        })
-
-        const response = await fetch(`${API_URL}/subcategory/addsubcat`, {
-          method: "POST",
-          headers: {
-            ...getAuthHeaders(),
-          },
-          body: formData,
-        })
-
-        const contentType = response.headers.get("content-type")
-        if (!contentType || !contentType.includes("application/json")) {
-          const text = await response.text()
-          console.error("Non-JSON response:", text)
-          
-          if (text.includes("success") || text.includes("created") || text.includes("subcategory")) {
-            setSuccess("Subcategory added successfully!")
-          } else {
-            throw new Error(text || "Failed to add subcategory")
+        // =========================
+        // STEP 1 → GET PRESIGNED URL
+        // =========================
+        
+        const presignedRes = await fetch(
+          "https://api.3846.in/api/v1/upload/presigned-url",
+          {
+            method: "POST",
+        
+            headers: {
+              "Content-Type": "application/json",
+            },
+        
+            body: JSON.stringify({
+              fileType: file.type,
+            }),
           }
+        )
+        
+        if (!presignedRes.ok) {
+          throw new Error("Failed to get presigned URL")
+        }
+        
+        const presignedData = await presignedRes.json()
+        
+        console.log("Presigned Data:", presignedData)
+        
+        // =========================
+        // STEP 2 → UPLOAD TO S3
+        // =========================
+        
+        const uploadRes = await fetch(
+          presignedData.uploadUrl,
+          {
+            method: "PUT",
+        
+            headers: {
+              "Content-Type": file.type,
+            },
+        
+            body: file,
+          }
+        )
+        
+        if (!uploadRes.ok) {
+          throw new Error("S3 Upload Failed")
+        }
+        
+        console.log("S3 Upload Success")
+        
+        // =========================
+        // STEP 3 → SAVE SUBCATEGORY
+        // =========================
+        
+        const response = await fetch(
+          `${API_URL}/subcategory/addsubcat`,
+          {
+            method: "POST",
+        
+            headers: {
+              ...getAuthHeaders(),
+              "Content-Type": "application/json",
+            },
+        
+            body: JSON.stringify({
+              subCatName: subCatName.trim(),
+        
+              subCatTitle: subCatTitle.trim(),
+        
+              catId: selectedCatId,
+        
+              file: presignedData.fileUrl,
+            }),
+          }
+        )
+        
+        console.log("Response:", response)
+        
+        const data = await response.json()
+        
+        console.log("Subcategory Saved:", data)
+
+        if (
+          response.ok &&
+          (
+            data.status === true ||
+            data.status === "success" ||
+            data.success
+          )
+        ) {
+        
+          setSuccess("Subcategory added successfully!")
+        
         } else {
-          const data: ApiResponse<SubCategory> = await response.json()
-          console.log("Add subcategory response:", data)
-          
-          if (data.status === "success" || (data.message && data.message.toLowerCase().includes("success"))) {
-            setSuccess("Subcategory added successfully!")
-          } else {
-            throw new Error(data.message || "Failed to add subcategory")
-          }
+        
+          throw new Error(
+            data.message || "Failed to add subcategory"
+          )
+        
         }
       }
 

@@ -120,8 +120,10 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
     const fetchCategories = async () => {
       try {
         const res = await fetch(`${BASE_URL}/api/v1/category`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },        })
         const data = await res.json()
         if (data.success) setCategories(data.data)
       } catch (err) {
@@ -133,8 +135,11 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
       const url = `${BASE_URL}/api/v1/brands/getAll`
       try {
         const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+                })
         const data = await res.json()
         if (data.success && Array.isArray(data.data)) {
           setBrands(data.data)
@@ -304,53 +309,129 @@ export function AddProduct({ onAddProduct }: AddProductProps) {
         return
       }
 
-      const data = new FormData()
-      data.append("name", formData.name)
-      data.append("description", formData.description)
-      data.append("categoryId", formData.categoryId)
-      data.append("subcategoryId", formData.subcategoryId)
-      data.append("brand", formData.brand)
-      data.append("isFeature", formData.isFeature ? "true" : "false")
+      // =========================
+      // STEP 1 → UPLOAD ALL IMAGES TO S3
+      // =========================
       
-      // ✅ CRITICAL: Send key_feature to backend
-      console.log("Sending key_feature:", formData.key_feature)
-      data.append("key_feature", formData.key_feature)
+      const uploadedImageUrls: string[] = []
       
-      // ✅ CRITICAL: Convert keywords string to array and send to backend
+      for (const img of images) {
+      
+        // GET PRESIGNED URL
+        const presignedRes = await fetch(
+          "https://api.3846.in/api/v1/upload/presigned-url",
+          {
+            method: "POST",
+      
+            headers: {
+              "Content-Type": "application/json",
+            },
+      
+            body: JSON.stringify({
+              fileType: img.type,
+            }),
+          }
+        )
+      
+        if (!presignedRes.ok) {
+          throw new Error("Failed to get presigned URL")
+        }
+      
+        const presignedData = await presignedRes.json()
+      
+        console.log("Presigned:", presignedData)
+      
+        // UPLOAD TO S3
+        const uploadRes = await fetch(
+          presignedData.uploadUrl,
+          {
+            method: "PUT",
+      
+            headers: {
+              "Content-Type": img.type,
+            },
+      
+            body: img,
+          }
+        )
+      
+        if (!uploadRes.ok) {
+          throw new Error("S3 Upload Failed")
+        }
+      
+        uploadedImageUrls.push(
+          presignedData.fileUrl
+        )
+      }
+      
+      console.log(
+        "Uploaded Images:",
+        uploadedImageUrls
+      )
+      
+      // =========================
+      // STEP 2 → PREPARE DATA
+      // =========================
+      
       const keywordsArray = formData.keywords
         .split(",")
         .map((keyword) => keyword.trim())
         .filter((keyword) => keyword.length > 0)
       
-      console.log("Sending keywords as array:", keywordsArray)
-      data.append("keywords", JSON.stringify(keywordsArray))
-
       const pointsArray =
         formData.points && formData.points.trim() !== ""
-          ? formData.points.split("\n").map((s) => s.trim()).filter(Boolean)
+          ? formData.points
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean)
           : []
-      data.append("points", JSON.stringify(pointsArray))
-
-      // ✅ Include percentage in cleaned variants
+      
       const cleanedVariants = variants.map((v) => ({
         price: v.price || "0",
         quantity: v.quantity,
-        percentage: v.percentage || "", // send empty string if not provided
+        percentage: v.percentage || "",
       }))
-      data.append("variants", JSON.stringify(cleanedVariants))
-
-      images.forEach((img) => data.append("image", img))
 
       const res = await fetch(`https://api.3846.in/api/v1/product`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: data,
-      })
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },        body: JSON.stringify({
+          name: formData.name,
+        
+          description: formData.description,
+        
+          categoryId: formData.categoryId,
+        
+          subcategoryId: formData.subcategoryId,
+        
+          brand: formData.brand,
+        
+          isFeature: formData.isFeature,
+        
+          key_feature: formData.key_feature,
+        
+          keywords: keywordsArray,
+        
+          points: pointsArray,
+        
+          variants: cleanedVariants,
+        
+          file: uploadedImageUrls,
+        }),      })
 
       const result = await res.json()
       console.log("API Response:", result) // ✅ Debug
 
-      if (res.ok && result.success) {
+      if (
+        res.ok &&
+        (
+          result.success ||
+          result.status === true ||
+          result.status === "success"
+        )
+      ){
         const newProduct: Product = {
           id: result._id || result.data?._id || crypto.randomUUID(),
           name: formData.name,

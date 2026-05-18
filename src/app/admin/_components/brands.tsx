@@ -165,24 +165,85 @@ const useBrands = () => {
       setIsMutating(true);
       setError(null);
 
-      const formData = new FormData();
-      formData.append("name", name.trim());
-      formData.append("brand", name.trim());
-
-      if (file) formData.append("file", file);
-      if (categoryId) formData.append("category", categoryId);
-      if (subcategoryId) formData.append("subcategory", subcategoryId);
-
-      const headers = getAuthHeaders("multipart");
-
+      // =========================
+      // STEP 1 → GET PRESIGNED URL
+      // =========================
+      
+      let uploadedFileUrl = "";
+      
+      if (file) {
+      
+        const presignedRes = await fetch(
+          "https://api.3846.in/api/v1/upload/presigned-url",
+          {
+            method: "POST",
+      
+            headers: {
+              "Content-Type": "application/json",
+            },
+      
+            body: JSON.stringify({
+              fileType: file.type,
+            }),
+          }
+        )
+      
+        if (!presignedRes.ok) {
+          throw new Error("Failed to get presigned URL")
+        }
+      
+        const presignedData = await presignedRes.json()
+      
+        console.log("Presigned:", presignedData)
+      
+        // =========================
+        // STEP 2 → UPLOAD TO S3
+        // =========================
+      
+        const uploadRes = await fetch(
+          presignedData.uploadUrl,
+          {
+            method: "PUT",
+      
+            headers: {
+              "Content-Type": file.type,
+            },
+      
+            body: file,
+          }
+        )
+      
+        if (!uploadRes.ok) {
+          throw new Error("S3 Upload Failed")
+        }
+      
+        uploadedFileUrl = presignedData.fileUrl
+      }
+      
+      // =========================
+      // STEP 3 → CREATE BRAND
+      // =========================
+      
       const response = await fetch(
         "https://api.3846.in/api/v1/brands",
         {
           method: "POST",
-          headers: headers,
-          body: formData,
+      
+          headers: getAuthHeaders("json"),
+      
+          body: JSON.stringify({
+            name: name.trim(),
+      
+            brand: name.trim(),
+      
+            file: uploadedFileUrl,
+      
+            category: categoryId,
+      
+            subcategory: subcategoryId,
+          }),
         }
-      );
+      )
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -220,24 +281,83 @@ const useBrands = () => {
       setIsMutating(true);
       setError(null);
 
-      const formData = new FormData();
-      formData.append("name", name.trim());
-      formData.append("brand", name.trim());
+      let uploadedFileUrl = ""
 
-      if (file) formData.append("file", file);
-      if (categoryId) formData.append("category", categoryId);
-      if (subcategoryId) formData.append("subcategory", subcategoryId);
-
-      const headers = getAuthHeaders("multipart");
-
+      if (file) {
+      
+        // =========================
+        // STEP 1 → GET PRESIGNED URL
+        // =========================
+      
+        const presignedRes = await fetch(
+          "https://api.3846.in/api/v1/upload/presigned-url",
+          {
+            method: "POST",
+      
+            headers: {
+              "Content-Type": "application/json",
+            },
+      
+            body: JSON.stringify({
+              fileType: file.type,
+            }),
+          }
+        )
+      
+        if (!presignedRes.ok) {
+          throw new Error("Failed to get presigned URL")
+        }
+      
+        const presignedData = await presignedRes.json()
+      
+        // =========================
+        // STEP 2 → UPLOAD TO S3
+        // =========================
+      
+        const uploadRes = await fetch(
+          presignedData.uploadUrl,
+          {
+            method: "PUT",
+      
+            headers: {
+              "Content-Type": file.type,
+            },
+      
+            body: file,
+          }
+        )
+      
+        if (!uploadRes.ok) {
+          throw new Error("S3 Upload Failed")
+        }
+      
+        uploadedFileUrl = presignedData.fileUrl
+      }
+      
+      // =========================
+      // STEP 3 → UPDATE BRAND
+      // =========================
+      
       const response = await fetch(
         `https://api.3846.in/api/v1/brands/${id}`,
         {
           method: "PUT",
-          headers: headers,
-          body: formData,
+      
+          headers: getAuthHeaders("json"),
+      
+          body: JSON.stringify({
+            name: name.trim(),
+      
+            brand: name.trim(),
+      
+            file: uploadedFileUrl,
+      
+            category: categoryId,
+      
+            subcategory: subcategoryId,
+          }),
         }
-      );
+      )
 
       if (!response.ok) {
         const errorData = await response.json();

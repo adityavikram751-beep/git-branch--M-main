@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AdminSidebar } from './_components/admin-sidebar';
-
+import Test from '..//..//..//src/components/test';
 import { UserRequests } from './_components/user-requests';
 import { ProductManagement } from './_components/product-management';
 import Category from './_components/category';
@@ -58,6 +58,8 @@ export default function AdminPanel() {
 
       case 'sliding-banners':            // ✅ ADD
         return <SlidingBanners />;
+        case 'test':
+  return <Test />;
 
       default:
         return null;                      // ❌ products mat dikhao

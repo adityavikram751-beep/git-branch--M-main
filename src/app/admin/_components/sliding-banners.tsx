@@ -158,19 +158,78 @@ export default function SlidingBanners() {
 
       setPosting(true);
 
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("type", selectedType);
-      fd.append("title", title.trim());
-      if (redirectUrl.trim()) {
-        fd.append("url", redirectUrl.trim());
+      // =========================
+      // STEP 1 → GET PRESIGNED URL
+      // =========================
+      
+      const presignedRes = await fetch(
+        "https://api.3846.in/api/v1/upload/presigned-url",
+        {
+          method: "POST",
+      
+          headers: {
+            "Content-Type": "application/json",
+          },
+      
+          body: JSON.stringify({
+            fileType: file.type,
+          }),
+        }
+      )
+      
+      if (!presignedRes.ok) {
+        throw new Error("Failed to get presigned URL")
       }
-
+      
+      const presignedData = await presignedRes.json()
+      
+      console.log("Presigned:", presignedData)
+      
+      // =========================
+      // STEP 2 → UPLOAD TO S3
+      // =========================
+      
+      const uploadRes = await fetch(
+        presignedData.uploadUrl,
+        {
+          method: "PUT",
+      
+          headers: {
+            "Content-Type": file.type,
+          },
+      
+          body: file,
+        }
+      )
+      
+      if (!uploadRes.ok) {
+        throw new Error("S3 Upload Failed")
+      }
+      
+      console.log("S3 Upload Success")
+      
+      // =========================
+      // STEP 3 → SAVE BANNER
+      // =========================
+      
       const res = await fetch(API_ADD, {
         method: "POST",
-        headers: { Authorization: token },
-        body: fd,
-      });
+      
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+      
+        body: JSON.stringify({
+          file: presignedData.fileUrl,
+      
+          type: selectedType,
+      
+          title: title.trim(),
+      
+          url: redirectUrl.trim(),
+        }),
+      })
 
       const rawRes = await res.text();
       let data: any = {};
