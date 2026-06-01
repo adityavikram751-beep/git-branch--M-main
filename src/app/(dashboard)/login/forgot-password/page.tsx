@@ -49,7 +49,7 @@ const ForgotPassword = () => {
         throw new Error(data?.message || 'Failed to send OTP. Please try again.');
       }
 
-      setSuccess('OTP sent successfully to your phone number.');
+      setSuccess(data?.message || 'OTP sent successfully! Please check mail.');
       setStep(2);
     } catch (err: any) {
       console.error('OTP request error:', err);
@@ -156,7 +156,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-amber-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-amber-50 py-26 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-6 text-center">

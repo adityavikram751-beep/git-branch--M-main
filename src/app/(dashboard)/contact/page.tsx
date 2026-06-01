@@ -1,12 +1,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Phone, Mail, MapPin, Send, MessageCircle, Clock } from "lucide-react";
+import { Phone, Mail, MapPin, Send, MessageCircle, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface ContactData {
   _id: string;
   phone: string;
   email: string;
   address: string;
+}
+
+interface StatusMsg {
+  type: "success" | "error";
+  message: string;
 }
 
 export default function ContactPage() {
@@ -20,13 +25,14 @@ export default function ContactPage() {
   const [contactInfo, setContactInfo] = useState<ContactData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<StatusMsg | null>(null);
 
   const API_BASE_URL = "https://api.3846.in";
 
   useEffect(() => {
     const fetchContactData = async () => {
       try {
-        const response = await fetch('https://api.3846.in/api/v1/admin/contact');
+        const response = await fetch("https://api.3846.in/api/v1/admin/contact");
         const result = await response.json();
         if (result.data) {
           setContactInfo(result.data);
@@ -48,13 +54,12 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setStatus(null);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/user/send`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -66,14 +71,14 @@ export default function ContactPage() {
       const result = await response.json();
 
       if (response.ok && result.status === true) {
-        alert("✅ Thank you! Your message has been sent successfully.");
+        setStatus({ type: "success", message: "Thank you! Your message has been sent successfully." });
         setFormData({ name: "", phone: "", email: "", message: "" });
       } else {
-        alert(`✅ ${response.status}: ${result.message || "Something went wrong"}`);
+        setStatus({ type: "error", message: result.message || "Something went wrong. Please try again." });
       }
     } catch (error) {
       console.error("Submission error:", error);
-      alert("❌ Network error. Please check your connection and try again.");
+      setStatus({ type: "error", message: "Network error. Please check your connection and try again." });
     } finally {
       setIsSubmitting(false);
     }
@@ -81,13 +86,10 @@ export default function ContactPage() {
 
   return (
     <section className="pt-36 pb-24 min-h-screen bg-yellow-50 px-4 overflow-hidden relative">
-      
-      {/* Background Decorative Elements */}
       <div className="absolute top-20 left-[-10%] w-[40%] h-[40%] bg-red-100/40 rounded-full blur-[120px] -z-10"></div>
       <div className="absolute bottom-10 right-[-10%] w-[30%] h-[30%] bg-white/50 rounded-full blur-[100px] -z-10"></div>
 
       <div className="max-w-6xl mx-auto">
-        {/* Header Section */}
         <div className="text-center mb-16 space-y-4">
           <h1 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight">
             Let's Start a <span className="text-[#B30000]">Conversation</span>
@@ -97,12 +99,10 @@ export default function ContactPage() {
           </p>
         </div>
 
-        {/* Main 3D Card Wrapper */}
         <div className="flex flex-col lg:flex-row bg-white rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.08)] overflow-hidden border border-white/40 backdrop-blur-sm">
-          
-          {/* LEFT SIDE: Information Panel */}
+
+          {/* LEFT: Info Panel */}
           <div className="lg:w-[40%] bg-[#B30000] p-10 md:p-14 text-white flex flex-col justify-between relative">
-            {/* Pattern Overlay */}
             <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
 
             <div className="relative z-10 space-y-12">
@@ -114,34 +114,20 @@ export default function ContactPage() {
               </div>
 
               <div className="space-y-10">
-                {/* Address */}
                 <div className="flex items-start gap-6 group">
                   <a
                     href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl cursor-pointer hover:bg-[#FFD700]"
-                    onClick={(e) => {
-                      if (!contactInfo?.address) {
-                        e.preventDefault();
-                        alert("Address not available");
-                      }
-                    }}
+                    className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl cursor-pointer"
                   >
                     <MapPin size={28} />
                   </a>
-                  
                   <a
                     href={contactInfo?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address)}` : "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 cursor-pointer transition-opacity"
-                    onClick={(e) => {
-                      if (!contactInfo?.address) {
-                        e.preventDefault();
-                        alert("Address not available");
-                      }
-                    }}
+                    className="flex-1 cursor-pointer"
                   >
                     <p className="text-xs uppercase font-black text-[#FFD700] tracking-[0.2em] mb-1">Visit Us</p>
                     <p className="text-lg leading-snug font-medium">
@@ -150,7 +136,6 @@ export default function ContactPage() {
                   </a>
                 </div>
 
-                {/* Phone */}
                 <a href={`tel:${contactInfo?.phone}`} className="flex items-center gap-6 group cursor-pointer">
                   <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl">
                     <Phone size={28} />
@@ -161,7 +146,6 @@ export default function ContactPage() {
                   </div>
                 </a>
 
-                {/* Email */}
                 <a href={`mailto:${contactInfo?.email}`} className="flex items-center gap-6 group cursor-pointer">
                   <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-red-900 transition-all duration-500 shadow-xl">
                     <Mail size={28} />
@@ -174,7 +158,6 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Bottom Info Box */}
             <div className="mt-16 p-6 bg-black/20 rounded-3xl border border-white/10 flex items-center gap-4 relative z-10">
               <div className="w-12 h-12 bg-[#FFD700] rounded-full flex items-center justify-center text-red-900 shadow-lg">
                 <Clock size={24} />
@@ -186,7 +169,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* RIGHT SIDE: Interactive Form */}
+          {/* RIGHT: Form */}
           <div className="lg:w-[60%] p-10 md:p-16 bg-white relative">
             <div className="max-w-md">
               <h3 className="text-3xl font-extrabold text-gray-900 mb-2">Drop us a line</h3>
@@ -248,22 +231,43 @@ export default function ContactPage() {
                 <label className="absolute left-0 top-3 text-gray-400 pointer-events-none transition-all peer-focus:-top-4 peer-focus:text-xs peer-focus:text-[#B30000] peer-focus:font-bold peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-xs">Your Message</label>
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="group relative w-full md:w-fit px-12 py-5 bg-[#B30000] text-white font-black rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-[0_20px_40px_rgba(179,0,0,0.3)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="absolute inset-0 w-0 bg-black transition-all duration-[0.4s] ease-out group-hover:w-full -z-0"></div>
-                <span className="relative z-10 flex items-center justify-center gap-3 tracking-widest uppercase">
-                  {isSubmitting ? (
-                    "Sending..."
-                  ) : (
-                    <>
-                      Send Message <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                    </>
-                  )}
-                </span>
-              </button>
+              {/* Button + Status Message */}
+              <div className="space-y-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="group relative w-full md:w-fit px-12 py-5 bg-[#B30000] text-white font-black rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-[0_20px_40px_rgba(179,0,0,0.3)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="absolute inset-0 w-0 bg-black transition-all duration-[0.4s] ease-out group-hover:w-full -z-0"></div>
+                  <span className="relative z-10 flex items-center justify-center gap-3 tracking-widest uppercase">
+                    {isSubmitting ? (
+                      "Sending..."
+                    ) : (
+                      <>
+                        Send Message <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                      </>
+                    )}
+                  </span>
+                </button>
+
+                {/* Inline Status Message — neeche button ke */}
+                {status && (
+                  <div
+                    className={`flex items-center gap-2 text-sm font-semibold transition-all duration-500
+                      ${status.type === "success"
+                        ? "text-red-600 border-l-4 border-green-500 pl-3"
+                        : "text-green-600 border-l-4 border-red-500 pl-3"
+                      }`}
+                  >
+                    {status.type === "success" ? (
+                      <CheckCircle2 size={18} className="shrink-0" />
+                    ) : (
+                      <AlertCircle size={18} className="shrink-0" />
+                    )}
+                    <span>{status.message}</span>
+                  </div>
+                )}
+              </div>
             </form>
           </div>
         </div>
