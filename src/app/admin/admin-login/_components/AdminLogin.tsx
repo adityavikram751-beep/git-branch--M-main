@@ -52,7 +52,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
 
-  // ✅ agar token already hai to redirect to admin panel
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     if (token) {
@@ -80,8 +79,13 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     setError('');
     setLoading(true);
 
+    // ✅ Alag endpoint based on isLogin
+    const endpoint = isLogin
+      ? 'https://api.3846.in/api/v1/admin/login'
+      : 'https://api.3846.in/api/v1/admin/signup';
+
     try {
-      const res = await fetch('https://api.3846.in/api/v1/admin/login', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +114,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
 
       alert(data.message || `${isLogin ? 'Logged in' : 'Signed up'} successfully`);
 
-      // ✅ if parent passed onLoginSuccess (AdminPanel), call it
       if (onLoginSuccess) {
         onLoginSuccess();
       } else {

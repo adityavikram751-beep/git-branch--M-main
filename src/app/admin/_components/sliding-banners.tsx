@@ -228,6 +228,7 @@ export default function SlidingBanners() {
           title: title.trim(),
       
           url: redirectUrl.trim(),
+          key: presignedData.key,
         }),
       })
 
