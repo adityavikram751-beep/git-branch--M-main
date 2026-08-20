@@ -11,7 +11,7 @@ const RegisterUI = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    gstnumber: '',
+    gstnumber: '',    
     address: '',
   });
 
