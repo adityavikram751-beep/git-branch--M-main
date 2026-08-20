@@ -9,19 +9,18 @@ const RegisterUI = () => {
     name: '',
     email: '',
     phone: '',
-    dob: '', // new field for date of birth
     password: '',
     confirmPassword: '',
     gstnumber: '',
     address: '',
   });
-  
+
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to calculate age from DOB
@@ -48,19 +47,19 @@ const RegisterUI = () => {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    
+
     if (selectedFile) {
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(selectedFile.type)) {
         setError('Please upload a valid image file (JPEG, PNG, GIF, WebP)');
         return;
       }
-      
+
       if (selectedFile.size > 5 * 1024 * 1024) {
         setError('File size should be less than 5MB');
         return;
       }
-      
+
       setFile(selectedFile);
       const previewUrl = URL.createObjectURL(selectedFile);
       setPreview(previewUrl);
@@ -90,74 +89,69 @@ const RegisterUI = () => {
     }
 
     // Required fields validation
-    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.address || !formData.dob) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.address) {
       setError('Please fill in all required fields');
       setIsLoading(false);
       return;
     }
 
     // Age validation (18+)
-    const age = calculateAge(formData.dob);
-    if (age < 18) {
-      setError('You must be at least 18 years old to register.');
-      setIsLoading(false);
-      return;
-    }
+
 
     // =========================
     // STEP 1 → UPLOAD IMAGE TO S3
     // =========================
-    
+
     let uploadedFileUrl = "";
-    
+
     if (file) {
-    
+
       const presignedRes = await fetch(
         "https://api.3846.in/api/v1/upload/presigned-url",
         {
           method: "POST",
-    
+
           headers: {
             "Content-Type": "application/json",
           },
-    
+
           body: JSON.stringify({
             fileType: file.type,
           }),
         }
       )
-    
+
       if (!presignedRes.ok) {
         throw new Error("Failed to get presigned URL")
       }
-    
+
       const presignedData = await presignedRes.json()
-    
+
       console.log("Presigned Data:", presignedData)
-    
+
       // =========================
       // STEP 2 → UPLOAD TO S3
       // =========================
-    
+
       const uploadRes = await fetch(
         presignedData.uploadUrl,
         {
           method: "PUT",
-    
+
           headers: {
             "Content-Type": file.type,
           },
-    
+
           body: file,
         }
       )
-    
+
       if (!uploadRes.ok) {
         throw new Error("S3 Upload Failed")
       }
-    
+
       uploadedFileUrl = presignedData.fileUrl
-    
+
       console.log("Uploaded File URL:", uploadedFileUrl)
     }
 
@@ -167,22 +161,21 @@ const RegisterUI = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        
+
         body: JSON.stringify({
           name: formData.name,
-        
+
           email: formData.email,
-        
+
           phone: formData.phone,
-        
-          dob: formData.dob,
-        
+
+
           password: formData.password,
-        
+
           gstnumber: formData.gstnumber,
-        
+
           address: formData.address,
-        
+
           file: uploadedFileUrl,
         }),
       });
@@ -199,13 +192,12 @@ const RegisterUI = () => {
       }
 
       setSuccess('Registration successful! Awaiting admin approval.');
-      
+
       // Reset form
       setFormData({
         name: '',
         email: '',
         phone: '',
-        dob: '',
         password: '',
         confirmPassword: '',
         gstnumber: '',
@@ -297,23 +289,7 @@ const RegisterUI = () => {
               </div>
 
               {/* Date of Birth - Age verification */}
-              <div>
-                <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of Birth *
-                </label>
-                <input
-                  id="dob"
-                  name="dob"
-                  type="date"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  value={formData.dob}
-                  onChange={handleChange}
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  You must be at least 18 years old to register.
-                </p>
-              </div>
+
 
               <div>
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
@@ -354,9 +330,9 @@ const RegisterUI = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Profile/Business Image
                 </label>
-                
+
                 {!preview ? (
-                  <div 
+                  <div
                     className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition-colors cursor-pointer"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -379,9 +355,9 @@ const RegisterUI = () => {
                   <div className="relative">
                     <div className="border border-gray-300 rounded-lg p-4 flex items-center space-x-4">
                       <div className="relative">
-                        <img 
-                          src={preview} 
-                          alt="Preview" 
+                        <img
+                          src={preview}
+                          alt="Preview"
                           className="w-16 h-16 object-cover rounded-md"
                         />
                         <button
